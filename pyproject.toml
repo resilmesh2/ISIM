@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "isim"
+version = "0.1.0"
+description = "ISIM component"
+authors = ["None"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+neo4j = "^5.21.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
