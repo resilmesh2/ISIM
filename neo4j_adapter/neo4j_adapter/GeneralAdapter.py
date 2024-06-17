@@ -35,7 +35,8 @@ class GeneralAdapter:
                        'CREATE CONSTRAINT FOR (v:Vulnerability) REQUIRE v.description IS UNIQUE',
                        'CREATE CONSTRAINT FOR (n:Mission) REQUIRE n.name IS UNIQUE',
                        'CREATE CONSTRAINT FOR (n:Component) REQUIRE n.name IS UNIQUE',
-                       'CREATE CONSTRAINT FOR (n:Host) REQUIRE n.hostname IS UNIQUE',
+                       # TODO hostnames will not be unique in the database, e.g., when we have multiple robot networks
+                       # 'CREATE CONSTRAINT FOR (n:Host) REQUIRE n.hostname IS UNIQUE',
                        'CREATE CONSTRAINT FOR (n:DomainName) REQUIRE (n.domain_name, n.tag) IS UNIQUE',
                        'CREATE CONSTRAINT FOR (s:NetworkService) REQUIRE (s.service, s.tag) IS UNIQUE',
                        'CREATE CONSTRAINT FOR (s:SoftwareVersion) REQUIRE (s.version, s.tag) IS UNIQUE']

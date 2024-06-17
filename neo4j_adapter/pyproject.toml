@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "neo4j-adapter"
+version = "0.1.1"
+description = "Database adapter for Neo4j client"
+authors = ["None"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
