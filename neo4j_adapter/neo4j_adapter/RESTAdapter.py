@@ -1,6 +1,10 @@
-from neo4j_adapter.GeneralAdapter import GeneralAdapter
 import json
+from typing import Any
 
+from neo4j_adapter.GeneralAdapter import GeneralAdapter
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent
 
 class RESTAdapter(GeneralAdapter):
     def __init__(self, password, **kwargs):
@@ -44,11 +48,11 @@ class RESTAdapter(GeneralAdapter):
                 "MATCH (mission:Mission {name: supports.from}) " \
                 "MATCH (component:Component {name: supports.to}) " \
                 "MERGE(mission)<-[:SUPPORTS]-(component) " \
-                # "WITH relationships " \
-                # "UNWIND relationships.has_identity as identity " \
-                # "MATCH (component:Component {name: identity.from}) " \
-                # "MATCH (host:Host {hostname: identity.to}) " \
-                # "MERGE(component)-[:PROVIDED_BY]->(host)"
+            # "WITH relationships " \
+        # "UNWIND relationships.has_identity as identity " \
+        # "MATCH (component:Component {name: identity.from}) " \
+        # "MATCH (host:Host {hostname: identity.to}) " \
+        # "MERGE(component)-[:PROVIDED_BY]->(host)"
 
         params = {'json_string': json_string}
 
@@ -69,7 +73,17 @@ class RESTAdapter(GeneralAdapter):
                 for component2 in json_data["nodes"]["services"]:
                     if component1["id"] == dependency["from"] and component2["id"] == dependency["to"]:
                         self._run_query(
-                                "MATCH (src_component:Component {name: $component1_name}), (dst_component:Component {name: $component2_name}) "
-                                "MERGE (src_component)<-[:FROM]-(dep:MissionDependency) "
-                                "MERGE (dep)-[:TO]->(dst_component)",
-                                **{"component1_name": component1["name"], "component2_name": component2["name"]})
+                            "MATCH (src_component:Component {name: $component1_name}), (dst_component:Component {name: $component2_name}) "
+                            "MERGE (src_component)<-[:FROM]-(dep:MissionDependency) "
+                            "MERGE (dep)-[:TO]->(dst_component)",
+                            **{"component1_name": component1["name"], "component2_name": component2["name"]})
+
+    def get_assets(self):
+        with open(BASE_DIR / 'assets/get_assets.cypher', 'r') as f:
+            query = f.read()
+        return self._run_query(query)
+    def store_assets(self, json_string: str):
+        with open(BASE_DIR / 'assets/asset_update_query.cypher', 'r') as f:
+            query = f.read()
+        params = {'json_string': json_string}
+        self._run_query(query, **params)

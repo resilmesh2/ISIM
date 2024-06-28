@@ -1,0 +1,33 @@
+services:
+  neo4j:
+    image: neo4j:5.21.0
+    environment:
+      - NEO4J_AUTH=neo4j/supertestovaciheslo
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+    volumes:
+      - neo4j_isim_data:/data
+      - ${DATA_PATH}:/tmp/dumps/neo4j.dump
+    ports:
+      - 7474:7474
+      - 7687:7687
+    depends_on:
+      neo4j_load_data:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  neo4j_load_data:
+    image: neo4j:5.21.0
+    environment:
+      - NEO4J_AUTH=neo4j/supertestovaciheslo
+    volumes:
+      - neo4j_isim_data:/data
+      - ${DATA_PATH}:/tmp/dumps/neo4j.dump
+    entrypoint:
+      - sh
+      - -c
+      - neo4j-admin database load --from-path=/tmp/dumps --overwrite-destination=true neo4j && neo4j-admin database migrate neo4j
+volumes:
+  neo4j_isim_data:

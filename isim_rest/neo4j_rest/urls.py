@@ -19,5 +19,6 @@ from . import views
 
 urlpatterns = [
     # BLUE LAYER
-    path('missions', views.mission, name='missions')
+    path('missions', views.mission, name='missions'),
+    path('assets', views.assets, name='assets')
 ]
