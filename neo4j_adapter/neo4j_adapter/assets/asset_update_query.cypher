@@ -1,21 +1,94 @@
-WITH apoc.convert.fromJsonMap($json_string) as input_
-UNWIND input_.hosts as hosts
-MERGE (host:Host)-[:IS_A]-(node:Node)-[:ASSIGNED_TO]-(ip:IP {address: hosts.ip_address})
-WITH hosts, ip
-FOREACH (s in hosts.subnets |
-  MERGE (subnet:Subnet {range: s})
-  MERGE (ip)-[:PART_OF]-(subnet)
-)
-WITH hosts, ip
-FOREACH(u in hosts.uris |
-  MERGE (uri:URI {identifier: u})
-  MERGE (ip)-[:IDENTIFIES]-(uri)
-)
-WITH hosts, ip
-FOREACH(d in hosts.domain_names |
-  MERGE (domain:Domain {domain_name: d})
-    ON MATCH SET domain.tag = hosts.tag
-    ON CREATE SET domain.tag = hosts.tag
-  MERGE (ip)-[:RESOLVES_TO]-(domain)
-)
-
+WITH apoc.convert.fromJsonMap($json_string) AS input_
+// HOSTS PROCESSING
+WITH *
+CALL {
+  WITH input_
+  UNWIND input_.hosts AS hosts
+  MERGE (host:Host)-[:IS_A]-(node:Node)-[:ASSIGNED_TO]-(ip:IP {address: hosts.ip_address}) // MATCH NEW HOST BY IP ADDRESS
+  WITH hosts, ip, input_
+  FOREACH (s IN hosts.subnets |     // UPSERT SUBNETS THE IP IS PART OF, UPSERT RELATIONSHIPS
+    MERGE (subnet:Subnet {range: s})
+    MERGE (ip)-[:PART_OF]-(subnet)
+  )
+  WITH hosts, ip, input_
+  FOREACH (u IN hosts.uris |   // UPSERT URIS RELATED TO IP, UPSERT RELATIONSHIPS
+    MERGE (uri:URI {identifier: u})
+    MERGE (ip)-[:IDENTIFIES]-(uri)
+  )
+  WITH hosts, ip, input_
+  FOREACH (d IN hosts.domain_names | // UPSERT DOMAINS RELATED TO IP, UPSERT RELATIONSHIPS
+    MERGE (domain:Domain {domain_name: d})
+      ON MATCH SET domain.tag = hosts.tag
+      ON CREATE SET domain.tag = hosts.tag
+    MERGE (ip)-[:RESOLVES_TO]-(domain)
+  )
+}
+// SUBNETS PROCESSING
+CALL {
+  WITH input_
+  UNWIND input_.subnets AS subnets
+  MERGE (subnet: Subnet {range: subnets.ip_range})
+      ON MATCH SET subnet.note = subnets.note
+      ON CREATE SET subnet.note = subnets.note
+  WITH subnets, subnet, input_
+  FOREACH (p IN subnets.parents |
+    MERGE (parent:Subnet {range: p})
+    MERGE (subnet)-[:PART_OF]-(parent)
+  )
+  WITH subnets, subnet, input_
+  FOREACH (c IN subnets.contacts |
+    MERGE (contact: Contact {name: c})
+    MERGE (subnet)-[:HAS]-(contact)
+  )
+  WITH subnets, subnet, input_
+  FOREACH (ou IN subnets.org_units |
+    MERGE (org_unit: OrganizationUnit {name: ou})
+    MERGE (subnet)-[:PART_OF]-(org_unit)
+  )
+}
+// OU PROCESSING
+CALL {
+  WITH input_
+  UNWIND input_.org_units AS org_units
+  MERGE (org_unit:OrganizationUnit {name: org_units.name})
+  WITH org_units, org_unit, input_
+  FOREACH (p IN org_units.parents |
+    MERGE (ou_parent:OrganizationUnit {name: p})
+    MERGE (org_unit)-[:PART_OF]-(ou_parent)
+  )
+  FOREACH (l IN org_units.locations |
+    MERGE (loc:PhysicalEnvironment {location: l})
+    MERGE (loc)-[:TENANTS]-(org_unit)
+  )
+}
+// APPLICATIONS PROCESSING
+CALL {
+  WITH input_
+  UNWIND input_.applications AS applications
+  MERGE (app:Application {name: applications.name})
+  WITH app, applications
+  FOREACH (d IN applications.devices |
+    MERGE (app)-[:RUNNING_ON]-(d)
+  )
+}
+// DEVICES
+CALL {
+  WITH input_
+  UNWIND input_.devices as devices
+  MERGE (device:Device {name:devices.name})
+    ON MATCH SET device.power = devices.power, device.state = device.state
+    ON CREATE SET device.power = devices.power, device.state = device.state
+  WITH device, devices
+  FOREACH (ou IN devices.org_units |
+    MERGE (org_unit:OrganizationUnit {name: ou})
+    MERGE (device)-[:PART_OF]-(org_unit)
+  )
+  WITH devices, device
+  WHERE NOT devices.ip_address IS NULL
+  MERGE (ip_address:IP {address: devices.ip_address})
+  MERGE (device)-[:HAS_IDENTITY]-(h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip_address)
+  WITH devices, device
+  WHERE NOT (devices.manufacturer IS NULL OR devices.model IS NULL)
+  MERGE (h_v: HardwareVersion {manufacturer: devices.manufacturer, model: devices.model})-[:HAS]-(device)
+}
+RETURN input_

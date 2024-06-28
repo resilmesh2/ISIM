@@ -46,6 +46,8 @@ class DeviceDTO(msgspec.Struct):
     model: str | None = None
     ip_address: IP_TYPE | None = None
     org_units: list[str] = field(default_factory=list)
+    power: str | None = None
+    state: str | None = None
 
 
 class ApplicationDTO(msgspec.Struct):

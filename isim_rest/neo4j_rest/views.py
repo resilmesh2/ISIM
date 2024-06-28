@@ -66,5 +66,5 @@ def assets(request: HttpRequest) -> Response:
             json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
             client.store_assets(json_string)
         except Exception as e:
-            print(e)
+            return Response(f"ERROR {str(e)}", status=status.HTTP_500_INTERNAL_SERVER_ERROR )
         return Response("Alles gutte", status=status.HTTP_201_CREATED)
