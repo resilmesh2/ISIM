@@ -74,21 +74,47 @@ CALL {
 // DEVICES
 CALL {
   WITH input_
-  UNWIND input_.devices as devices
+  UNWIND input_.devices AS devices
   MERGE (device:Device {name:devices.name})
     ON MATCH SET device.power = devices.power, device.state = device.state
     ON CREATE SET device.power = devices.power, device.state = device.state
   WITH device, devices
-  FOREACH (ou IN devices.org_units |
-    MERGE (org_unit:OrganizationUnit {name: ou})
-    MERGE (device)-[:PART_OF]-(org_unit)
+ WITH device, devices
+    FOREACH (ou IN devices.org_units |
+      MERGE (org_unit:OrganizationUnit {name: ou})
+      MERGE (device)-[:PART_OF]-(org_unit)
   )
   WITH devices, device
-  WHERE NOT devices.ip_address IS NULL
-  MERGE (ip_address:IP {address: devices.ip_address})
-  MERGE (device)-[:HAS_IDENTITY]-(h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip_address)
+  CALL {
+    WITH devices, device
+    CALL apoc.do.when(
+    NOT devices.ip_address IS NULL,
+    'MERGE (ip_address:IP {address: devices.ip_address}) MERGE (device)-[:HAS_IDENTITY]-(h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip_address)',
+    '',
+    {devices:devices, device: device}
+    )
+    YIELD value
+    RETURN count(value) as ip_val
+  }
   WITH devices, device
-  WHERE NOT (devices.manufacturer IS NULL OR devices.model IS NULL)
-  MERGE (h_v: HardwareVersion {manufacturer: devices.manufacturer, model: devices.model})-[:HAS]-(device)
+  CALL {
+    WITH device, devices
+    CALL apoc.do.when(
+      NOT (devices.manufacturer IS NULL OR devices.model IS NULL),
+      'MERGE (h_v: HardwareVersion {manufacturer: devices.manufacturer, model: devices.model})-[:HAS]-(device)',
+      '',
+      {devices: devices, device: device}
+    )
+    YIELD value
+    RETURN count(value) as hv_val
+  }
+
+  RETURN devices // discarded value
+
+}
+// SOFTWARE VERSIONS
+CALL {
+WITH input_
+
 }
 RETURN input_
