@@ -18,8 +18,7 @@ CALL {
   WITH hosts, ip, input_
   FOREACH (d IN hosts.domain_names | // UPSERT DOMAINS RELATED TO IP, UPSERT RELATIONSHIPS
     MERGE (domain:Domain {domain_name: d})
-      ON MATCH SET domain.tag = hosts.tag
-      ON CREATE SET domain.tag = hosts.tag
+    SET domain.tag = hosts.tag
     MERGE (ip)-[:RESOLVES_TO]-(domain)
   )
 }
@@ -28,8 +27,7 @@ CALL {
   WITH input_
   UNWIND input_.subnets AS subnets
   MERGE (subnet: Subnet {range: subnets.ip_range})
-      ON MATCH SET subnet.note = subnets.note
-      ON CREATE SET subnet.note = subnets.note
+  SET subnet.note = subnets.note
   WITH subnets, subnet, input_
   FOREACH (p IN subnets.parents |
     MERGE (parent:Subnet {range: p})
@@ -76,8 +74,7 @@ CALL {
   WITH input_
   UNWIND input_.devices AS devices
   MERGE (device:Device {name:devices.name})
-    ON MATCH SET device.power = devices.power, device.state = device.state
-    ON CREATE SET device.power = devices.power, device.state = device.state
+  SET device.power = devices.power, device.state = device.state
   WITH device, devices
  WITH device, devices
     FOREACH (ou IN devices.org_units |
@@ -89,12 +86,13 @@ CALL {
     WITH devices, device
     CALL apoc.do.when(
     NOT devices.ip_address IS NULL,
-    'MERGE (ip_address:IP {address: devices.ip_address}) MERGE (device)-[:HAS_IDENTITY]-(h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip_address)',
+    'MERGE (ip_address:IP {address: devices.ip_address})
+     MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip_address) MERGE (device)-[:HAS_IDENTITY]-(h)',
     '',
     {devices:devices, device: device}
     )
     YIELD value
-    RETURN count(value) as ip_val
+    RETURN count(value) AS ip_val
   }
   WITH devices, device
   CALL {
@@ -106,7 +104,7 @@ CALL {
       {devices: devices, device: device}
     )
     YIELD value
-    RETURN count(value) as hv_val
+    RETURN count(value) AS hv_val
   }
 
   RETURN devices // discarded value
@@ -115,6 +113,48 @@ CALL {
 // SOFTWARE VERSIONS
 CALL {
 WITH input_
+UNWIND input_.software_versions AS sw_versions
+  CALL apoc.do.case([
+    sw_versions.port is not null and sw_versions.protocol is not null and sw_versions.version is not null and sw_versions.service is not null,
+    '
+    MERGE (sw:SoftwareVersion {version: sw_versions.version})
+    MERGE (ns:NetworkService {port: sw_versions.port, protocol: sw_versions.protocol, service: sw_versions.service})
+    SET sw.tag = sw_versions.tag
+    SET ns.tag = sw_versions.tag
+    MERGE (sw)-[:PROVIDES]-(ns)
+    FOREACH (ip_address in sw_versions.ip_addresses |
+        MERGE (ip:IP {address: ip_address})
+        MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip)
+        MERGE (sw)-[:ON]-(h)
+        MERGE (ns)-[:ON]-(h)
+    )
+    ',
+    sw_versions.version is not null,
+    '
+    MERGE (sw:SoftwareVersion {version: sw_versions.version})
+    SET sw.tag = sw_versions.tag
+    FOREACH (ip_address in sw_versions.ip_addresses |
+        MERGE (ip:IP {address: ip_address})
+        MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip)
+        MERGE (sw)-[:ON]-(h)
+    )
+    ',
+    sw_versions.port is not null and sw_versions.protocol is not null and sw_versions.service is not null,
+    '
+    MERGE (ns:NetworkService {port: sw_versions.port, protocol: sw_versions.protocol, service: sw_versions.service})
+    SET ns.tag = sw_versions.tag
+    FOREACH (ip_address in sw_versions.ip_addresses |
+        MERGE (ip:IP {address: ip_address})
+        MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip)
+        MERGE (ns)-[:ON]-(h)
+    )
+    '
+    ],
+    '',
+    {sw_versions: sw_versions}
+  )
+  yield value as versions
+  RETURN versions
 
 }
 RETURN input_
