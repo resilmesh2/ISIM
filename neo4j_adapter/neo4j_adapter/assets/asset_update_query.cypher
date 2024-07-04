@@ -66,7 +66,8 @@ CALL {
   MERGE (app:Application {name: applications.name})
   WITH app, applications
   FOREACH (d IN applications.devices |
-    MERGE (app)-[:RUNNING_ON]-(d)
+    MERGE (device:Device {name: d})
+    MERGE (app)-[:RUNNING_ON]-(device)
   )
 }
 // DEVICES
@@ -86,8 +87,10 @@ CALL {
     WITH devices, device
     CALL apoc.do.when(
     NOT devices.ip_address IS NULL,
-    'MERGE (ip_address:IP {address: devices.ip_address})
-     MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip_address) MERGE (device)-[:HAS_IDENTITY]-(h)',
+    '
+    MERGE (ip_address:IP {address: devices.ip_address})
+    MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip_address)
+    MERGE (device)-[:HAS_IDENTITY]-(h)',
     '',
     {devices:devices, device: device}
     )
@@ -99,7 +102,10 @@ CALL {
     WITH device, devices
     CALL apoc.do.when(
       NOT (devices.manufacturer IS NULL OR devices.model IS NULL),
-      'MERGE (h_v: HardwareVersion {manufacturer: devices.manufacturer, model: devices.model})-[:HAS]-(device)',
+      '
+      MERGE (h_v: HardwareVersion {manufacturer: devices.manufacturer, model: devices.model})
+      MERGE (h_v)-[:HAS]-(device)
+      ',
       '',
       {devices: devices, device: device}
     )
