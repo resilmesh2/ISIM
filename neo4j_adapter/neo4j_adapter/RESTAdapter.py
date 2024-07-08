@@ -85,7 +85,7 @@ class RESTAdapter(GeneralAdapter):
         OPTIONAl MATCH (s:Subnet)-[:PART_OF]-(ou)
         RETURN ou, s, pe
         ORDER BY ou.name
-        SKIP $skip
+        SKIP $offset
         LIMIT $limit
         """
         return self._run_query(query, **{'limit': limit, 'offset': offset})
@@ -99,7 +99,7 @@ class RESTAdapter(GeneralAdapter):
         OPTIONAL MATCH (s)-[:PART_OF]-(ip: IP)
         RETURN s, p_s, ou, c, ip
         ORDER BY s.range
-        SKIP $skip
+        SKIP $offset
         LIMIT $limit
         """
         return self._run_query(query, **{'limit': limit, 'offset': offset})
@@ -111,7 +111,7 @@ class RESTAdapter(GeneralAdapter):
         OPTIONAL MATCH (ip)-[:IDENTIFIES]-(u:URI)
         RETURN ip, s, d, u, ou
         ORDER BY ip.address
-        SKIP $skip
+        SKIP $offset
         LIMIT $limit
         """
         return self._run_query(query, **{'limit': limit, 'offset': offset})
@@ -124,7 +124,7 @@ class RESTAdapter(GeneralAdapter):
         OPTIONAL MATCH (dev)-[:HAS_IDENTITY]-(h:Host)-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]-(ip:IP)
         RETURN dev, ou, h_v, h, n, ip
         ORDER BY dev.name
-        SKIP $skip
+        SKIP $offset
         LIMIT $limit
         """
         return self._run_query(query, **{'limit': limit, 'offset': offset})
@@ -135,7 +135,7 @@ class RESTAdapter(GeneralAdapter):
         OPTIONAL MATCH (app)-[:RUNNING_ON]-(dev:Device)
         RETURN app, dev
         ORDER BY app.name
-        SKIP $skip
+        SKIP $offset
         LIMIT $limit
         """
         return self._run_query(query, **{'limit': limit, 'offset': offset})

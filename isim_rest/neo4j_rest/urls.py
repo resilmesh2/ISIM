@@ -20,5 +20,10 @@ from . import views
 urlpatterns = [
     # BLUE LAYER
     path('missions', views.mission, name='missions'),
-    path('assets', views.assets, name='assets')
+    path('assets', views.assets, name='assets'),
+    path('ips', views.ip_assets, name='ips'),
+    path('subnets', views.subnets, name='subnets'),
+    path('devices', views.devices, name='devices'),
+    path('org-units', views.org_units, name='org-units'),
+    path('applications', views.applications, name='applications')
 ]
