@@ -1,10 +1,10 @@
 import json
-from typing import Any
-
-from neo4j_adapter.GeneralAdapter import GeneralAdapter
 from pathlib import Path
 
+from neo4j_adapter.GeneralAdapter import GeneralAdapter
+
 BASE_DIR = Path(__file__).parent
+
 
 class RESTAdapter(GeneralAdapter):
     def __init__(self, password, **kwargs):
@@ -78,10 +78,68 @@ class RESTAdapter(GeneralAdapter):
                             "MERGE (dep)-[:TO]->(dst_component)",
                             **{"component1_name": component1["name"], "component2_name": component2["name"]})
 
-    def get_assets(self):
-        with open(BASE_DIR / 'assets/get_assets.cypher', 'r') as f:
-            query = f.read()
-        return self._run_query(query)
+    def get_organization_units(self, limit: int = 50, offset: int = 0) -> str:
+        query = """
+        MATCH (ou: OrganizationUnit)
+        OPTIONAL MATCH (ou)-[:TENANTS]-(pe:PhysicalEnvironment)
+        OPTIONAl MATCH (s:Subnet)-[:PART_OF]-(ou)
+        RETURN ou, s, pe
+        ORDER BY ou.name
+        SKIP $skip
+        LIMIT $limit
+        """
+        return self._run_query(query, **{'limit': limit, 'offset': offset})
+
+    def get_subnets(self, limit: int = 50, offset: int = 0) -> str:
+        query = """
+        MATCH (s:Subnet)
+        OPTIONAL MATCH (s)-[:PART_OF]-(p_s: Subnet)
+        OPTIONAL MATCH (s)-[:PART_OF]-(ou: OrganizationUnit)
+        OPTIONAL MATCH (s)-[:HAS]-(c: Contact)
+        OPTIONAL MATCH (s)-[:PART_OF]-(ip: IP)
+        RETURN s, p_s, ou, c, ip
+        ORDER BY s.range
+        SKIP $skip
+        LIMIT $limit
+        """
+        return self._run_query(query, **{'limit': limit, 'offset': offset})
+    def get_ip_assets(self, limit: int = 50, offset: int = 0) -> str:
+        query = """
+        MATCH (ip:IP)
+        OPTIONAL MATCH (ip)-[:PART_OF]-(s:Subnet)-[:PART_OF]-(ou:OrganizationUnit)
+        OPTIONAL MATCH (ip)-[:RESOLVES_TO]-(d:Domain)
+        OPTIONAL MATCH (ip)-[:IDENTIFIES]-(u:URI)
+        RETURN ip, s, d, u, ou
+        ORDER BY ip.address
+        SKIP $skip
+        LIMIT $limit
+        """
+        return self._run_query(query, **{'limit': limit, 'offset': offset})
+
+    def get_devices(self, limit: int = 50, offset: int = 0) -> str:
+        query = """
+        MATCH (dev:Device)
+        OPTIONAL MATCH (dev)-[:PART_OF]-(ou:OrganizationUnit)
+        OPTIONAL MATCH (dev)-[:HAS]-(h_v:HardwareVersion)
+        OPTIONAL MATCH (dev)-[:HAS_IDENTITY]-(h:Host)-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]-(ip:IP)
+        RETURN dev, ou, h_v, h, n, ip
+        ORDER BY dev.name
+        SKIP $skip
+        LIMIT $limit
+        """
+        return self._run_query(query, **{'limit': limit, 'offset': offset})
+
+    def get_applications(self, limit: int = 50, offset: int = 0) -> str:
+        query = """
+        MATCH (app:Application)
+        OPTIONAL MATCH (app)-[:RUNNING_ON]-(dev:Device)
+        RETURN app, dev
+        ORDER BY app.name
+        SKIP $skip
+        LIMIT $limit
+        """
+        return self._run_query(query, **{'limit': limit, 'offset': offset})
+
     def store_assets(self, json_string: str):
         with open(BASE_DIR / 'assets/asset_update_query.cypher', 'r') as f:
             query = f.read()

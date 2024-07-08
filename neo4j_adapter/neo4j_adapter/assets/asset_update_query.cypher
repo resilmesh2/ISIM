@@ -48,7 +48,7 @@ CALL {
   )
   FOREACH (l IN org_units.locations |
     MERGE (loc:PhysicalEnvironment {location: l})
-    MERGE (loc)-[:TENANTS]-(org_unit)
+    MERGE (loc)<-[:TENANTS]-(org_unit)
   )
 }
 // APPLICATIONS PROCESSING
@@ -56,10 +56,8 @@ CALL {
   WITH input_
   UNWIND input_.applications AS applications
   MERGE (app:Application {name: applications.name})
-  FOREACH (d IN applications.devices |
-    MERGE (device:Device {name: d})
-    MERGE (app)-[:RUNNING_ON]->(device)
-  )
+  MERGE (device:Device {name: d})
+  MERGE (app)-[:RUNNING_ON]->(device)
 }
 // DEVICES
 CALL {
