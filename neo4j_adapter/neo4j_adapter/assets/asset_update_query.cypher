@@ -56,7 +56,7 @@ CALL {
   WITH input_
   UNWIND input_.applications AS applications
   MERGE (app:Application {name: applications.name})
-  MERGE (device:Device {name: d})
+  MERGE (device:Device {name: applications.device})
   MERGE (app)-[:RUNNING_ON]->(device)
 }
 // DEVICES
