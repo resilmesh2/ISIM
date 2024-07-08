@@ -4,11 +4,11 @@ WITH *
 CALL {
   WITH input_
   UNWIND input_.hosts AS hosts
-  MERGE (host:Host)-[:IS_A]-(node:Node)-[:ASSIGNED_TO]-(ip:IP {address: hosts.ip_address}) // MATCH NEW HOST BY IP ADDRESS
+  MERGE (host:Host)<-[:IS_A]-(node:Node)-[:HAS_ASSIGNED]->(ip:IP {address: hosts.ip_address}) // MATCH NEW HOST BY IP ADDRESS
   WITH hosts, ip, input_
   FOREACH (s IN hosts.subnets |     // UPSERT SUBNETS THE IP IS PART OF, UPSERT RELATIONSHIPS
     MERGE (subnet:Subnet {range: s})
-    MERGE (ip)-[:PART_OF]-(subnet)
+    MERGE (ip)-[:PART_OF]->(subnet)
   )
   WITH hosts, ip, input_
   FOREACH (u IN hosts.uris |   // UPSERT URIS RELATED TO IP, UPSERT RELATIONSHIPS
@@ -31,17 +31,17 @@ CALL {
   WITH subnets, subnet, input_
   FOREACH (p IN subnets.parents |
     MERGE (parent:Subnet {range: p})
-    MERGE (subnet)-[:PART_OF]-(parent)
+    MERGE (subnet)-[:PART_OF]->(parent)
   )
   WITH subnets, subnet, input_
   FOREACH (c IN subnets.contacts |
     MERGE (contact: Contact {name: c})
-    MERGE (subnet)-[:HAS]-(contact)
+    MERGE (subnet)-[:HAS]->(contact)
   )
   WITH subnets, subnet, input_
   FOREACH (ou IN subnets.org_units |
     MERGE (org_unit: OrganizationUnit {name: ou})
-    MERGE (subnet)-[:PART_OF]-(org_unit)
+    MERGE (subnet)-[:PART_OF]->(org_unit)
   )
 }
 // OU PROCESSING
@@ -52,7 +52,7 @@ CALL {
   WITH org_units, org_unit, input_
   FOREACH (p IN org_units.parents |
     MERGE (ou_parent:OrganizationUnit {name: p})
-    MERGE (org_unit)-[:PART_OF]-(ou_parent)
+    MERGE (org_unit)-[:PART_OF]->(ou_parent)
   )
   FOREACH (l IN org_units.locations |
     MERGE (loc:PhysicalEnvironment {location: l})
@@ -67,7 +67,7 @@ CALL {
   WITH app, applications
   FOREACH (d IN applications.devices |
     MERGE (device:Device {name: d})
-    MERGE (app)-[:RUNNING_ON]-(device)
+    MERGE (app)-[:RUNNING_ON]->(device)
   )
 }
 // DEVICES
@@ -80,7 +80,7 @@ CALL {
  WITH device, devices
     FOREACH (ou IN devices.org_units |
       MERGE (org_unit:OrganizationUnit {name: ou})
-      MERGE (device)-[:PART_OF]-(org_unit)
+      MERGE (device)-[:PART_OF]->(org_unit)
   )
   WITH devices, device
   CALL {
@@ -89,8 +89,8 @@ CALL {
     NOT devices.ip_address IS NULL,
     '
     MERGE (ip_address:IP {address: devices.ip_address})
-    MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip_address)
-    MERGE (device)-[:HAS_IDENTITY]-(h)',
+    MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip_address)
+    MERGE (device)<-[:HAS_IDENTITY]-(h)',
     '',
     {devices:devices, device: device}
     )
@@ -104,7 +104,7 @@ CALL {
       NOT (devices.manufacturer IS NULL OR devices.model IS NULL),
       '
       MERGE (h_v: HardwareVersion {manufacturer: devices.manufacturer, model: devices.model})
-      MERGE (h_v)-[:HAS]-(device)
+      MERGE (h_v)<-[:HAS]-(device)
       ',
       '',
       {devices: devices, device: device}
@@ -130,9 +130,9 @@ UNWIND input_.software_versions AS sw_versions
     MERGE (sw)-[:PROVIDES]-(ns)
     FOREACH (ip_address in sw_versions.ip_addresses |
         MERGE (ip:IP {address: ip_address})
-        MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip)
-        MERGE (sw)-[:ON]-(h)
-        MERGE (ns)-[:ON]-(h)
+        MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
+        MERGE (sw)-[:ON]->(h)
+        MERGE (ns)-[:ON]->(h)
     )
     ',
     sw_versions.version is not null,
@@ -141,8 +141,8 @@ UNWIND input_.software_versions AS sw_versions
     SET sw.tag = sw_versions.tag
     FOREACH (ip_address in sw_versions.ip_addresses |
         MERGE (ip:IP {address: ip_address})
-        MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip)
-        MERGE (sw)-[:ON]-(h)
+        MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
+        MERGE (sw)-[:ON]->(h)
     )
     ',
     sw_versions.port is not null and sw_versions.protocol is not null and sw_versions.service is not null,
@@ -151,8 +151,8 @@ UNWIND input_.software_versions AS sw_versions
     SET ns.tag = sw_versions.tag
     FOREACH (ip_address in sw_versions.ip_addresses |
         MERGE (ip:IP {address: ip_address})
-        MERGE (h:Host)-[:IS_A]-(n:Node)-[:ASSIGNED_TO]-(ip)
-        MERGE (ns)-[:ON]-(h)
+        MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
+        MERGE (ns)-[:ON]->(h)
     )
     '
     ],
