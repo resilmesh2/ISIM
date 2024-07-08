@@ -1,7 +1,3 @@
-from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address, IPv4Interface, IPv6Interface, ip_interface, \
-    ip_network
-from typing import Any
-
 from ipaddress import (
     IPv4Address,
     IPv4Interface,
@@ -14,6 +10,8 @@ from ipaddress import (
 )
 from ipaddress import _BaseAddress as IPInterface  # type: ignore
 from ipaddress import _BaseNetwork as IPNetwork  # type: ignore
+from typing import Any
+
 
 def dec_hook_ip(type_: type[Any], obj: Any) -> Any:
     if type_ in {IPv4Network, IPv6Network, IPv4Address, IPv6Address, IPv4Interface, IPv6Interface}:
@@ -23,6 +21,7 @@ def dec_hook_ip(type_: type[Any], obj: Any) -> Any:
     if type_ is IPNetwork:
         return obj if isinstance(obj, IPv4Network | IPv6Network) else ip_network(obj)
     raise NotImplementedError(f"Objects of type {type_} are not supported")
+
 
 def enc_hook_ip(obj: Any) -> Any:
     if isinstance(obj, IPv4Interface | IPv6Interface | IPv4Address | IPv6Address):

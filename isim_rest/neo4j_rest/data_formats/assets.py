@@ -1,4 +1,4 @@
-from ipaddress import IPv4Interface, IPv6Interface, IPv4Network, IPv6Network, IPv4Address, IPv6Address
+from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network
 from typing import TYPE_CHECKING
 
 import msgspec
@@ -32,7 +32,6 @@ class HostDTO(msgspec.Struct):
     uris: list[str] = field(default_factory=list)
     tag: str | None = None
 
-
     def __post_init__(self):
         for s in self.subnets:
             if not self.ip_address not in s:
@@ -52,7 +51,6 @@ class SoftwareVersionDTO(msgspec.Struct):
             raise ValueError("Either version or port and protocol and service must be set!")
         if not self.ip_addresses:
             raise ValueError("IP Addresses are mandatory for service definition!")
-
 
 
 class DeviceDTO(msgspec.Struct):
