@@ -1,31 +1,5 @@
-"""
-URL configuration for neo4j_rest project.
+from isim_rest.asset_management.urls import urlpatterns as asset_management_urls
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+urlpatterns = []
 
-from django.urls import path
-
-from . import views
-
-urlpatterns = [
-    # BLUE LAYER
-    path("missions", views.mission, name="missions"),
-    path("assets", views.assets, name="assets"),
-    path("ips", views.ip_assets, name="ips"),
-    path("subnets", views.subnets, name="subnets"),
-    path("devices", views.devices, name="devices"),
-    path("org-units", views.org_units, name="org-units"),
-    path("applications", views.applications, name="applications"),
-]
+urlpatterns += asset_management_urls

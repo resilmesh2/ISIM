@@ -3,7 +3,8 @@ WITH apoc.convert.fromJsonMap($json_string) AS input_
 CALL {
   WITH input_
   UNWIND input_.hosts AS hosts
-  MERGE (host:Host)<-[:IS_A]-(node:Node)-[:HAS_ASSIGNED]->(ip:IP {address: hosts.ip_address}) // MATCH NEW HOST BY IP ADDRESS
+  MERGE (ip:IP {address: hosts.ip_address})
+  MERGE (host:Host)<-[:IS_A]-(node:Node)-[:HAS_ASSIGNED]->(ip) // MATCH NEW HOST BY IP ADDRESS
   FOREACH (s IN hosts.subnets |     // UPSERT SUBNETS THE IP IS PART OF, UPSERT RELATIONSHIPS
     MERGE (subnet:Subnet {range: s})
     MERGE (ip)-[:PART_OF]->(subnet)
