@@ -1,4 +1,15 @@
 services:
+  isim:
+    build:
+      context: .
+    ports:
+      - 8000:8000
+    depends_on:
+      - neo4j
+    volumes:
+      - ./isim_rest/neo4j_rest/conf.ini:/app/isim_rest/neo4j_rest/conf.ini
+    restart: unless-stopped
+
   neo4j:
     image: neo4j:5.21.0
     environment:
@@ -28,6 +39,6 @@ services:
     entrypoint:
       - sh
       - -c
-      - neo4j-admin database load --from-path=/tmp/dumps --overwrite-destination=true neo4j && neo4j-admin database migrate neo4j
+      - neo4j-admin database load --from-path=/tmp/dumps --overwrite-destination=true neo4j && neo4j-admin database migrate neo4j --force-btree-indexes-to-range
 volumes:
   neo4j_isim_data:

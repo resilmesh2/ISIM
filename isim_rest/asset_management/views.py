@@ -10,13 +10,18 @@ from rest_framework.response import Response
 
 from isim_rest.asset_management.data_formats.assets import AssetListDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
-from isim_rest.asset_management.utils import get_password
+from isim_rest.neo4j_rest.config import AppConfig
 from neo4j_adapter.rest_adapter import RESTAdapter
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
 
-client = RESTAdapter(password=get_password())
+config = AppConfig.get()
+client = RESTAdapter(
+    password=config.neo4j_config.password,
+    bolt=config.neo4j_config.bolt,
+    user=config.neo4j_config.user
+)
 
 
 def get_limit(request: HttpRequest) -> int:
