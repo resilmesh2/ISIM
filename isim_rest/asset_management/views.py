@@ -1,27 +1,20 @@
 import json
-from configparser import ConfigParser
 
 import msgspec.json
 from django.http import HttpRequest
+from msgspec._core import ValidationError
 from neo4j.exceptions import ClientError, DatabaseError, TransientError
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from isim_rest.neo4j_rest.data_formats.assets import AssetListDTO
-from isim_rest.neo4j_rest.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
-from isim_rest.neo4j_rest.settings import BASE_DIR
-from neo4j_adapter.RESTAdapter import RESTAdapter
+from isim_rest.asset_management.data_formats.assets import AssetListDTO
+from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
+from isim_rest.asset_management.utils import get_password
+from neo4j_adapter.rest_adapter import RESTAdapter
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
-
-
-def get_password():
-    config_parser = ConfigParser()
-    config_parser.read(BASE_DIR / "neo4j_rest/conf.ini")
-    return config_parser["dashboard_rest"]["neo4j_password"]
-
 
 client = RESTAdapter(password=get_password())
 
@@ -46,7 +39,7 @@ def get_offset(request: HttpRequest) -> int | None:
 
 # RED and BLUE LAYERS
 @api_view(["GET", "POST"])
-def mission(request):
+def mission(request: HttpRequest) -> Response:
     """
     GET/POST information about missions view.
     :param request: GET/POST request
@@ -55,17 +48,14 @@ def mission(request):
     if request.method == "GET":
         limit = get_limit(request)
         return Response(client.get_all_mission(limit))
-    if request.method == "POST":
-        properties = request.data
-        try:
-            data = json.dumps(properties)
-            return Response(client.create_missions_and_components_string(data))
-        except (ClientError, TransientError, DatabaseError) as e:
-            return Response(
-                "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_400_BAD_REQUEST
-            )
-        except (KeyError, TypeError):
-            return Response("Structured data was not provided or are incorrect.", status=status.HTTP_400_BAD_REQUEST)
+    properties = request.data
+    try:
+        data = json.dumps(properties)
+        return Response(client.create_missions_and_components_string(data))
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response("Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_400_BAD_REQUEST)
+    except (KeyError, TypeError):
+        return Response("Structured data was not provided or are incorrect.", status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["POST"])
@@ -75,41 +65,45 @@ def assets(request: HttpRequest) -> Response:
         data = msgspec.json.decode(request_body, type=AssetListDTO, dec_hook=dec_hook_ip)
         json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
         client.store_assets(json_string)
-    except Exception as e:
-        return Response(f"ERROR {e!s}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except ValidationError as e:
+        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
     return Response("Processed successfully", status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])
-def ip_assets(request: HttpRequest):
+def ip_assets(request: HttpRequest) -> Response:
     limit = get_limit(request)
     offset = get_offset(request)
     return Response(client.get_ip_assets(limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
-def subnets(request: HttpRequest):
+def subnets(request: HttpRequest) -> Response:
     limit = get_limit(request)
     offset = get_limit(request)
     return Response(client.get_subnets(limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
-def devices(request: HttpRequest):
+def devices(request: HttpRequest) -> Response:
     limit = get_limit(request)
     offset = get_limit(request)
     return Response(client.get_devices(limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
-def org_units(request: HttpRequest):
+def org_units(request: HttpRequest) -> Response:
     limit = get_limit(request)
     offset = get_limit(request)
     return Response(client.get_organization_units(limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
-def applications(request: HttpRequest):
+def applications(request: HttpRequest) -> Response:
     limit = get_limit(request)
     offset = get_limit(request)
     return Response(client.get_applications(limit=limit, offset=offset), status=status.HTTP_200_OK)

@@ -2,13 +2,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from neo4j_adapter.GeneralAdapter import GeneralAdapter
+from neo4j_adapter.general_adapter import GeneralAdapter
 
 BASE_DIR = Path(__file__).parent
 
 
 class RESTAdapter(GeneralAdapter):
-    def __init__(self, password, **kwargs):
+    def __init__(self, password: str, **kwargs: Any) -> None:
         super().__init__(password=password, **kwargs)
 
     def get_all_mission(self, limit: int) -> list[Any]:
@@ -53,11 +53,6 @@ class RESTAdapter(GeneralAdapter):
             "MATCH (component:Component {name: supports.to}) "
             "MERGE(mission)<-[:SUPPORTS]-(component) "
         )
-        # "WITH relationships " \
-        # "UNWIND relationships.has_identity as identity " \
-        # "MATCH (component:Component {name: identity.from}) " \
-        # "MATCH (host:Host {hostname: identity.to}) " \
-        # "MERGE(component)-[:PROVIDED_BY]->(host)"
 
         params = {"json_string": json_string}
 
@@ -71,7 +66,10 @@ class RESTAdapter(GeneralAdapter):
                         "MATCH (component:Component {name: $identity_from}) "
                         "MATCH (host:Host {hostname: $identity_to})<-[:IS_A]-(nod:Node)-[:HAS_ASSIGNED]->(ip:IP {address: $host_ip}) "
                         "MERGE (component)-[:PROVIDED_BY]->(host)",
-                        identity_from=identity["from"], identity_to=identity["to"], host_ip=host["ip"], host_hostname=host["hostname"],
+                        identity_from=identity["from"],
+                        identity_to=identity["to"],
+                        host_ip=host["ip"],
+                        host_hostname=host["hostname"],
                     )
 
         for dependency in json_data["relationships"]["dependencies"]:
@@ -82,7 +80,8 @@ class RESTAdapter(GeneralAdapter):
                             "MATCH (src_component:Component {name: $component1_name}), (dst_component:Component {name: $component2_name}) "
                             "MERGE (src_component)<-[:FROM]-(dep:MissionDependency) "
                             "MERGE (dep)-[:TO]->(dst_component)",
-                            component1_name=component1["name"], component2_name=component2["name"],
+                            component1_name=component1["name"],
+                            component2_name=component2["name"],
                         )
 
     def get_organization_units(self, limit: int = 50, offset: int = 0) -> list[Any]:
@@ -152,3 +151,65 @@ class RESTAdapter(GeneralAdapter):
         query = Path(BASE_DIR / "assets/asset_update_query.cypher").read_text()
         params = {"json_string": json_string}
         self._run_query(query, **params)
+        self._default_ip_address_parent_subnets_constraint()
+        self._default_subnet_parent_subnets_constraint()
+
+    def _default_ip_address_parent_subnets_constraint(self) -> None:
+        query_ipv4_without_parents = r"""
+        MATCH (ip:IP) WHERE NOT EXISTS ((ip)-[:PART_OF]->(:Subnet)) AND ip.address =~ ".+\..+"
+        MATCH (s:Subnet {range: "0.0.0.0/0"})
+        MERGE (ip)-[:PART_OF]->(s)
+        """
+        query_ipv6_without_parents = """
+        MATCH (ip:IP) WHERE NOT EXISTS ((ip)-[:PART_OF]->(:Subnet)) AND ip.address =~ ".+:.+"
+        MATCH (s:Subnet {range: "::/0"})
+        MERGE (ip)-[:PART_OF]->(s)
+        """
+        query_ipv4_delete_internet_relict = """
+        MATCH (internet:Subnet {range: "0.0.0.0/0"})
+        MATCH (subnet:Subnet) WHERE subnet.range <> "0.0.0.0/0"
+        MATCH (ip:IP) WHERE EXISTS ((ip)-[:PART_OF]->(internet)) AND EXISTS ((ip)-[:PART_OF]->(subnet))
+        MATCH (ip)-[r:PART_OF]->(internet)
+        DELETE r
+        """
+        query_ipv6_delete_internet_relict = """
+        MATCH (internet:Subnet {range: "::/0"})
+        MATCH (subnet:Subnet) WHERE subnet.range <> "::/0"
+        MATCH (ip:IP) WHERE EXISTS ((ip)-[:PART_OF]->(internet)) AND EXISTS ((ip)-[:PART_OF]->(subnet))
+        MATCH (ip)-[r:PART_OF]->(internet)
+        DELETE r
+        """
+        self._run_query(query_ipv4_without_parents)
+        self._run_query(query_ipv4_delete_internet_relict)
+        self._run_query(query_ipv6_without_parents)
+        self._run_query(query_ipv6_delete_internet_relict)
+
+    def _default_subnet_parent_subnets_constraint(self) -> None:
+        query_ipv4_without_parents = r"""
+        MATCH (s:Subnet) WHERE NOT EXISTS ((s)-[:PART_OF]->(:Subnet)) AND s.range =~ ".+\..+" AND s.range <> "0.0.0.0/0"
+        MATCH (internet:Subnet {range: "0.0.0.0/0"})
+        MERGE (s)-[:PART_OF]->(internet)
+        """
+        query_ipv6_without_parents = """
+        MATCH (s:Subnet) WHERE NOT EXISTS ((s)-[:PART_OF]->(:Subnet)) AND s.range =~ ".+:.+" AND s.range <> "::/0"
+        MATCH (internet:Subnet {range: "::/0"})
+        MERGE (s)-[:PART_OF]->(internet)
+        """
+        query_ipv4_delete_internet_relict = """
+        MATCH (internet:Subnet {range: "0.0.0.0/0"})
+        MATCH (parent:Subnet) WHERE parent.range <> "0.0.0.0/0"
+        MATCH (subnet:Subnet) WHERE EXISTS ((subnet)-[:PART_OF]->(internet)) AND EXISTS ((subnet)-[:PART_OF]->(parent))
+        MATCH (subnet)-[r:PART_OF]->(internet)
+        DELETE r
+        """
+        query_ipv6_delete_internet_relict = """
+        MATCH (internet:Subnet {range: "::/0"})
+        MATCH (parent:Subnet) WHERE parent.range <> "::/0"
+        MATCH (subnet:Subnet) WHERE EXISTS ((subnet)-[:PART_OF]->(internet)) AND EXISTS ((subnet)-[:PART_OF]->(parent))
+        MATCH (subnet)-[r:PART_OF]->(internet)
+        DELETE r
+        """
+        self._run_query(query_ipv4_without_parents)
+        self._run_query(query_ipv4_delete_internet_relict)
+        self._run_query(query_ipv6_without_parents)
+        self._run_query(query_ipv6_delete_internet_relict)

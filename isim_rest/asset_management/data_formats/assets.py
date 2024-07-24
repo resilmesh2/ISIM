@@ -19,7 +19,7 @@ class SubnetDTO(msgspec.Struct):
     parents: list[IP_NET_TYPE] = field(default_factory=list)
     org_units: list[str] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         for p in self.parents:
             if not self.ip_range.subnet_of(p):
                 raise ValueError(f"Declared {self.ip_range.compressed} is not subnet of {p.compressed}")
@@ -32,7 +32,7 @@ class HostDTO(msgspec.Struct):
     uris: list[str] = field(default_factory=list)
     tag: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         for s in self.subnets:
             if not self.ip_address not in s:
                 raise ValueError(f"Declared {self.ip_address.compressed} is not in subnet {s.compressed}")
@@ -46,7 +46,7 @@ class SoftwareVersionDTO(msgspec.Struct):
     port: int | None = None
     tag: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.version is None and (self.protocol is None or self.port is None or self.service is None):
             raise ValueError("Either version or port and protocol and service must be set!")
         if not self.ip_addresses:
