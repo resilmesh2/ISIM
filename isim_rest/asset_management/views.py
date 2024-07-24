@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from isim_rest.asset_management.data_formats.assets import AssetListDTO
+from isim_rest.asset_management.data_formats.input_dtos import AssetListDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
 from neo4j_adapter.rest_adapter import RESTAdapter
@@ -18,9 +18,7 @@ DEFAULT_OFFSET = 0
 
 config = AppConfig.get()
 client = RESTAdapter(
-    password=config.neo4j_config.password,
-    bolt=config.neo4j_config.bolt,
-    user=config.neo4j_config.user
+    password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
 )
 
 
@@ -77,6 +75,16 @@ def assets(request: HttpRequest) -> Response:
             "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     return Response("Processed successfully", status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+def asset_info(request: HttpRequest) -> Response:
+    ip = request.GET.get("ip", None)
+    limit = get_limit(request)
+    offset = get_offset(request)
+    asset_infos = client.get_ip_asset_info(limit=limit, offset=offset, ip=ip)
+    asset_information = [asset_info.serialize() for asset_info in asset_infos]
+    return Response(asset_information, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

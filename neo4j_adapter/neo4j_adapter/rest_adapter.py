@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from neo4j_adapter.dtos import IPAssetInformationDTO
 from neo4j_adapter.general_adapter import GeneralAdapter
 
 BASE_DIR = Path(__file__).parent
@@ -84,6 +85,8 @@ class RESTAdapter(GeneralAdapter):
                             component2_name=component2["name"],
                         )
 
+    # generic GETs
+
     def get_organization_units(self, limit: int = 50, offset: int = 0) -> list[Any]:
         query = """
         MATCH (ou: OrganizationUnit)
@@ -147,12 +150,43 @@ class RESTAdapter(GeneralAdapter):
         """
         return self._run_query(query, limit=limit, offset=offset)
 
+    # requested GETs
+    def get_ip_asset_info(
+        self, limit: int = 500, offset: int = 0, ip: str | None = None
+    ) -> list[IPAssetInformationDTO]:
+        query = f"""
+        MATCH (ip:IP{' {address: $ip}' if ip else ''})
+        WITH ip, [(ip)-[:PART_OF]-(s:Subnet) | s.range] as subnets
+        WITH ip, subnets, [(ip)-[:PART_OF]-(s:Subnet)-[:HAS]-(c:Contact) | c.name] as contacts
+        WITH ip, subnets, contacts, [(ip)-[:RESOLVES_TO]-(d:Domain) | d.domain_name] as domains
+        WITH ip, subnets, contacts, domains, [(ip)-[:HAS_ASSIGNED]-(Node)-[:IS_A]-(Host)-[:HAS_IDENTITY]-(Component)-[:SUPPORTS]-(m:Mission) | m.name] as missions
+        RETURN ip.address as ip, subnets, contacts, domains, missions
+        ORDER BY ip.address
+        SKIP $offset
+        LIMIT $limit
+        """
+        data = self._run_query(query, limit=limit, offset=offset, ip=ip)
+        return [
+            IPAssetInformationDTO(
+                ip=ip_info.get("ip"),
+                subnets=ip_info.get("subnets"),
+                contacts=ip_info.get("contacts"),
+                missions=ip_info.get("missions"),
+                domain_names=ip_info.get("domains"),
+            )
+            for ip_info in data
+        ]
+
+    # inserting data
+
     def store_assets(self, json_string: str) -> None:
         query = Path(BASE_DIR / "assets/asset_update_query.cypher").read_text()
         params = {"json_string": json_string}
         self._run_query(query, **params)
         self._default_ip_address_parent_subnets_constraint()
         self._default_subnet_parent_subnets_constraint()
+
+    # consistency queries
 
     def _default_ip_address_parent_subnets_constraint(self) -> None:
         query_ipv4_without_parents = r"""

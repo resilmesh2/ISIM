@@ -7,8 +7,8 @@ from isim_rest.neo4j_rest.settings import BASE_DIR
 
 @dataclass
 class Neo4jConfig:
-    bolt: str = "bolt://localhost:7687",
-    user: str = "neo4j",
+    bolt: str = "bolt://localhost:7687"
+    user: str = "neo4j"
     password: str | None = None
 
 
@@ -27,9 +27,5 @@ class AppConfig:
             if config_path is None:  # pragma: no cover
                 config_path = BASE_DIR / "neo4j_rest/conf.ini"
             config_parser.read(config_path)
-            cls._config = Config(
-                neo4j_config=Neo4jConfig(
-                    **dict(config_parser["neo4j_config"])
-                )
-            )
+            cls._config = Config(neo4j_config=Neo4jConfig(**dict(config_parser["neo4j_config"])))
         return cls._config
