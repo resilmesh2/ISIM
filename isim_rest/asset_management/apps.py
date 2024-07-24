@@ -6,14 +6,14 @@ from neo4j.exceptions import ClientError
 
 from isim_rest.asset_management.data_formats.assets import AssetListDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
-from isim_rest.asset_management.utils import get_password
+from isim_rest.neo4j_rest.config import AppConfig as ISIMConfig
 from neo4j_adapter.rest_adapter import RESTAdapter
 
 
 class AssetManagementConfig(AppConfig):
     name = "neo4j_rest"
-
     def ready(self) -> None:
+        config = ISIMConfig.get()
         initial_data = {
             "subnets": [
                 {
@@ -23,7 +23,10 @@ class AssetManagementConfig(AppConfig):
                 {"ip_range": "::/0", "note": "Internet"},
             ]
         }
-        client = RESTAdapter(password=get_password())
+        client = RESTAdapter(
+            password=config.neo4j_config.password,
+            bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+        )
         try:
             client.init_db()
         except ClientError as e:
