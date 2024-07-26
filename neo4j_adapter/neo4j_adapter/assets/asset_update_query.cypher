@@ -4,6 +4,7 @@ CALL {
   WITH input_
   UNWIND input_.hosts AS hosts
   MERGE (ip:IP {address: hosts.ip_address})
+  SET ip.version = hosts.version
   MERGE (host:Host)<-[:IS_A]-(node:Node)-[:HAS_ASSIGNED]->(ip) // MATCH NEW HOST BY IP ADDRESS
   FOREACH (s IN hosts.subnets |     // UPSERT SUBNETS THE IP IS PART OF, UPSERT RELATIONSHIPS
     MERGE (subnet:Subnet {range: s})
@@ -14,7 +15,7 @@ CALL {
     MERGE (ip)-[:IDENTIFIES]-(uri)
   )
   FOREACH (d IN hosts.domain_names | // UPSERT DOMAINS RELATED TO IP, UPSERT RELATIONSHIPS
-    MERGE (domain:Domain {domain_name: d})
+    MERGE (domain:DomainName {domain_name: d})
     SET domain.tag = hosts.tag
     MERGE (ip)-[:RESOLVES_TO]-(domain)
   )
@@ -25,6 +26,7 @@ CALL {
   UNWIND input_.subnets AS subnets
   MERGE (subnet: Subnet {range: subnets.ip_range})
   SET subnet.note = subnets.note
+  SET subnet.version = subnets.version
   FOREACH (p IN subnets.parents |
     MERGE (parent:Subnet {range: p})
     MERGE (subnet)-[:PART_OF]->(parent)

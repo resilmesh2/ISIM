@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from isim_rest.asset_management.data_formats.input_dtos import AssetListDTO
+from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO, HostDTO, SubnetDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
 from neo4j_adapter.rest_adapter import RESTAdapter
@@ -65,7 +65,8 @@ def mission(request: HttpRequest) -> Response:
 def assets(request: HttpRequest) -> Response:
     request_body = request.body
     try:
-        data = msgspec.json.decode(request_body, type=AssetListDTO, dec_hook=dec_hook_ip)
+        data = msgspec.json.decode(request_body, type=AssetListInputDTO, dec_hook=dec_hook_ip)
+        data.flatten_related_relationships()
         json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
         client.store_assets(json_string)
     except ValidationError as e:

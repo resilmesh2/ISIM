@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -117,7 +118,7 @@ class RESTAdapter(GeneralAdapter):
         query = """
         MATCH (ip:IP)
         OPTIONAL MATCH (ip)-[:PART_OF]-(s:Subnet)-[:PART_OF]-(ou:OrganizationUnit)
-        OPTIONAL MATCH (ip)-[:RESOLVES_TO]-(d:Domain)
+        OPTIONAL MATCH (ip)-[:RESOLVES_TO]-(d:DomainName)
         OPTIONAL MATCH (ip)-[:IDENTIFIES]-(u:URI)
         RETURN ip, s, d, u, ou
         ORDER BY ip.address
@@ -158,7 +159,7 @@ class RESTAdapter(GeneralAdapter):
         MATCH (ip:IP{' {address: $ip}' if ip else ''})
         WITH ip, [(ip)-[:PART_OF]-(s:Subnet) | s.range] as subnets
         WITH ip, subnets, [(ip)-[:PART_OF]-(s:Subnet)-[:HAS]-(c:Contact) | c.name] as contacts
-        WITH ip, subnets, contacts, [(ip)-[:RESOLVES_TO]-(d:Domain) | d.domain_name] as domains
+        WITH ip, subnets, contacts, [(ip)-[:RESOLVES_TO]-(d:DomainName) | d.domain_name] as domains
         WITH ip, subnets, contacts, domains, [(ip)-[:HAS_ASSIGNED]-(Node)-[:IS_A]-(Host)-[:HAS_IDENTITY]-(Component)-[:SUPPORTS]-(m:Mission) | m.name] as missions
         RETURN ip.address as ip, subnets, contacts, domains, missions
         ORDER BY ip.address
@@ -190,27 +191,23 @@ class RESTAdapter(GeneralAdapter):
 
     def _default_ip_address_parent_subnets_constraint(self) -> None:
         query_ipv4_without_parents = r"""
-        MATCH (ip:IP) WHERE NOT EXISTS ((ip)-[:PART_OF]->(:Subnet)) AND ip.address =~ ".+\..+"
+        MATCH (ip:IP) WHERE NOT EXISTS ((ip)-[:PART_OF]->(:Subnet)) AND ip.version = 4
         MATCH (s:Subnet {range: "0.0.0.0/0"})
         MERGE (ip)-[:PART_OF]->(s)
         """
         query_ipv6_without_parents = """
-        MATCH (ip:IP) WHERE NOT EXISTS ((ip)-[:PART_OF]->(:Subnet)) AND ip.address =~ ".+:.+"
+        MATCH (ip:IP) WHERE NOT EXISTS ((ip)-[:PART_OF]->(:Subnet)) AND ip.version = 6
         MATCH (s:Subnet {range: "::/0"})
         MERGE (ip)-[:PART_OF]->(s)
         """
         query_ipv4_delete_internet_relict = """
         MATCH (internet:Subnet {range: "0.0.0.0/0"})
-        MATCH (subnet:Subnet) WHERE subnet.range <> "0.0.0.0/0"
-        MATCH (ip:IP) WHERE EXISTS ((ip)-[:PART_OF]->(internet)) AND EXISTS ((ip)-[:PART_OF]->(subnet))
-        MATCH (ip)-[r:PART_OF]->(internet)
+        MATCH (ip:IP)-[r:PART_OF]->(internet) WHERE count{(ip)-[:PART_OF]-(:Subnet)} > 1
         DELETE r
         """
         query_ipv6_delete_internet_relict = """
         MATCH (internet:Subnet {range: "::/0"})
-        MATCH (subnet:Subnet) WHERE subnet.range <> "::/0"
-        MATCH (ip:IP) WHERE EXISTS ((ip)-[:PART_OF]->(internet)) AND EXISTS ((ip)-[:PART_OF]->(subnet))
-        MATCH (ip)-[r:PART_OF]->(internet)
+        MATCH (ip:IP)-[r:PART_OF]->(internet) WHERE count{(ip)-[:PART_OF]-(:Subnet)} > 1
         DELETE r
         """
         self._run_query(query_ipv4_without_parents)
@@ -220,27 +217,23 @@ class RESTAdapter(GeneralAdapter):
 
     def _default_subnet_parent_subnets_constraint(self) -> None:
         query_ipv4_without_parents = r"""
-        MATCH (s:Subnet) WHERE NOT EXISTS ((s)-[:PART_OF]->(:Subnet)) AND s.range =~ ".+\..+" AND s.range <> "0.0.0.0/0"
+        MATCH (s:Subnet) WHERE NOT EXISTS ((s)-[:PART_OF]->(:Subnet)) AND s.version = 4 AND s.range <> "0.0.0.0/0"
         MATCH (internet:Subnet {range: "0.0.0.0/0"})
         MERGE (s)-[:PART_OF]->(internet)
         """
         query_ipv6_without_parents = """
-        MATCH (s:Subnet) WHERE NOT EXISTS ((s)-[:PART_OF]->(:Subnet)) AND s.range =~ ".+:.+" AND s.range <> "::/0"
+        MATCH (s:Subnet) WHERE NOT EXISTS ((s)-[:PART_OF]->(:Subnet)) AND s.version = 6 AND s.range <> "::/0"
         MATCH (internet:Subnet {range: "::/0"})
         MERGE (s)-[:PART_OF]->(internet)
         """
         query_ipv4_delete_internet_relict = """
         MATCH (internet:Subnet {range: "0.0.0.0/0"})
-        MATCH (parent:Subnet) WHERE parent.range <> "0.0.0.0/0"
-        MATCH (subnet:Subnet) WHERE EXISTS ((subnet)-[:PART_OF]->(internet)) AND EXISTS ((subnet)-[:PART_OF]->(parent))
-        MATCH (subnet)-[r:PART_OF]->(internet)
+        MATCH (subnet:Subnet)-[r:PART_OF]->(internet) WHERE count{(subnet)-[:PART_OF]-(:Subnet)} > 1
         DELETE r
         """
         query_ipv6_delete_internet_relict = """
         MATCH (internet:Subnet {range: "::/0"})
-        MATCH (parent:Subnet) WHERE parent.range <> "::/0"
-        MATCH (subnet:Subnet) WHERE EXISTS ((subnet)-[:PART_OF]->(internet)) AND EXISTS ((subnet)-[:PART_OF]->(parent))
-        MATCH (subnet)-[r:PART_OF]->(internet)
+        MATCH (subnet:Subnet)-[r:PART_OF]->(internet) WHERE count{(subnet)-[:PART_OF]-(:Subnet)} > 1
         DELETE r
         """
         self._run_query(query_ipv4_without_parents)

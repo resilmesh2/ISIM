@@ -49,7 +49,16 @@ class GeneralAdapter:
             "CREATE CONSTRAINT FOR (n:DomainName) REQUIRE (n.domain_name, n.tag) IS UNIQUE",
             "CREATE CONSTRAINT FOR (s:NetworkService) REQUIRE (s.service, s.tag) IS UNIQUE",
             "CREATE CONSTRAINT FOR (s:SoftwareVersion) REQUIRE (s.version, s.tag) IS UNIQUE",
+            "CREATE CONSTRAINT FOR (d:Device) REQUIRE (d.name) IS UNIQUE",
+        ]
+
+        indices = [
+            "CREATE INDEX FOR (n:IP) ON (n.version, n.address)",
+            "CREATE INDEX FOR (n:Subnet) ON (n.version, n.range)"
         ]
 
         for constraint in constraints:
             self._run_query(constraint)
+
+        for index in indices:
+            self._run_query(index)

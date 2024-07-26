@@ -4,7 +4,7 @@ import msgspec
 from django.apps.config import AppConfig
 from neo4j.exceptions import ClientError
 
-from isim_rest.asset_management.data_formats.input_dtos import AssetListDTO
+from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig as ISIMConfig
 from neo4j_adapter.rest_adapter import RESTAdapter
@@ -31,6 +31,6 @@ class AssetManagementConfig(AppConfig):
             client.init_db()
         except ClientError as e:
             print(e)  # todo replace with logging
-        data = msgspec.convert(initial_data, type=AssetListDTO, dec_hook=dec_hook_ip)
+        data = msgspec.convert(initial_data, type=AssetListInputDTO, dec_hook=dec_hook_ip)
         json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
         client.store_assets(json_string)
