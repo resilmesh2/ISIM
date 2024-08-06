@@ -1,4 +1,4 @@
-FROM python:3.12-bookworm as build
+FROM python:3.12-bookworm AS build
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY . .
 COPY pyproject.toml poetry.lock ./
 RUN . /venv/bin/activate && ~/.local/bin/poetry install --no-root --only main
 
-FROM python:3.12-slim-bookworm as runtime
+FROM python:3.12-slim-bookworm AS runtime
 ENV VIRTUAL_ENV=/venv \
 	PATH=/venv/bin:$PATH \
 	PYTHONFAULTHANDLER=1 \

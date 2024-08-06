@@ -5,9 +5,10 @@ services:
     ports:
       - 8000:8000
     depends_on:
-      - neo4j
+      neo4j:
+        condition: service_healthy
     volumes:
-      - ./isim_rest/neo4j_rest/conf.ini:/app/isim_rest/neo4j_rest/conf.ini
+      - ./config/conf_docker.ini:/app/config/conf.ini
     restart: unless-stopped
 
   neo4j:
@@ -27,6 +28,11 @@ services:
     depends_on:
       neo4j_load_data:
         condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:7474/"]
+      interval: 10s
+      timeout: 2s
+      retries: 10
     restart: unless-stopped
 
   neo4j_load_data:

@@ -18,11 +18,13 @@ class SubnetDTO(msgspec.Struct):
     contacts: list[str] = field(default_factory=list)
     parents: list[IP_NET_TYPE] = field(default_factory=list)
     org_units: list[str] = field(default_factory=list)
+    version: int = 4
 
     def __post_init__(self) -> None:
         for p in self.parents:
             if not self.ip_range.subnet_of(p):
                 raise ValueError(f"Declared {self.ip_range.compressed} is not subnet of {p.compressed}")
+        self.version = self.ip_range.version
 
 
 class HostDTO(msgspec.Struct):
@@ -31,11 +33,13 @@ class HostDTO(msgspec.Struct):
     subnets: list[IP_NET_TYPE] = field(default_factory=list)
     uris: list[str] = field(default_factory=list)
     tag: str | None = None
+    version: int = 4
 
     def __post_init__(self) -> None:
         for s in self.subnets:
             if not self.ip_address not in s:
                 raise ValueError(f"Declared {self.ip_address.compressed} is not in subnet {s.compressed}")
+        self.version = self.ip_address.version
 
 
 class SoftwareVersionDTO(msgspec.Struct):
@@ -74,10 +78,39 @@ class OrgUnitDTO(msgspec.Struct):
     parents: list[str] = field(default_factory=list)
 
 
-class AssetListDTO(msgspec.Struct):
+class AssetListInputDTO(msgspec.Struct):
     hosts: list[HostDTO] = field(default_factory=list)
     subnets: list[SubnetDTO] = field(default_factory=list)
     software_versions: list[SoftwareVersionDTO] = field(default_factory=list)
     devices: list[DeviceDTO] = field(default_factory=list)
     applications: list[ApplicationDTO] = field(default_factory=list)
     org_units: list[OrgUnitDTO] = field(default_factory=list)
+
+    def flatten_related_relationships(self) -> None:
+        declared_hosts = set()
+        declared_subnets = set()
+        related_undeclared_hosts = set()
+        related_undeclared_subnets = set()
+        # we obtain declared hosts and related_undeclared_subnet candidates from  hosts
+        for host in self.hosts:
+            declared_hosts.add(host.ip_address)
+            related_undeclared_subnets = related_undeclared_subnets.union(set(host.subnets))
+
+        # we obtain declared subnets and related_undeclared_subnet candidates from subnets
+        for subnet in self.subnets:
+            declared_subnets.add(subnet.ip_range)
+            related_undeclared_subnets = related_undeclared_subnets.union(set(subnet.parents))
+
+        # we obtain related undeclared hosts candidates from devices
+        for dev in self.devices:
+            related_undeclared_hosts.add(dev.ip_address)
+        # we obtained related undeclared hosts candidates from sw version
+        for sw in self.software_versions:
+            related_undeclared_hosts = related_undeclared_hosts.union(set(sw.ip_addresses))
+        # eliminate declared from undeclared
+        related_undeclared_hosts = related_undeclared_hosts.difference(declared_hosts)
+        related_undeclared_subnets = related_undeclared_subnets.difference(declared_subnets)
+
+        # add undeclared to asset list
+        self.hosts += [HostDTO(ip_address=h) for h in related_undeclared_hosts if h]
+        self.subnets += [SubnetDTO(ip_range=s) for s in related_undeclared_subnets if s]

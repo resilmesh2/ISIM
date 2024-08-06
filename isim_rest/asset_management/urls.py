@@ -23,6 +23,7 @@ urlpatterns = [
     # BLUE LAYER
     path("missions", views.mission, name="missions"),
     path("assets", views.assets, name="assets"),
+    path("asset_info", views.asset_info, name="asset_info"),
     path("ips", views.ip_assets, name="ips"),
     path("subnets", views.subnets, name="subnets"),
     path("devices", views.devices, name="devices"),
