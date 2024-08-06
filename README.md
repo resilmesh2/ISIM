@@ -65,3 +65,15 @@ Input JSON format:
 ```
 
 For more details, please, see README.md files in subcomponents.
+
+# How to run
+
+The application itself is dockerized. For local non-production deployment, repository offers a simple docker compose file
+deploying instance of Neo4j, the ISIM rest as well as optional loading of initial data to Neo4j. This can be turned off by simply 
+commenting out the `neo4j_load_data` service in the compose file and the dependency on it from `neo4j` service.
+
+After running:
+```
+docker compose up -d --build
+```
+, the ISIM REST API is available at 'http://localhost:8000'
