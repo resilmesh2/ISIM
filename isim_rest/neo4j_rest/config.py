@@ -4,6 +4,7 @@ from pathlib import Path
 
 from isim_rest.neo4j_rest.settings import BASE_DIR
 
+CONF_DIR = BASE_DIR.parent / "config"
 
 @dataclass
 class Neo4jConfig:
@@ -25,7 +26,7 @@ class AppConfig:
         config_parser = ConfigParser()
         if cls._config is None:
             if config_path is None:  # pragma: no cover
-                config_path = BASE_DIR / "neo4j_rest/conf.ini"
+                config_path = CONF_DIR / "conf.ini"
             config_parser.read(config_path)
             cls._config = Config(neo4j_config=Neo4jConfig(**dict(config_parser["neo4j_config"])))
         return cls._config
