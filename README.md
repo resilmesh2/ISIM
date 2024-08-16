@@ -10,6 +10,8 @@ For more details, please, see README.md files in subcomponents.
 
 # How to run
 
+## Data preload
+
 The application itself is dockerized. For local non-production deployment, repository offers a simple docker compose file
 deploying instance of Neo4j, the ISIM rest as well as optional loading of initial data to Neo4j. This can be turned off by simply 
 commenting out the `neo4j_load_data` service in the compose file and the dependency on it from `neo4j` service.
@@ -24,12 +26,13 @@ If you want to load the initial data from Neo4j dump, you can either:
 > Be aware that `neo4j_load_data` container overwrites the target database data. If you are using the application in production
 > and you need data persistence, you SHOULD NOT run this container after your initial setup.
 
+## Running the app
 
 After running:
 ```
 docker compose up -d
 ```
-, the ISIM REST API is available at 'http://localhost:8000'.
+, the ISIM REST API is available at http://localhost:8000.
 
 If you need to rebuild the image (e. g. there is a new version of the application) run:
 ```
