@@ -20,6 +20,11 @@ If you want to load the initial data from Neo4j dump, you can either:
 - set the environment variable in your shell
 - replace the ${DATA_PATH} occurances with your path
 
+> [!WARNING]
+> Be aware that `neo4j_load_data` container overwrites the target database data. If you are using the application in production
+> and you need data persistence, you SHOULD NOT run this container after your initial setup.
+
+
 After running:
 ```
 docker compose up -d
