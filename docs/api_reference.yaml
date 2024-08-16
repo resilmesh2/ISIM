@@ -1,0 +1,327 @@
+openapi: 3.0.3
+info:
+  title: "ISIM"
+  version: 0.1.0
+paths:
+  /assets:
+    post:
+      tags:
+        - Assets
+      description: Upload asset information to ISIM
+      operationId: store_assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetInformationInput'
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'Processed successfully'
+        "422":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'Bad input: <error message>'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'Exception on neo4j side, set operation failed. <error message>'
+  /asset_info:
+    get:
+      tags:
+        - Assets
+      description: Get information about IP address
+      operationId: ip_asset_info
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: ip
+          in: query
+          schema:
+            type: string
+            format: ip
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IPAssetInformation'
+  /missions:
+    get:
+      tags:
+        - Missions
+      description: TODO Return information about stored missions
+      operationId: get_missions
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+                example: TODO
+    post:
+      tags:
+        - Missions
+      description: TODO Upload mission information to ISIM
+      operationId: store_missions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+              example: TODO
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'Processed successfully'
+        "422":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'Bad input: <error message>'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 'Exception on neo4j side, set operation failed. <error message>'
+components:
+  schemas:
+    Host:
+      type: object
+      properties:
+        ip_address:
+          type: string
+          format: ip
+          example: 127.0.0.1
+        domain_names:
+          type: array
+          items:
+            type: string
+            format: domain
+            example: ["test1.com", "test2.com"]
+        subnets:
+          type: array
+          items:
+            type: string
+            format: ip
+            example: ["10.0.0.0/16"]
+        uris:
+          type: array
+          items:
+            type: string
+            format: uri
+            example: ["https://test1.com/api"]
+        tag:
+          type: array
+          items:
+            type: string
+            example: ["localhost", "mandatory"]
+      required:
+        - ip_address
+    Subnet:
+      type: object
+      properties:
+        ip_range:
+          type: string
+          format: ip
+          example: 10.0.0.0/8
+        note:
+          type: string
+          example: "private network"
+        contacts:
+          type: array
+          items:
+            type: string
+            format: e-mail
+            example: ["admin@test.com"]
+        parents:
+          type: array
+          items:
+            type: string
+            format: ip
+            example: ["0.0.0.0/0"]
+        org_units:
+          type: array
+          items:
+            type: string
+            example: ["OrgA", "SubOrgD"]
+      required:
+        - ip_range
+    SoftwareVersion:
+      type: object
+      properties:
+        service:
+          type: string
+          example: "ssh"
+        version:
+          type: string
+          format: cpe
+          example: "cpe:/a:openbsd:openssh:7.4"
+        protocol:
+          type: string
+          example: "tcp"
+        port:
+          type: integer
+          example: 22
+        ip_addresses:
+          type: array
+          items:
+            type: string
+            format: ip
+            example: ["127.0.0.1", "10.0.0.35"]
+        tag:
+          type: array
+          items:
+            type: string
+            example: ["core"]
+      anyOf:
+        - required:
+          - service
+          - port
+          - protocol
+        - required:
+          - version
+    Device:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "DevA"
+    Application:
+      type: object
+      properties:
+        name:
+          type: string
+          example: SSH
+        device:
+          type: string
+          description: "Represents name of the Device entity, there will be relationship between Application and Device"
+          example: "DevA"
+      required:
+        - name
+        - device
+    OrgUnit:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "OrgA"
+        locations:
+          type: array
+          items:
+            type: string
+            example: ["Brno"]
+        parents:
+          type: array
+          description: List of OrgUnits that are parents of this OrgUnit
+          items:
+            type: string
+            example: ["OrgPrime"]
+      required:
+        - name
+    AssetInformationInput:
+      type: object
+      properties:
+        hosts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Host'
+        subnets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subnet'
+        software_versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoftwareVersion'
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        applications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
+        org_units:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgUnit'
+
+    IPAssetInformation:
+      type: object
+      properties:
+        ip:
+          type: string
+          format: ip
+          example: 10.1.2.3
+        domain_names:
+          type: array
+          items:
+            type: string
+            format: domain
+            example: ["test.com"]
+        subnets:
+          type: array
+          items:
+            type: string
+            format: ip
+            example: ["0.0.0.0/0", "10.0.0.0/8"]
+        contacts:
+          type: array
+          items:
+            type: string
+            format: e-mail
+            example: ["admin@test.com"]
+        critical:
+          type: integer
+          minimum: 0
+          maximum: 1
+          description: 1 if IP is assigned to any mission, 0 otherwise
+        missions:
+          type: array
+          items:
+            type: string
+            example: ["MissionA"]
+tags:
+  - name: Assets
+    description: |-
+      Assets API allows users to store and query asset information in ISIM component
