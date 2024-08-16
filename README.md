@@ -22,9 +22,14 @@ If you want to load the initial data from Neo4j dump, you can either:
 
 After running:
 ```
+docker compose up -d
+```
+, the ISIM REST API is available at 'http://localhost:8000'.
+
+If you need to rebuild the image (e. g. there is a new version of the application) run:
+```
 docker compose up -d --build
 ```
-, the ISIM REST API is available at 'http://localhost:8000'
 
 # Configuration
 Configuration files are located in the [config](config) folder. Currently, the project provides configuration file
@@ -45,4 +50,4 @@ password = supertestovaciheslo
 
 
 # API reference
-API reference is available [here](./docs/api_reference.yaml)
+API reference is available as an OpenAPI document [here](./docs/api_reference.yaml)
