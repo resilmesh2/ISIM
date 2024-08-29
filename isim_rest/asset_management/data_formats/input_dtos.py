@@ -37,7 +37,7 @@ class HostDTO(msgspec.Struct):
 
     def __post_init__(self) -> None:
         for s in self.subnets:
-            if not self.ip_address not in s:
+            if self.ip_address not in s:
                 raise ValueError(f"Declared {self.ip_address.compressed} is not in subnet {s.compressed}")
         self.version = self.ip_address.version
 
