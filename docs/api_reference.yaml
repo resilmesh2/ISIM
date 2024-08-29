@@ -113,18 +113,16 @@ paths:
                       items:
                         $ref: "#/components/schemas/ServiceInput"
                     aggregations:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          or:
-                            type: array
-                            items:
-                              type: integer
-                          and:
-                            type: array
-                            items:
-                              type: integer
+                      type: object
+                      properties:
+                        or:
+                          type: array
+                          items:
+                            type: integer
+                        and:
+                          type: array
+                          items:
+                            type: integer
                     hosts:
                       type: array
                       items:
@@ -146,9 +144,9 @@ paths:
                       items:
                         type: object
                         properties:
-                          from:
+                          first:
                             type: integer
-                          to:
+                          second:
                             type: integer
                     dependencies:
                       type: array

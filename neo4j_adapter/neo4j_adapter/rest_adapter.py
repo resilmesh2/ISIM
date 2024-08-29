@@ -32,28 +32,7 @@ class RESTAdapter(GeneralAdapter):
         :param json_string: a string obtained from JSON file
         :return: None
         """
-        query = (
-            "WITH apoc.convert.fromJsonMap($json_string) as value "
-            "UNWIND value.nodes as nodes "
-            "UNWIND nodes.missions as missions "
-            "MERGE (mission:Mission {criticality: missions.criticality, "
-            "name: missions.name, description: missions.description, structure: apoc.convert.toJson(value)}) "
-            "WITH nodes, value "
-            "UNWIND nodes.services as components "
-            "MERGE (component:Component {name: components.name}) "
-            "WITH nodes, value "
-            "UNWIND nodes.hosts as host "
-            "MERGE (ip:IP {address: host.ip}) "
-            "MERGE (ip)<-[:HAS_ASSIGNED]-(nod:Node) "
-            "MERGE (nod)-[:IS_A]->(hos:Host {hostname: host.hostname}) "
-            "WITH value "
-            "UNWIND value.relationships as relationships "
-            "WITH relationships "
-            "UNWIND relationships.supports as supports "
-            "MATCH (mission:Mission {name: supports.from}) "
-            "MATCH (component:Component {name: supports.to}) "
-            "MERGE(mission)<-[:SUPPORTS]-(component) "
-        )
+        query = Path(BASE_DIR / "assets/missions_update_query.cypher").read_text()
 
         params = {"json_string": json_string}
 
