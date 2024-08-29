@@ -1,16 +1,17 @@
 #!/usr/bin/python3.12
-from typing import Any
+from typing import Any, LiteralString, cast
 
 from neo4j import GraphDatabase, basic_auth
+from neo4j._sync.driver import Driver
 
 
 class GeneralAdapter:
     def __init__(
         self,
+        password: str,
         bolt: str = "bolt://localhost:7687",
         user: str = "neo4j",
-        password: str | None = None,
-        driver: str | None = None,
+        driver: Driver | None = None,
         lifetime: int = 200,
         encrypted: bool = False,
     ) -> None:
@@ -22,11 +23,11 @@ class GeneralAdapter:
         else:
             self._driver = driver
 
-    def _run_query(self, query: str, **kwargs: Any) -> list[Any]:
+    def _run_query(self, query: LiteralString, **kwargs: Any) -> list[Any]:
         records, _, _ = self._driver.execute_query(query, **kwargs)
         return records
 
-    def _get_driver(self) -> None:
+    def _get_driver(self) -> Driver:
         return self._driver
 
     def _close(self) -> None:
@@ -58,7 +59,9 @@ class GeneralAdapter:
         ]
 
         for constraint in constraints:
+            constraint = cast(LiteralString, constraint)
             self._run_query(constraint)
 
         for index in indices:
+            index = cast(LiteralString, index)
             self._run_query(index)

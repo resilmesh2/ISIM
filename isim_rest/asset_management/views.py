@@ -2,10 +2,10 @@ import json
 
 import msgspec.json
 from django.http import HttpRequest
-from msgspec._core import ValidationError
+from msgspec import ValidationError
 from neo4j.exceptions import ClientError, DatabaseError, TransientError
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view  # type: ignore
 from rest_framework.response import Response
 
 from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO
@@ -23,18 +23,18 @@ client = RESTAdapter(
 
 
 def get_limit(request: HttpRequest) -> int:
-    limit = request.GET.get("limit")
+    limit_param = request.GET.get("limit", DEFAULT_LIMIT)
     try:
-        limit = int(limit)
+        limit = int(limit_param)
     except (TypeError, ValueError):
         limit = DEFAULT_LIMIT
     return limit
 
 
-def get_offset(request: HttpRequest) -> int | None:
-    offset = request.GET.get("offset", DEFAULT_OFFSET)
+def get_offset(request: HttpRequest) -> int:
+    offset_param = request.GET.get("offset", DEFAULT_OFFSET)
     try:
-        offset = int(offset)
+        offset = int(offset_param)
     except (TypeError, ValueError):
         offset = DEFAULT_OFFSET
     return offset
@@ -48,10 +48,10 @@ def mission(request: HttpRequest) -> Response:
     :param request: GET/POST request
     :return: HTTP response
     """
-    if request.method == "GET":
+    if request.method == "GET":  # type: ignore
         limit = get_limit(request)
         return Response(client.get_all_mission(limit))
-    properties = request.data
+    properties = request.data  # type:  ignore
     try:
         data = json.dumps(properties)
         return Response(client.create_missions_and_components_string(data))
@@ -80,7 +80,7 @@ def assets(request: HttpRequest) -> Response:
 
 @api_view(["GET"])
 def asset_info(request: HttpRequest) -> Response:
-    ip = request.GET.get("ip", None)
+    ip: str | None = request.GET.get("ip", None)
     limit = get_limit(request)
     offset = get_offset(request)
     asset_infos = client.get_ip_asset_info(limit=limit, offset=offset, ip=ip)

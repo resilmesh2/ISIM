@@ -9,9 +9,9 @@ CONF_DIR = BASE_DIR.parent / "config"
 
 @dataclass
 class Neo4jConfig:
+    password: str
     bolt: str = "bolt://localhost:7687"
     user: str = "neo4j"
-    password: str | None = None
 
 
 @dataclass
