@@ -22,7 +22,7 @@ class SubnetDTO(msgspec.Struct):
 
     def __post_init__(self) -> None:
         for p in self.parents:
-            if not self.ip_range.subnet_of(p):
+            if self.ip_range.version != p.version or not self.ip_range.subnet_of(p):  # type: ignore
                 raise ValueError(f"Declared {self.ip_range.compressed} is not subnet of {p.compressed}")
         self.version = self.ip_range.version
 
@@ -37,7 +37,7 @@ class HostDTO(msgspec.Struct):
 
     def __post_init__(self) -> None:
         for s in self.subnets:
-            if not self.ip_address not in s:
+            if self.ip_address not in s:
                 raise ValueError(f"Declared {self.ip_address.compressed} is not in subnet {s.compressed}")
         self.version = self.ip_address.version
 
@@ -87,10 +87,10 @@ class AssetListInputDTO(msgspec.Struct):
     org_units: list[OrgUnitDTO] = field(default_factory=list)
 
     def flatten_related_relationships(self) -> None:
-        declared_hosts = set()
-        declared_subnets = set()
-        related_undeclared_hosts = set()
-        related_undeclared_subnets = set()
+        declared_hosts: set[IPv4Interface | IPv6Interface] = set()
+        declared_subnets: set[IPv4Network | IPv6Network] = set()
+        related_undeclared_hosts: set[IPv4Interface | IPv6Interface] = set()
+        related_undeclared_subnets: set[IPv4Network | IPv6Network] = set()
         # we obtain declared hosts and related_undeclared_subnet candidates from  hosts
         for host in self.hosts:
             declared_hosts.add(host.ip_address)
@@ -102,8 +102,7 @@ class AssetListInputDTO(msgspec.Struct):
             related_undeclared_subnets = related_undeclared_subnets.union(set(subnet.parents))
 
         # we obtain related undeclared hosts candidates from devices
-        for dev in self.devices:
-            related_undeclared_hosts.add(dev.ip_address)
+        related_undeclared_hosts.update(dev.ip_address for dev in self.devices if dev.ip_address)
         # we obtained related undeclared hosts candidates from sw version
         for sw in self.software_versions:
             related_undeclared_hosts = related_undeclared_hosts.union(set(sw.ip_addresses))

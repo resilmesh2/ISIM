@@ -1,7 +1,6 @@
 import json
-from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, LiteralString, cast
 
 from neo4j_adapter.dtos import IPAssetInformationDTO
 from neo4j_adapter.general_adapter import GeneralAdapter
@@ -33,29 +32,8 @@ class RESTAdapter(GeneralAdapter):
         :param json_string: a string obtained from JSON file
         :return: None
         """
-        query = (
-            "WITH apoc.convert.fromJsonMap($json_string) as value "
-            "UNWIND value.nodes as nodes "
-            "UNWIND nodes.missions as missions "
-            "MERGE (mission:Mission {criticality: missions.criticality, "
-            "name: missions.name, description: missions.description, structure: apoc.convert.toJson(value)}) "
-            "WITH nodes, value "
-            "UNWIND nodes.services as components "
-            "MERGE (component:Component {name: components.name}) "
-            "WITH nodes, value "
-            "UNWIND nodes.hosts as host "
-            "MERGE (ip:IP {address: host.ip}) "
-            "MERGE (ip)<-[:HAS_ASSIGNED]-(nod:Node) "
-            "MERGE (nod)-[:IS_A]->(hos:Host {hostname: host.hostname}) "
-            "WITH value "
-            "UNWIND value.relationships as relationships "
-            "WITH relationships "
-            "UNWIND relationships.supports as supports "
-            "MATCH (mission:Mission {name: supports.from}) "
-            "MATCH (component:Component {name: supports.to}) "
-            "MERGE(mission)<-[:SUPPORTS]-(component) "
-        )
-
+        query = Path(BASE_DIR / "assets/missions_update_query.cypher").read_text()
+        query = cast(LiteralString, query)
         params = {"json_string": json_string}
 
         self._run_query(query, **params)
@@ -183,6 +161,7 @@ class RESTAdapter(GeneralAdapter):
     def store_assets(self, json_string: str) -> None:
         query = Path(BASE_DIR / "assets/asset_update_query.cypher").read_text()
         params = {"json_string": json_string}
+        query = cast(LiteralString, query)
         self._run_query(query, **params)
         self._default_ip_address_parent_subnets_constraint()
         self._default_subnet_parent_subnets_constraint()

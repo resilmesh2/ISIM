@@ -99,8 +99,90 @@ paths:
         content:
           application/json:
             schema:
-              type: string
-              example: TODO
+              type: object
+              properties:
+                nodes:
+                  type: object
+                  properties:
+                    missions:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/MissionInput'
+                    services:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/ServiceInput"
+                    aggregations:
+                      type: object
+                      properties:
+                        or:
+                          type: array
+                          items:
+                            type: integer
+                        and:
+                          type: array
+                          items:
+                            type: integer
+                    hosts:
+                      type: array
+                      items:
+                        $ref: "#/components/schemas/NamedHostInput"
+                relationships:
+                  type: object
+                  properties:
+                    one_way:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          from:
+                            type: integer
+                          to:
+                            type: integer
+                    two_way:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          first:
+                            type: integer
+                          second:
+                            type: integer
+                    dependencies:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          from:
+                            type: integer
+                          to:
+                            type: integer
+                    supports:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          from:
+                            type: string
+                            example: "Public-Facing Services - BT1"
+                            description: "Name of a mission"
+                          to:
+                            type: string
+                            example: "Mail - BT1"
+                            description: "Name of a service"
+                    has_identity:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          from:
+                            type: string
+                            example: "Mail - BT1"
+                            description: "Name of a service"
+                          to:
+                            type: string
+                            example: "mail"
+                            description: "Hostname of a host"
       responses:
         "201":
           description: OK
@@ -320,7 +402,58 @@ components:
           type: array
           items:
             type: string
-            example: ["MissionA"]
+            example: ["Public-Facing Services - BT1"]
+
+    MissionInput:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Public-Facing Services - BT1
+        criticality:
+          type: integer
+          example: 5
+        description:
+          type: string
+          example: This mission represents services that must be available for public.
+      required:
+        - id
+        - name
+        - criticality
+    ServiceInput:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Mail - BT1"
+      required:
+        - id
+        - name
+    NamedHostInput:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        hostname:
+          type: string
+          example: "mail"
+        ip:
+          type: string
+          format: ip
+          example: 10.0.0.2
+      required:
+        - id
+        - hostname
+        - ip
+
+
 tags:
   - name: Assets
     description: |-

@@ -24,8 +24,10 @@ def dec_hook_ip(type_: type[Any], obj: Any) -> Any:
 
 
 def enc_hook_ip(obj: Any) -> Any:
-    if isinstance(obj, IPv4Interface | IPv6Interface | IPv4Address | IPv6Address):
+    if isinstance(obj, IPv4Interface | IPv6Interface):
         return obj.ip.compressed
+    if isinstance(obj, IPv4Address | IPv6Address):
+        return obj.compressed
     if isinstance(obj, IPv4Network | IPv6Network):
         return obj.with_prefixlen
     # Raise a NotImplementedError for other types
