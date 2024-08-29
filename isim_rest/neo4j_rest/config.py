@@ -6,6 +6,7 @@ from isim_rest.neo4j_rest.settings import BASE_DIR
 
 CONF_DIR = BASE_DIR.parent / "config"
 
+
 @dataclass
 class Neo4jConfig:
     bolt: str = "bolt://localhost:7687"

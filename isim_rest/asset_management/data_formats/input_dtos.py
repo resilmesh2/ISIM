@@ -102,8 +102,7 @@ class AssetListInputDTO(msgspec.Struct):
             related_undeclared_subnets = related_undeclared_subnets.union(set(subnet.parents))
 
         # we obtain related undeclared hosts candidates from devices
-        for dev in self.devices:
-            related_undeclared_hosts.add(dev.ip_address)
+        related_undeclared_hosts.update(dev.ip_address for dev in self.devices)
         # we obtained related undeclared hosts candidates from sw version
         for sw in self.software_versions:
             related_undeclared_hosts = related_undeclared_hosts.union(set(sw.ip_addresses))

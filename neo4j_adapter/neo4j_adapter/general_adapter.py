@@ -54,7 +54,7 @@ class GeneralAdapter:
 
         indices = [
             "CREATE INDEX FOR (n:IP) ON (n.version, n.address)",
-            "CREATE INDEX FOR (n:Subnet) ON (n.version, n.range)"
+            "CREATE INDEX FOR (n:Subnet) ON (n.version, n.range)",
         ]
 
         for constraint in constraints:
