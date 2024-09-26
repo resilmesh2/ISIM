@@ -32,7 +32,7 @@ class HostDTO(msgspec.Struct):
     domain_names: list[str] = field(default_factory=list)
     subnets: list[IP_NET_TYPE] = field(default_factory=list)
     uris: list[str] = field(default_factory=list)
-    tag: str | None = None
+    tag: list[str] = field(default_factory=list)
     version: int = 4
 
     def __post_init__(self) -> None:
@@ -48,7 +48,7 @@ class SoftwareVersionDTO(msgspec.Struct):
     service: str | None = None
     protocol: str | None = None
     port: int | None = None
-    tag: str | None = None
+    tag: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.version is None and (self.protocol is None or self.port is None or self.service is None):

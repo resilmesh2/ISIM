@@ -219,24 +219,24 @@ components:
           items:
             type: string
             format: domain
-            example: ["test1.com", "test2.com"]
+          example: ["test1.com", "test2.com"]
         subnets:
           type: array
           items:
             type: string
             format: ip
-            example: ["10.0.0.0/16"]
+          example: ["127.0.0.0/16"]
         uris:
           type: array
           items:
             type: string
             format: uri
-            example: ["https://test1.com/api"]
+          example: ["https://test1.com/api"]
         tag:
           type: array
           items:
             type: string
-            example: ["localhost", "mandatory"]
+          example: ["localhost", "mandatory"]
       required:
         - ip_address
     Subnet:
@@ -254,18 +254,18 @@ components:
           items:
             type: string
             format: e-mail
-            example: ["admin@test.com"]
+          example: ["admin@test.com"]
         parents:
           type: array
           items:
             type: string
             format: ip
-            example: ["0.0.0.0/0"]
+          example: ["0.0.0.0/0"]
         org_units:
           type: array
           items:
             type: string
-            example: ["OrgA", "SubOrgD"]
+          example: ["OrgA", "SubOrgD"]
       required:
         - ip_range
     SoftwareVersion:
@@ -289,12 +289,12 @@ components:
           items:
             type: string
             format: ip
-            example: ["127.0.0.1", "10.0.0.35"]
+          example: ["127.0.0.1", "10.0.0.35"]
         tag:
           type: array
           items:
             type: string
-            example: ["core"]
+          example: ["core"]
       anyOf:
         - required:
           - service
@@ -331,13 +331,13 @@ components:
           type: array
           items:
             type: string
-            example: ["Brno"]
+          example: ["Brno"]
         parents:
           type: array
           description: List of OrgUnits that are parents of this OrgUnit
           items:
             type: string
-            example: ["OrgPrime"]
+          example: ["OrgPrime"]
       required:
         - name
     AssetInformationInput:
@@ -380,19 +380,19 @@ components:
           items:
             type: string
             format: domain
-            example: ["test.com"]
+          example: ["test.com"]
         subnets:
           type: array
           items:
             type: string
             format: ip
-            example: ["0.0.0.0/0", "10.0.0.0/8"]
+          example: ["0.0.0.0/0", "10.0.0.0/8"]
         contacts:
           type: array
           items:
             type: string
             format: e-mail
-            example: ["admin@test.com"]
+          example: ["admin@test.com"]
         critical:
           type: integer
           minimum: 0
@@ -402,7 +402,7 @@ components:
           type: array
           items:
             type: string
-            example: ["Public-Facing Services - BT1"]
+          example: ["Public-Facing Services - BT1"]
 
     MissionInput:
       type: object
