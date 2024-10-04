@@ -98,26 +98,26 @@ def ip_assets(request: HttpRequest) -> Response:
 @api_view(["GET"])
 def subnets(request: HttpRequest) -> Response:
     limit = get_limit(request)
-    offset = get_limit(request)
+    offset = get_offset(request)
     return Response(client.get_subnets(limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 def devices(request: HttpRequest) -> Response:
     limit = get_limit(request)
-    offset = get_limit(request)
+    offset = get_offset(request)
     return Response(client.get_devices(limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 def org_units(request: HttpRequest) -> Response:
     limit = get_limit(request)
-    offset = get_limit(request)
+    offset = get_offset(request)
     return Response(client.get_organization_units(limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 def applications(request: HttpRequest) -> Response:
     limit = get_limit(request)
-    offset = get_limit(request)
+    offset = get_offset(request)
     return Response(client.get_applications(limit=limit, offset=offset), status=status.HTTP_200_OK)
