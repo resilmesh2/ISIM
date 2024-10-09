@@ -121,3 +121,21 @@ def applications(request: HttpRequest) -> Response:
     limit = get_limit(request)
     offset = get_offset(request)
     return Response(client.get_applications(limit=limit, offset=offset), status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+def cves(request: HttpRequest) -> Response:
+    limit = get_limit(request)
+    offset = get_offset(request)
+    return Response(client.get_all_cve(limit=limit, offset=offset), status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+def cve(request: HttpRequest, cve_id: str) -> Response:
+    limit = get_limit(request)
+    offset = get_offset(request)
+    return Response(client.get_cve(cve_id=cve_id, limit=limit, offset=offset), status=status.HTTP_200_OK)
+
+@api_view(["GET"])
+def ip_cves(request: HttpRequest, ip: str) -> Response:
+    limit = get_limit(request)
+    offset = get_offset(request)
+    return Response(client.get_ip_cve(ip=ip, limit=limit, offset=offset), status=status.HTTP_200_OK)
