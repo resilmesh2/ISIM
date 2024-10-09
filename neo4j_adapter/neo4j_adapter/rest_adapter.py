@@ -129,6 +129,35 @@ class RESTAdapter(GeneralAdapter):
         """
         return self._run_query(query, limit=limit, offset=offset)
 
+    def get_all_cve(self, limit: int = 50, offset: int = 0) -> list[Any]:
+        query = """
+        MATCH (cve:CVE) 
+        RETURN {description: cve.description, CVE_id: cve.CVE_id} AS cve
+        SKIP $offset
+        LIMIT $limit
+        """
+        return self._run_query(query, limit=limit, offset=offset)
+
+    def get_cve(self, cve_id: str, limit: int = 50, offset: int = 0) -> list[Any]:
+        query = """
+        MATCH (cve:CVE {CVE_id: $cve_id})
+        RETURN cve
+        SKIP $offset
+        LIMIT $limit
+        """
+        return self._run_query(query, cve_id=cve_id, limit=limit, offset=offset)
+
+    def get_ip_cve(self, ip: str, limit: int = 50, offset: int = 0) -> list[Any]:
+        query = """
+        MATCH (ip:IP {address: $ip})<-[:HAS_ASSIGNED]-(nod:Node)-[:IS_A]-(host:Host) 
+        WITH host 
+        MATCH (host)<-[:ON]-(soft:SoftwareVersion)<-[:IN]-(vul:Vulnerability)-[:REFERS_TO]->(cve:CVE) 
+        RETURN cve 
+        SKIP $offset 
+        LIMIT $limit
+        """
+        return self._run_query(query, ip=ip, limit=limit, offset=offset)
+
     # requested GETs
     def get_ip_asset_info(
         self, limit: int = 500, offset: int = 0, ip: str | None = None
