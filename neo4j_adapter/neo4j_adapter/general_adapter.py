@@ -2,6 +2,7 @@
 from typing import Any, LiteralString, cast
 
 from neo4j import GraphDatabase, basic_auth
+from neo4j._api import NotificationMinimumSeverity, NotificationDisabledCategory
 from neo4j._sync.driver import Driver
 
 
@@ -18,7 +19,11 @@ class GeneralAdapter:
         self._user = user
         if driver is None:
             self._driver = GraphDatabase.driver(
-                bolt, auth=basic_auth(user, password), max_connection_lifetime=lifetime, encrypted=encrypted
+                bolt,
+                auth=basic_auth(user, password),
+                max_connection_lifetime=lifetime,
+                encrypted=encrypted,
+                notifications_disabled_categories=[NotificationDisabledCategory.UNRECOGNIZED]
             )
         else:
             self._driver = driver
