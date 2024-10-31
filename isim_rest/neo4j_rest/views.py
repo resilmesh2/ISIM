@@ -1,7 +1,7 @@
 from django.http import HttpRequest, HttpResponse
 from django.template import loader
 from rest_framework import status
-from rest_framework.decorators import api_view, renderer_classes
+from rest_framework.decorators import api_view, renderer_classes  # type: ignore
 from rest_framework.renderers import TemplateHTMLRenderer
 
 
