@@ -1,78 +1,14 @@
-scalar JSON
-scalar JSONObject
-
-type Device {
-  name: String!
-  state: String
-  power: String
-  hardware_version: HardwareVersion @relationship(type: "HAS", direction: OUT)
-  applications: [Application!]! @relationship(type: "RUNNING_ON", direction: IN)
-}
-
-type HardwareVersion {
-  manufacturer: String!
-  model: String!
-  devices: [Device!]! @relationship(type: "HAS", direction: IN)
-}
-
 type Application {
   name: String!
   device: Device! @relationship(type: "RUNNING_ON", direction: OUT)
 }
 
-
-type SoftwareVersion {
-  tag: [String]!
-  version: String!
-  on: [Host!]! @relationship(type: "ON", direction: OUT, )
-  network_services: [NetworkService!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
-  vulnerabilities: [Vulnerability!]! @relationship(type: "IN", direction: IN)
-}
-
-type NodeObject @node(labels: "Node") {
-  has_assigned: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT)
-  is_a: [Host!]! @relationship(type:  "IS_A", direction: OUT)
-  is_dependent_on: [NodeObject!]! @relationship(type:  "IS_DEPENDENT_ON", direction: OUT)
-  is_connected_to: [NodeObject!]! @relationship(type:  "IS_CONNECTED_TO", direction: OUT)
-}
-
-type NetworkService {
-  protocol: String
-  port: Int
-  tag: [String!]!
-  service: String
-  hosts: [Host!]! @relationship(type: "ON", direction: OUT)
-  software_versions: [SoftwareVersion!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
-}
-
-type Host {
-  hostname: String
-  nodes: [NodeObject!]! @relationship(type:  "IS_A", direction: IN)
-  software_versions: [SoftwareVersion!]! @relationship(type:  "ON", direction: IN)
-  components: [Component!]! @relationship(type:  "PROVIDED_BY", direction: IN)
-  network_services: [NetworkService!]! @relationship(type: "ON", direction: IN)
-}
-
-type Contact {
+type Component {
   name: String!
-}
-
-type PhysicalEnvironment {
-  location: String!
-  org_units: [OrganizationUnit!]! @relationship(type: "TENANTS", direction: IN)
-}
-
-type OrganizationUnit {
-  name: String!
-  subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: IN)
-  locations: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT)
-}
-
-type Subnet {
-  note: String!
-  range: String!
-  part_of: [OrganizationUnit!]! @relationship(type:  "PART_OF", direction: OUT)
-  contacts: [Contact!]! @relationship(type: "HAS", direction: OUT)
+  supports_missions: [Mission!]! @relationship(type:  "SUPPORTS", direction: OUT)
+  provided_by_hosts: [Host!]! @relationship(type:  "PROVIDED_BY", direction: OUT)
+  from_mission_dependencies: [MissionDependency!]! @relationship(type: "FROM", direction: IN)
+  to_mission_dependencies: [MissionDependency!]! @relationship(type: "TO", direction: IN)
 }
 
 type Contact {
@@ -109,29 +45,83 @@ type CVE {
   vulnerabilities: [Vulnerability!]! @relationship(type:  "REFERS_TO", direction: IN)
 }
 
-type Vulnerability {
-  description: String!
-  in: [SoftwareVersion!]! @relationship(type:  "IN", direction: OUT)
-  refers_to: [CVE!]! @relationship(type:  "REFERS_TO", direction: OUT)
+type Device {
+  name: String
+  state: String
+  power: String
+  hardware_version: HardwareVersion @relationship(type: "HAS", direction: OUT)
+  applications: [Application!]! @relationship(type: "RUNNING_ON", direction: IN)
 }
 
 type DomainName {
-  domain_name: JSON
+  domain_name: String!
   tag: [String]!
   ips: [IP!]! @relationship(type:  "RESOLVES_TO", direction: IN)
 }
 
-type NetworkService {
-  port: Int!
-  protocol: String!
-  service: String!
-  tag: [String]!
+type HardwareVersion {
+  manufacturer: String!
+  model: String!
+  devices: [Device!]! @relationship(type: "HAS", direction: IN)
 }
 
-type Component {
+type Host {
+  hostname: String
+  nodes: [NodeObject!]! @relationship(type:  "IS_A", direction: IN)
+  software_versions: [SoftwareVersion!]! @relationship(type:  "ON", direction: IN)
+  components: [Component!]! @relationship(type:  "PROVIDED_BY", direction: IN)
+  network_services: [NetworkService!]! @relationship(type: "ON", direction: IN)
+}
+
+type IP {
+  address: String!
+  version: Int
+  resolves_to: [DomainName!]! @relationship(type:  "RESOLVES_TO", direction: OUT)
+  uris: [URI!]! @relationship(type: "IDENTIFIES", direction: OUT)
+  nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", direction: IN)
+  part_of: [Subnet!]! @relationship(type:  "PART_OF", direction: OUT)
+}
+
+type NetworkService {
+  protocol: String
+  port: Int
+  tag: [String!]!
+  service: String
+  hosts: [Host!]! @relationship(type: "ON", direction: OUT)
+  software_versions: [SoftwareVersion!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
+}
+
+type NodeObject @node(labels: "Node") {
+  has_assigned: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT)
+  is_a: [Host!]! @relationship(type:  "IS_A", direction: OUT)
+  is_dependent_on: [NodeObject!]! @relationship(type:  "IS_DEPENDENT_ON", direction: OUT)
+  is_connected_to: [NodeObject!]! @relationship(type:  "IS_CONNECTED_TO", direction: OUT)
+}
+
+type OrganizationUnit {
   name: String!
-  supports: [Mission!]! @relationship(type:  "SUPPORTS", direction: OUT)
-  provided_by: [Host!]! @relationship(type:  "PROVIDED_BY", direction: OUT)
+  subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: IN)
+  locations: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT)
+}
+
+type PhysicalEnvironment {
+  location: String!
+  org_units: [OrganizationUnit!]! @relationship(type: "TENANTS", direction: IN)
+}
+
+type SoftwareVersion {
+  tag: [String]!
+  version: String!
+  on: [Host!]! @relationship(type: "ON", direction: OUT, )
+  network_services: [NetworkService!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
+  vulnerabilities: [Vulnerability!]! @relationship(type: "IN", direction: IN)
+}
+
+type Subnet {
+  note: String!
+  range: String!
+  part_of: [OrganizationUnit!]! @relationship(type:  "PART_OF", direction: OUT)
+  contacts: [Contact!]! @relationship(type: "HAS", direction: OUT)
 }
 
 type Mission {
@@ -142,15 +132,25 @@ type Mission {
   components: [Component!]! @relationship(type:  "SUPPORTS", direction: IN)
 }
 
-type IP {
-  address: String!
-  resolves_to: [DomainName!]! @relationship(type:  "RESOLVES_TO", direction: OUT)
-  uris: [URI!]! @relationship(type: "IDENTIFIES", direction: OUT)
-  nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", direction: IN)
-  part_of: [Subnet!]! @relationship(type:  "PART_OF", direction: OUT)
+type MissionDependency {
+  from: [Component!]! @relationship(type: "FROM", direction: OUT)
+  to: [Component!]! @relationship(type: "TO", direction: OUT)
+}
+
+type NetworkService {
+  port: Int!
+  protocol: String!
+  service: String!
+  tag: [String]!
 }
 
 type URI {
   identifier: String!
   ips: [IP!]! @relationship(type: "IDENTIFIES", direction: IN)
+}
+
+type Vulnerability {
+  description: String!
+  in: [SoftwareVersion!]! @relationship(type:  "IN", direction: OUT)
+  refers_to: [CVE!]! @relationship(type:  "REFERS_TO", direction: OUT)
 }
