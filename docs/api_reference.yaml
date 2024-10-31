@@ -69,7 +69,7 @@ paths:
     get:
       tags:
         - Missions
-      description: TODO Return information about stored missions
+      description: Return information about stored missions
       operationId: get_missions
       parameters:
         - name: limit
@@ -88,12 +88,16 @@ paths:
           content:
             application/json:
               schema:
-                type: string
-                example: TODO
+                type: array
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MissionsInformation'
+
     post:
       tags:
         - Missions
-      description: TODO Upload mission information to ISIM
+      description: Upload mission information to ISIM
       operationId: store_missions
       requestBody:
         content:
@@ -453,7 +457,22 @@ components:
         - hostname
         - ip
 
-
+    MissionsInformation:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Public-Facing Services - BT1"
+        description:
+          type: string
+          example: "This mission represents services that must be available for public."
+        criticality:
+          type: integer
+          example: 5
+        structure:
+          type: string
+          format: json string
+          example: "{\"relationships\":{\"two_way\":[{\"first\":0,\"second\":0}],\"one_way\":[{\"from\":0,\"to\":0}],\"supports\":[{\"from\":\"Public-Facing Services - BT1\",\"to\":\"Mail - BT1\"}],\"has_identity\":[{\"from\":\"Mail - BT1\",\"to\":\"mail\"}],\"dependencies\":[{\"from\":0,\"to\":0}]},\"nodes\":{\"missions\":[{\"name\":\"Public-Facing Services - BT1\",\"criticality\":5,\"description\":\"This mission represents services that must be available for public.\",\"id\":1}],\"hosts\":[{\"hostname\":\"mail\",\"ip\":\"10.0.0.2\",\"id\":1}],\"services\":[{\"name\":\"Mail - BT1\",\"id\":1}],\"aggregations\":{\"or\":[0],\"and\":[0]}}}"
 tags:
   - name: Assets
     description: |-

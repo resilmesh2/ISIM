@@ -113,3 +113,64 @@ class AssetListInputDTO(msgspec.Struct):
         # add undeclared to asset list
         self.hosts += [HostDTO(ip_address=h) for h in related_undeclared_hosts if h]
         self.subnets += [SubnetDTO(ip_range=s) for s in related_undeclared_subnets if s]
+
+
+class MissionDTO(msgspec.Struct):
+    id: int
+    name: str
+    criticality: int
+    description: str | None = None
+
+
+class ServiceDTO(msgspec.Struct):
+    id: int
+    name: str
+
+
+class AggregationsDTO(msgspec.Struct):
+    or_: list[int] = field(default_factory=list, name="or")
+    and_: list[int] = field(default_factory=list, name="and")
+
+
+class HostMissionDTO(msgspec.Struct):
+    id: int
+    hostname: str
+    ip: IP_TYPE
+
+
+class NodeMissionDTO(msgspec.Struct):
+    aggregations: AggregationsDTO
+    missions: list[MissionDTO] = field(default_factory=list)
+    services: list[ServiceDTO] = field(default_factory=list)
+    hosts: list[HostMissionDTO] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not self.missions:
+            raise ValueError("Missions are mandatory!")
+        if not self.services:
+            raise ValueError("Services are mandatory!")
+        if not self.hosts:
+            raise ValueError("Hosts are mandatory!")
+
+
+class DirectedRelationshipDTO[T](msgspec.Struct):
+    from_: T = field(name="from")
+    to: T
+
+
+class UndirectedRelationshipDTO[T](msgspec.Struct):
+    first: T
+    second: T
+
+
+class RelationshipDTO(msgspec.Struct):
+    one_way: list[DirectedRelationshipDTO[int]] = field(default_factory=list)
+    two_way: list[UndirectedRelationshipDTO[int]] = field(default_factory=list)
+    dependencies: list[DirectedRelationshipDTO[int]] = field(default_factory=list)
+    supports: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
+    has_identity: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
+
+
+class MissionListInputDTO(msgspec.Struct):
+    nodes: NodeMissionDTO
+    relationships: RelationshipDTO
