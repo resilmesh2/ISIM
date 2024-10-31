@@ -33,7 +33,7 @@ class AssetManagementConfig(AppConfig):
         try:
             client.init_db()
         except ClientError as e:
-            if not "An equivalent constraint already exists" in e.message:
+            if "An equivalent constraint already exists" not in e.message:
                 logger.exception(e)
         data = msgspec.convert(initial_data, type=AssetListInputDTO, dec_hook=dec_hook_ip)
         json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
