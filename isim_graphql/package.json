@@ -1,0 +1,49 @@
+{
+  "name": "GraphQL-API",
+  "version": "0.0.1",
+  "description": "GraphQL API for Neo4j data",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:dev": "cross-env DEBUG=neo4j-graphql-js ./node_modules/.bin/nodemon --watch src --ext js,graphql --exec babel-node  src/index.js",
+    "build": "babel src --out-dir build && shx cp .env build 2>/dev/null || : && shx cp src/schema.graphql build",
+    "now-build": "babel src --out-dir build && shx cp src/schema.graphql build",
+    "start": "npm run build && forever build/index.js",
+    "start:background": "npm run build && forever start build/index.js",
+    "generate-schema": "./node_modules/.bin/nodemon --ext js,graphql --exec babel-node  src/generate-schema.js"
+  },
+  "author": "Lukáš Matta",
+  "license": "MIT",
+  "dependencies": {
+    "@apollo/client": "^3.11.8",
+    "@apollo/server": "^4.11.0",
+    "@neo4j/graphql": "^5.9.1",
+    "@neo4j/graphql-ogm": "^5.9.1",
+    "apollo-server-lambda": "^3.13.0",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "graphql-type-json": "^0.3.2",
+    "neo4j-driver": "^5.26.0",
+    "node-fetch": "^3.3.2",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.0",
+    "@babel/node": "^7.8.7",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-transform-runtime": "^7.9.0",
+    "@babel/preset-env": "^7.9.0",
+    "@babel/preset-react": "^7.9.4",
+    "@babel/preset-typescript": "^7.9.0",
+    "@babel/runtime-corejs3": "^7.9.2",
+    "@neo4j/introspector": "3.0.1",
+    "babel-plugin-auto-import": "^1.0.5",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "cross-env": "^7.0.2",
+    "forever": "^4.0.3",
+    "nodemon": "^3.1.7",
+    "shx": "^0.3.2"
+  }
+}
