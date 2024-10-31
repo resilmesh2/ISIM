@@ -32,4 +32,4 @@ COPY --chown=1001:1001 --from=build /venv /venv
 USER 1001:1001
 EXPOSE 8000
 
-CMD gunicorn --preload --workers=${WORKER_COUNT} --chdir /app/isim_rest --bind 0.0.0.0:8000 'neo4j_rest.wsgi:application'
+CMD gunicorn --preload --workers=${WORKER_COUNT} --timeout 1200 --chdir /app/isim_rest --bind 0.0.0.0:8000 'neo4j_rest.wsgi:application'
