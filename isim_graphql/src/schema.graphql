@@ -1,12 +1,12 @@
 type Application {
   name: String!
-  device: Device! @relationship(type: "RUNNING_ON", direction: OUT)
+  devices: [Device!]! @relationship(type: "RUNNING_ON", direction: OUT)
 }
 
 type Component {
   name: String!
-  supports_missions: [Mission!]! @relationship(type:  "SUPPORTS", direction: OUT)
-  provided_by_hosts: [Host!]! @relationship(type:  "PROVIDED_BY", direction: OUT)
+  missions: [Mission!]! @relationship(type:  "SUPPORTS", direction: OUT)
+  hosts: [Host!]! @relationship(type:  "PROVIDED_BY", direction: OUT)
   from_mission_dependencies: [MissionDependency!]! @relationship(type: "FROM", direction: IN)
   to_mission_dependencies: [MissionDependency!]! @relationship(type: "TO", direction: IN)
 }
@@ -18,31 +18,31 @@ type Contact {
 
 type CVE {
   CVE_id: String!
-  access_complexity: String!
-  access_vector: String!
-  attack_complexity: String!
-  attack_vector: String!
-  authentication: String!
-  availability_impact_v2: String!
-  availability_impact_v3: String!
-  base_score_v2: Float!
-  base_score_v3: Float!
-  confidentiality_impact_v2: String!
-  confidentiality_impact_v3: String!
+  access_complexity: String
+  access_vector: String
+  attack_complexity: String
+  attack_vector: String
+  authentication: String
+  availability_impact_v2: String
+  availability_impact_v3: String
+  base_score_v2: Float
+  base_score_v3: Float
+  confidentiality_impact_v2: String
+  confidentiality_impact_v3: String
   description: String!
   impact: [String]!
-  integrity_impact_v2: String!
-  integrity_impact_v3: String!
-  obtain_all_privilege: Boolean!
-  obtain_other_privilege: Boolean!
-  obtain_user_privilege: Boolean!
+  integrity_impact_v2: String
+  integrity_impact_v3: String
+  obtain_all_privilege: Boolean
+  obtain_other_privilege: Boolean
+  obtain_user_privilege: Boolean
   patched: String
-  privileges_required: String!
+  privileges_required: String
   published_date: String!
-  scope: String!
-  user_interaction: String!
+  scope: String
+  user_interaction: String
   vendor_description: String
-  vulnerabilities: [Vulnerability!]! @relationship(type:  "REFERS_TO", direction: IN)
+  vulnerability: Vulnerability! @relationship(type:  "REFERS_TO", direction: IN)
 }
 
 type Device {
@@ -67,7 +67,7 @@ type HardwareVersion {
 
 type Host {
   hostname: String
-  nodes: [NodeObject!]! @relationship(type:  "IS_A", direction: IN)
+  node: NodeObject @relationship(type:  "IS_A", direction: IN)
   software_versions: [SoftwareVersion!]! @relationship(type:  "ON", direction: IN)
   components: [Component!]! @relationship(type:  "PROVIDED_BY", direction: IN)
   network_services: [NetworkService!]! @relationship(type: "ON", direction: IN)
@@ -76,32 +76,32 @@ type Host {
 type IP {
   address: String!
   version: Int
-  resolves_to: [DomainName!]! @relationship(type:  "RESOLVES_TO", direction: OUT)
+  domain_names: [DomainName!]! @relationship(type:  "RESOLVES_TO", direction: OUT)
   uris: [URI!]! @relationship(type: "IDENTIFIES", direction: OUT)
   nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", direction: IN)
-  part_of: [Subnet!]! @relationship(type:  "PART_OF", direction: OUT)
+  subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: OUT)
 }
 
 type NetworkService {
   protocol: String
   port: Int
-  tag: [String!]!
+  tag: [String]
   service: String
   hosts: [Host!]! @relationship(type: "ON", direction: OUT)
   software_versions: [SoftwareVersion!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
 }
 
 type NodeObject @node(labels: "Node") {
-  has_assigned: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT)
-  is_a: [Host!]! @relationship(type:  "IS_A", direction: OUT)
-  is_dependent_on: [NodeObject!]! @relationship(type:  "IS_DEPENDENT_ON", direction: OUT)
-  is_connected_to: [NodeObject!]! @relationship(type:  "IS_CONNECTED_TO", direction: OUT)
+  ips: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT)
+  host: Host @relationship(type:  "IS_A", direction: OUT)
+  is_dependent_on_nodes: [NodeObject!]! @relationship(type:  "IS_DEPENDENT_ON", direction: OUT)
+  is_connected_to_nodes: [NodeObject!]! @relationship(type:  "IS_CONNECTED_TO", direction: OUT)
 }
 
 type OrganizationUnit {
   name: String!
   subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: IN)
-  locations: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT)
+  physical_environments: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT)
 }
 
 type PhysicalEnvironment {
@@ -112,15 +112,15 @@ type PhysicalEnvironment {
 type SoftwareVersion {
   tag: [String]!
   version: String!
-  on: [Host!]! @relationship(type: "ON", direction: OUT, )
+  hosts: [Host!]! @relationship(type: "ON", direction: OUT, )
   network_services: [NetworkService!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
   vulnerabilities: [Vulnerability!]! @relationship(type: "IN", direction: IN)
 }
 
 type Subnet {
-  note: String!
+  note: String
   range: String!
-  part_of: [OrganizationUnit!]! @relationship(type:  "PART_OF", direction: OUT)
+  org_units: [OrganizationUnit!]! @relationship(type:  "PART_OF", direction: OUT)
   contacts: [Contact!]! @relationship(type: "HAS", direction: OUT)
 }
 
@@ -133,15 +133,8 @@ type Mission {
 }
 
 type MissionDependency {
-  from: [Component!]! @relationship(type: "FROM", direction: OUT)
-  to: [Component!]! @relationship(type: "TO", direction: OUT)
-}
-
-type NetworkService {
-  port: Int!
-  protocol: String!
-  service: String!
-  tag: [String]!
+  from_components: [Component!]! @relationship(type: "FROM", direction: OUT)
+  to_components: [Component!]! @relationship(type: "TO", direction: OUT)
 }
 
 type URI {
@@ -151,6 +144,6 @@ type URI {
 
 type Vulnerability {
   description: String!
-  in: [SoftwareVersion!]! @relationship(type:  "IN", direction: OUT)
-  refers_to: [CVE!]! @relationship(type:  "REFERS_TO", direction: OUT)
+  software_versions: [SoftwareVersion!]! @relationship(type:  "IN", direction: OUT)
+  cve: CVE @relationship(type:  "REFERS_TO", direction: OUT)
 }
