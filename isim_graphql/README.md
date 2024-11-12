@@ -1,6 +1,6 @@
 # GraphQL API for Neo4j
 
-GraphQL API endpoint based on [GRANDstack Starter](https://grandstack.io/)
+GraphQL API endpoint for selected vertices and relationships from Neo4j DB.
 
 ## Configure
 
@@ -14,22 +14,7 @@ NEO4J_USER=neo4j
 NEO4J_PASSWORD=letmein
 ```
 
-In case of using Vagrant, you should set credentials in `playbook.yml` file.
+## Running the project
 
-## Running (and building) the project
-
-### Run project using Docker
-
-See guide [(RUN_DOCKER.md)](RUN_DOCKER.md) on how to run project using Docker.
-
-### Run project using Vagrant
-
-See guide [(RUN_VAGRANT.md)](RUN_VAGRANT.md) on how to run project using Vagrant.
-
-### Run project locally
-
-See guide [(RUN_LOCALLY.md)](RUN_LOCALLY.md) on how to run project locally.
-
-## Deployment
-
-You can deploy to any service that hosts Node.js apps.
+The GraphQL is provided as a docker container. It is executed with other containers from ISIM.
+Please, see the root README.md  

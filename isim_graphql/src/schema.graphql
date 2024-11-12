@@ -76,7 +76,7 @@ type Host {
 type IP {
   address: String!
   version: Int
-  domain_names: [DomainName!]! @relationship(type:  "RESOLVES_TO", direction: OUT)
+  domain_names: [DomainName!]! @relationship(type:  "RESOLVES_TO", properties: "ResolvesTo", direction: OUT)
   uris: [URI!]! @relationship(type: "IDENTIFIES", direction: OUT)
   nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", direction: IN)
   subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: OUT)
@@ -87,7 +87,7 @@ type NetworkService {
   port: Int
   tag: [String]
   service: String
-  hosts: [Host!]! @relationship(type: "ON", direction: OUT)
+  hosts: [Host!]! @relationship(type: "ON", properties: "NetworkServiceOn", direction: OUT)
   software_versions: [SoftwareVersion!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
 }
 
@@ -112,7 +112,7 @@ type PhysicalEnvironment {
 type SoftwareVersion {
   tag: [String]!
   version: String!
-  hosts: [Host!]! @relationship(type: "ON", direction: OUT, )
+  hosts: [Host!]! @relationship(type: "ON", properties: "SoftwareOn", direction: OUT)
   network_services: [NetworkService!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
   vulnerabilities: [Vulnerability!]! @relationship(type: "IN", direction: IN)
 }
@@ -146,4 +146,21 @@ type Vulnerability {
   description: String!
   software_versions: [SoftwareVersion!]! @relationship(type:  "IN", direction: OUT)
   cve: CVE @relationship(type:  "REFERS_TO", direction: OUT)
+}
+
+type ResolvesTo @relationshipProperties {
+  start: String
+  end: String
+}
+
+type SoftwareOn @relationshipProperties {
+  end: String
+  start: String
+  tag: [String]
+}
+
+type NetworkServiceOn @relationshipProperties {
+  end: String
+  start: String
+  tag: [String]
 }
