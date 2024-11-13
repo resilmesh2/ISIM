@@ -23,7 +23,7 @@ class GeneralAdapter:
                 auth=basic_auth(user, password),
                 max_connection_lifetime=lifetime,
                 encrypted=encrypted,
-                notifications_disabled_categories=[NotificationDisabledCategory.UNRECOGNIZED]
+                notifications_disabled_categories=[NotificationDisabledCategory.UNRECOGNIZED],
             )
         else:
             self._driver = driver

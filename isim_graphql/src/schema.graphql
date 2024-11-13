@@ -76,6 +76,7 @@ type Host {
 type IP {
   address: String!
   version: Int
+  tag: [String]
   domain_names: [DomainName!]! @relationship(type:  "RESOLVES_TO", properties: "ResolvesTo", direction: OUT)
   uris: [URI!]! @relationship(type: "IDENTIFIES", direction: OUT)
   nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", direction: IN)

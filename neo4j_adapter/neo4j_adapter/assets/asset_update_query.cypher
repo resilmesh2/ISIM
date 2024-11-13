@@ -4,7 +4,8 @@ CALL {
   WITH input_
   UNWIND input_.hosts AS hosts
   MERGE (ip:IP {address: hosts.ip_address})
-  SET ip.version = hosts.version
+    ON CREATE SET ip.tag = ["known"]
+    SET ip.version = hosts.version
   MERGE (host:Host)<-[:IS_A]-(node:Node)-[:HAS_ASSIGNED]->(ip) // MATCH NEW HOST BY IP ADDRESS
   FOREACH (s IN hosts.subnets |     // UPSERT SUBNETS THE IP IS PART OF, UPSERT RELATIONSHIPS
     MERGE (subnet:Subnet {range: s})
@@ -16,7 +17,8 @@ CALL {
   )
   FOREACH (d IN hosts.domain_names | // UPSERT DOMAINS RELATED TO IP, UPSERT RELATIONSHIPS
     MERGE (domain:DomainName {domain_name: d})
-    SET domain.tag = hosts.tag
+      ON CREATE SET domain.tag = ["known"]
+    SET domain.tag = apoc.coll.toSet(domain.tag + hosts.tag)
     MERGE (ip)-[:RESOLVES_TO]-(domain)
   )
 }
@@ -123,8 +125,10 @@ UNWIND input_.software_versions AS sw_versions
     FOREACH (ip_address in sw_versions.ip_addresses |
         MERGE (ip:IP {address: ip_address})
         MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
-        MERGE (sw)-[:ON]->(h)
-        MERGE (ns)-[:ON]->(h)
+        MERGE (sw)-[sw_h:ON]->(h)
+          ON CREATE SET sw_h.tag = ["known"]
+        MERGE (ns)-[ns_h:ON]->(h)
+          ON CREATE SET ns_h.tag = ["known"]
     )
     ',
     sw_versions.version is not null,
@@ -134,7 +138,8 @@ UNWIND input_.software_versions AS sw_versions
     FOREACH (ip_address in sw_versions.ip_addresses |
         MERGE (ip:IP {address: ip_address})
         MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
-        MERGE (sw)-[:ON]->(h)
+        MERGE (sw)-[sw_h:ON]->(h)
+          ON CREATE SET sw_h.tag = ["known"]
     )
     ',
     sw_versions.port is not null and sw_versions.protocol is not null and sw_versions.service is not null,
@@ -144,7 +149,8 @@ UNWIND input_.software_versions AS sw_versions
     FOREACH (ip_address in sw_versions.ip_addresses |
         MERGE (ip:IP {address: ip_address})
         MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
-        MERGE (ns)-[:ON]->(h)
+        MERGE (ns)-[ns_h:ON]->(h)
+          ON CREATE SET ns_h.tag = ["known"]
     )
     '
     ],

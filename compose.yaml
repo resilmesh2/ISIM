@@ -10,6 +10,8 @@ services:
     volumes:
       - ./config/conf_docker.ini:/app/config/conf.ini
     restart: unless-stopped
+    networks:
+      - casm_isim_test_network
 
   isim_graphql:
     build:
@@ -24,6 +26,8 @@ services:
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=supertestovaciheslo
     restart: unless-stopped
+    networks:
+      - casm_isim_test_network
 
   neo4j:
     image: neo4j:5.21.0
@@ -60,5 +64,15 @@ services:
       - sh
       - -c
       - neo4j-admin database load --from-path=/tmp/dumps --overwrite-destination=true neo4j && neo4j-admin database migrate neo4j --force-btree-indexes-to-range
+
+## this network is ready to be connected to CASM demo.
+# To work together, do not deploy neo4j and neo4j_load_data from this compose and uncomment
+# the external option
+
+networks:
+  casm_isim_test_network:
+    #external: true
+    name: casm_isim_test_network
+
 volumes:
   neo4j_isim_data:
