@@ -46,6 +46,8 @@ services:
     depends_on:
       neo4j_load_data:
         condition: service_completed_successfully
+    networks:
+      - casm_isim_test_network
     healthcheck:
       test: ["CMD", "wget", "http://localhost:7474/"]
       interval: 10s
