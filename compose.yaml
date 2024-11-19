@@ -43,9 +43,9 @@ services:
     ports:
       - 7474:7474
       - 7687:7687
-    depends_on:
-      neo4j_load_data:
-        condition: service_completed_successfully
+#    depends_on:
+#      neo4j_load_data:
+#        condition: service_completed_successfully
     networks:
       - casm_isim_test_network
     healthcheck:
@@ -55,17 +55,17 @@ services:
       retries: 10
     restart: unless-stopped
 
-  neo4j_load_data:
-    image: neo4j:5.21.0
-    environment:
-      - NEO4J_AUTH=neo4j/supertestovaciheslo
-    volumes:
-      - neo4j_isim_data:/data
-      - ${DATA_PATH}:/tmp/dumps/neo4j.dump
-    entrypoint:
-      - sh
-      - -c
-      - neo4j-admin database load --from-path=/tmp/dumps --overwrite-destination=true neo4j && neo4j-admin database migrate neo4j --force-btree-indexes-to-range
+#  neo4j_load_data:
+#    image: neo4j:5.21.0
+#    environment:
+#      - NEO4J_AUTH=neo4j/supertestovaciheslo
+#    volumes:
+#      - neo4j_isim_data:/data
+#      - ${DATA_PATH}:/tmp/dumps/neo4j.dump
+#    entrypoint:
+#      - sh
+#      - -c
+#      - neo4j-admin database load --from-path=/tmp/dumps --overwrite-destination=true neo4j && neo4j-admin database migrate neo4j --force-btree-indexes-to-range
 
 ## this network is ready to be connected to CASM demo.
 # To work together, do not deploy neo4j and neo4j_load_data from this compose and uncomment
