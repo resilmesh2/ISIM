@@ -39,7 +39,7 @@ services:
       - NEO4J_apoc_import_file_use__neo4j__config=true
     volumes:
       - neo4j_isim_data:/data
-      - ${DATA_PATH}:/tmp/dumps/neo4j.dump
+#      - ${DATA_PATH}:/tmp/dumps/neo4j.dump
     ports:
       - 7474:7474
       - 7687:7687
