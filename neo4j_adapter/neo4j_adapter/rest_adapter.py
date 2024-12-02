@@ -167,7 +167,7 @@ class RESTAdapter(GeneralAdapter):
         WITH ip, [(ip)-[:PART_OF]-(s:Subnet) | s.range] as subnets
         WITH ip, subnets, [(ip)-[:PART_OF]-(s:Subnet)-[:HAS]-(c:Contact) | c.name] as contacts
         WITH ip, subnets, contacts, [(ip)-[:RESOLVES_TO]-(d:DomainName) | d.domain_name] as domains
-        WITH ip, subnets, contacts, domains, [(ip)-[:HAS_ASSIGNED]-(Node)-[:IS_A]-(Host)-[:HAS_IDENTITY]-(Component)-[:SUPPORTS]-(m:Mission) | m.name] as missions
+        WITH ip, subnets, contacts, domains, [(ip)-[:HAS_ASSIGNED]-(Node)-[:IS_A]-(Host)-[:PROVIDED_BY]-(Component)-[:SUPPORTS]-(m:Mission) | m.name] as missions
         RETURN ip.address as ip, subnets, contacts, domains, missions
         ORDER BY ip.address
         SKIP $offset
