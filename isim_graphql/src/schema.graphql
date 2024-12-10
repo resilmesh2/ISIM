@@ -1,9 +1,23 @@
 type Application {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   name: String!
   devices: [Device!]! @relationship(type: "RUNNING_ON", direction: OUT)
 }
 
 type Component {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   name: String!
   missions: [Mission!]! @relationship(type:  "SUPPORTS", direction: OUT)
   hosts: [Host!]! @relationship(type:  "PROVIDED_BY", direction: OUT)
@@ -12,11 +26,25 @@ type Component {
 }
 
 type Contact {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   name: String!
   subnets: [Subnet!]! @relationship(type: "HAS", direction: IN)
 }
 
 type CVE {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   CVE_id: String!
   access_complexity: String
   access_vector: String
@@ -46,6 +74,13 @@ type CVE {
 }
 
 type Device {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   name: String
   state: String
   power: String
@@ -54,18 +89,39 @@ type Device {
 }
 
 type DomainName {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   domain_name: String!
   tag: [String]!
   ips: [IP!]! @relationship(type:  "RESOLVES_TO", direction: IN)
 }
 
 type HardwareVersion {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   manufacturer: String!
   model: String!
   devices: [Device!]! @relationship(type: "HAS", direction: IN)
 }
 
 type Host {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   hostname: String
   node: NodeObject @relationship(type:  "IS_A", direction: IN)
   software_versions: [SoftwareVersion!]! @relationship(type:  "ON", direction: IN)
@@ -74,6 +130,13 @@ type Host {
 }
 
 type IP {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   address: String!
   version: Int
   tag: [String]
@@ -84,6 +147,13 @@ type IP {
 }
 
 type NetworkService {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   protocol: String
   port: Int
   tag: [String]
@@ -93,6 +163,13 @@ type NetworkService {
 }
 
 type NodeObject @node(labels: "Node") {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   ips: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT)
   host: Host @relationship(type:  "IS_A", direction: OUT)
   is_dependent_on_nodes: [NodeObject!]! @relationship(type:  "IS_DEPENDENT_ON", direction: OUT)
@@ -100,17 +177,38 @@ type NodeObject @node(labels: "Node") {
 }
 
 type OrganizationUnit {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   name: String!
   subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: IN)
   physical_environments: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT)
 }
 
 type PhysicalEnvironment {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   location: String!
   org_units: [OrganizationUnit!]! @relationship(type: "TENANTS", direction: IN)
 }
 
 type SoftwareVersion {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   tag: [String]!
   version: String!
   hosts: [Host!]! @relationship(type: "ON", properties: "SoftwareOn", direction: OUT)
@@ -119,6 +217,13 @@ type SoftwareVersion {
 }
 
 type Subnet {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   note: String
   range: String!
   org_units: [OrganizationUnit!]! @relationship(type:  "PART_OF", direction: OUT)
@@ -126,6 +231,13 @@ type Subnet {
 }
 
 type Mission {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   criticality: Int!
   description: String!
   name: String!
@@ -134,16 +246,37 @@ type Mission {
 }
 
 type MissionDependency {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   from_components: [Component!]! @relationship(type: "FROM", direction: OUT)
   to_components: [Component!]! @relationship(type: "TO", direction: OUT)
 }
 
 type URI {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   identifier: String!
   ips: [IP!]! @relationship(type: "IDENTIFIES", direction: IN)
 }
 
 type Vulnerability {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
   description: String!
   software_versions: [SoftwareVersion!]! @relationship(type:  "IN", direction: OUT)
   cve: CVE @relationship(type:  "REFERS_TO", direction: OUT)
