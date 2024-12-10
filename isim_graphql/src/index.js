@@ -89,18 +89,18 @@ const path = process.env.GRAPHQL_SERVER_PATH || "/graphql";
 const host = process.env.GRAPHQL_SERVER_HOST || "0.0.0.0";
 
 // Set CORS headers manually
-// app.use((req, res, next) => {
-//   res.header('Access-Control-Allow-Origin', '*'); // Allows all domains
-//   res.header(
-//     'Access-Control-Allow-Headers',
-//     'Origin, X-Requested-With, Content-Type, Accept, Authorization'
-//   );
-//   if (req.method === 'OPTIONS') {
-//     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE');
-//     return res.status(200).json({});
-//   }
-//   next();
-// });
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // Allows all domains
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+  );
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE');
+    return res.status(200).json({});
+  }
+  next();
+});
 
 /*
  * Optionally, apply Express middleware for authentication, etc
@@ -119,7 +119,7 @@ async function main() {
 
     });
     await server.start()
-    server.applyMiddleware({ app, path, cors: false });
+    server.applyMiddleware({ app, path, cors: true });
     app.listen({ host, port, path }, () => {
         console.log(`GraphQL server ready at http://${host}:${port}${path}`);
     });
