@@ -1,0 +1,324 @@
+{
+  "nodes": {
+    "missions": [
+      {
+        "id": 1,
+        "name": "Public-Facing Services",
+        "criticality": 5,
+        "description": "This mission represents services that must be available for public."
+      },
+      {
+        "id": 2,
+        "name": "User Services",
+        "criticality": 5,
+        "description": "This mission represents user desktops that must work for the white team."
+      },
+      {
+        "id": 3,
+        "name": "Admin Services",
+        "criticality": 7,
+        "description": "This mission represents admin hosts that must work to maintain the network."
+      },
+      {
+        "id": 4,
+        "name": "Custom Application",
+        "criticality": 10,
+        "description": "This mission provides dependencies for critical network application."
+      }
+    ],
+        "services": [
+      {
+        "id": 11,
+        "name": "Mail"
+      },
+      {
+        "id": 12,
+        "name": "DNS"
+      },
+      {
+        "id": 13,
+        "name": "Web"
+      },
+      {
+        "id": 14,
+        "name": "Ubuntu desktop"
+      },
+      {
+        "id": 15,
+        "name": "Windows desktop"
+      },
+      {
+        "id": 16,
+        "name": "Windows admin"
+      },
+      {
+        "id": 17,
+        "name": "Ubuntu admin"
+      },
+      {
+        "id": 18,
+        "name": "DC"
+      },
+      {
+        "id": 19,
+        "name": "File server"
+      },
+      {
+        "id": 20,
+        "name": "Menu"
+      },
+      {
+        "id": 21,
+        "name": "Database server"
+      },
+      {
+        "id": 22,
+        "name": "OCS"
+      },
+      {
+        "id": 23,
+        "name": "UPS"
+      },
+      {
+        "id": 24,
+        "name": "Monitoring"
+      },
+      {
+        "id": 25,
+        "name": "Operations"
+      }
+    ],
+    "aggregations": {
+      "or": [ 73, 74, 75, 76, 78, 84 ],
+      "and": [ 60, 61, 62, 63, 70, 71, 72, 77, 78, 79, 80, 81, 82, 83 ]
+    },
+    "hosts": [
+      {
+        "id": 30,
+        "hostname": "mail.firechmel.ex",
+        "ip": "9.66.11.12"
+      },
+      {
+        "id": 31,
+        "hostname": "dns.firechmel.ex",
+        "ip": "9.66.11.13"
+      },
+      {
+        "id": 32,
+        "hostname": "www.firechmel.ex",
+        "ip": "9.66.11.14"
+      },
+      {
+        "id": 33,
+        "hostname": "desktop3",
+        "ip": "10.1.4.44"
+      },
+      {
+        "id": 34,
+        "hostname": "desktop4",
+        "ip": "10.1.4.45"
+      },
+      {
+        "id": 35,
+        "hostname": "desktop1",
+        "ip": "10.1.4.42"
+      },
+      {
+        "id": 36,
+        "hostname": "desktop2",
+        "ip": "10.1.4.43"
+      },
+      {
+        "id": 37,
+        "hostname": "admin1",
+        "ip": "10.1.4.46"
+      },
+      {
+        "id": 38,
+        "hostname": "admin2",
+        "ip": "10.1.4.47"
+      },
+      {
+        "id": 39,
+        "hostname": "admin3",
+        "ip": "10.1.4.48"
+      },
+      {
+        "id": 40,
+        "hostname": "admin4",
+        "ip": "10.1.4.49"
+      },
+      {
+        "id": 41,
+        "hostname": "dc",
+        "ip": "10.1.2.22"
+      },
+      {
+        "id": 42,
+        "hostname": "files",
+        "ip": "10.1.2.23"
+      },
+      {
+        "id": 43,
+        "hostname": "backup",
+        "ip": "10.1.2.24"
+      },
+      {
+        "id": 44,
+        "hostname": "menu",
+        "ip": "10.1.2.25"
+      },
+      {
+        "id": 45,
+        "hostname": "db.chmel.ex",
+        "ip": "10.1.2.26"
+      },
+      {
+        "id": 46,
+        "hostname": "ocs.chmel.ex",
+        "ip": "10.1.2.27"
+      },
+      {
+        "id": 47,
+        "hostname": "ups.chmel.ex",
+        "ip": "10.1.2.28"
+      },
+      {
+        "id": 48,
+        "hostname": "monitoring",
+        "ip": "10.1.2.29"
+      },
+      {
+        "id": 49,
+        "hostname": "ops-desktop1",
+        "ip": "10.1.3.32"
+      },
+      {
+        "id": 50,
+        "hostname": "ops-desktop2",
+        "ip": "10.1.3.33"
+      }
+    ]
+  },
+  "relationships": {
+    "one_way": [
+      { "from": 1, "to": 60 },
+      { "from": 60, "to": 11 },
+      { "from": 60, "to": 12 },
+      { "from": 60, "to": 13 },
+      { "from": 11, "to": 70 },
+      { "from": 70, "to": 30 },
+      { "from": 12, "to": 71 },
+      { "from": 71, "to": 31 },
+      { "from": 13, "to": 72 },
+      { "from": 72, "to": 32 },
+      { "from": 2, "to": 61 },
+      { "from": 61, "to": 14 },
+      { "from": 61, "to": 15 },
+      { "from": 14, "to": 73 },
+      { "from": 15, "to": 74 },
+      { "from": 73, "to": 33 },
+      { "from": 73, "to": 34 },
+      { "from": 74, "to": 35 },
+      { "from": 74, "to": 36 },
+      { "from": 3, "to": 62 },
+      { "from": 62, "to": 16 },
+      { "from": 62, "to": 17 },
+      { "from": 16, "to": 75 },
+      { "from": 17, "to": 76 },
+      { "from": 75, "to": 37 },
+      { "from": 75, "to": 38 },
+      { "from": 76, "to": 39 },
+      { "from": 76, "to": 40 },
+      { "from": 4, "to": 63 },
+      { "from": 63, "to": 18 },
+      { "from": 63, "to": 19 },
+      { "from": 63, "to": 20 },
+      { "from": 63, "to": 21 },
+      { "from": 63, "to": 22 },
+      { "from": 63, "to": 23 },
+      { "from": 63, "to": 24 },
+      { "from": 63, "to": 25 },
+      { "from": 18, "to": 77 },
+      { "from": 19, "to": 78 },
+      { "from": 20, "to": 79 },
+      { "from": 21, "to": 80 },
+      { "from": 22, "to": 81 },
+      { "from": 23, "to": 82 },
+      { "from": 24, "to": 83 },
+      { "from": 25, "to": 84 },
+      { "from": 77, "to": 41 },
+      { "from": 78, "to": 42 },
+      { "from": 78, "to": 43 },
+      { "from": 79, "to": 44 },
+      { "from": 80, "to": 45 },
+      { "from": 81, "to": 46 },
+      { "from": 82, "to": 47 },
+      { "from": 83, "to": 48 },
+      { "from": 84, "to": 49 },
+      { "from": 84, "to": 50 }
+    ],
+    "two_way": [
+    ],
+    "dependencies": [
+      { "from": "Web", "to": "Database server" },
+      { "from": "Windows desktop", "to": "DC" },
+      { "from": "Ubuntu desktop", "to": "File server" },
+      { "from": "Windows desktop", "to": "File server" },
+      { "from": "Mail", "to": "DNS" },
+      { "from": "Web", "to": "DNS" },
+      { "from": "Ubuntu desktop", "to": "DNS" },
+      { "from": "Windows desktop", "to": "DNS" },
+      { "from": "Windows admin", "to": "DNS" },
+      { "from": "Ubuntu admin", "to": "DNS" },
+      { "from": "DC", "to": "DNS" },
+      { "from": "File server", "to": "DNS" },
+      { "from": "Menu", "to": "DNS" },
+      { "from": "Database server", "to": "DNS" },
+      { "from": "OCS", "to": "DNS" },
+      { "from": "UPS", "to": "DNS" },
+      { "from": "Monitoring", "to": "DNS" },
+      { "from": "Operations", "to": "DNS" }
+    ],
+    "supports": [
+      {"from": "Public-Facing Services", "to": "Mail"},
+      {"from": "Public-Facing Services", "to": "DNS"},
+      {"from": "Public-Facing Services", "to": "Web"},
+      {"from": "User Services", "to": "Ubuntu desktop"},
+      {"from": "User Services", "to": "Windows desktop"},
+      {"from": "Admin Services", "to": "Windows admin"},
+      {"from": "Admin Services", "to": "Ubuntu admin"},
+      {"from": "Custom Application", "to": "DC"},
+      {"from": "Custom Application", "to": "File server"},
+      {"from": "Custom Application", "to": "Menu"},
+      {"from": "Custom Application", "to": "Database server"},
+      {"from": "Custom Application", "to": "OCS"},
+      {"from": "Custom Application", "to": "UPS"},
+      {"from": "Custom Application", "to": "Monitoring"},
+      {"from": "Custom Application", "to": "Operations"}
+    ],
+    "has_identity": [
+      {"from": "Mail", "to": "mail.firechmel.ex"},
+      {"from": "DNS", "to": "dns.firechmel.ex"},
+      {"from": "Web", "to": "www.firechmel.ex"},
+      {"from": "Ubuntu desktop", "to": "desktop3"},
+      {"from": "Ubuntu desktop", "to": "desktop4"},
+      {"from": "Windows desktop", "to": "desktop1"},
+      {"from": "Windows desktop", "to": "desktop2"},
+      {"from": "Windows admin", "to": "admin1"},
+      {"from": "Windows admin", "to": "admin2"},
+      {"from": "Ubuntu admin", "to": "admin3"},
+      {"from": "Ubuntu admin", "to": "admin4"},
+      {"from": "DC", "to": "dc"},
+      {"from": "File server", "to": "files"},
+      {"from": "File server", "to": "backup"},
+      {"from": "Menu", "to": "menu"},
+      {"from": "Database server", "to": "db.chmel.ex"},
+      {"from": "OCS", "to": "ocs.chmel.ex"},
+      {"from": "UPS", "to": "ups.chmel.ex"},
+      {"from": "Monitoring", "to": "monitoring"},
+      {"from": "Operations", "to": "ops-desktop1"},
+      {"from": "Operations", "to": "ops-desktop2"}
+    ]
+  }
+}
