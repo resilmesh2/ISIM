@@ -301,3 +301,10 @@ The data loading option was tested with [dataset from Cyberczech cyber defence e
 > [!WARNING]
 > Be aware that `neo4j_load_data` container overwrites the target database data. If you are using the application in production
 > and you need data persistence, you SHOULD NOT run this container after your initial setup.
+
+# Tests
+
+Tests are available in `isim_rest/test` folder. 
+Test data contain example inputs for `/assets` and `/missions` endpoints.
+Tests were executed using `python manage.py test` inside `isim` container
+after connecting to it using `sudo docker exec -it <container_id> bash`.

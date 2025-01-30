@@ -1,0 +1,115 @@
+{
+  "hosts": [{
+      "ip_address": "9.66.11.13",
+      "domain_names": [
+        "dns.firechmel.ex"
+      ],
+      "subnets": [
+        "9.66.11.0/24"
+      ],
+      "tag": [
+        "known"
+      ]
+    },
+    {
+      "ip_address": "9.66.11.12",
+      "domain_names": [
+        "mail.firechmel.ex"
+      ],
+      "subnets": [
+        "9.66.11.0/24"
+      ],
+      "tag": [
+        "known"
+      ]
+    },
+    {
+      "ip_address": "9.66.11.14",
+      "domain_names": [
+        "www.firechmel.ex"
+      ],
+      "subnets": [
+        "9.66.11.0/24"
+      ],
+      "tag": [
+        "known"
+      ]
+    }
+  ],
+  "subnets": [
+    {
+      "ip_range": "9.66.11.0/24",
+      "note": "DMZ subnet",
+      "contacts": [
+        "admin@firechmel.ex"
+      ],
+      "parents": [
+        "0.0.0.0/0"
+      ],
+      "org_units": [
+        "blue-team-1"
+      ]
+    }
+  ],
+  "software_versions": [
+    {
+      "version": "centos:centos:7.4",
+      "ip_addresses": [
+        "9.66.11.13",
+        "9.66.11.12"
+      ],
+      "tag": [
+        "known"
+      ]
+    },
+    {
+      "version": "microsoft:windows_server_2012:r2",
+      "ip_addresses": [
+        "9.66.11.12"
+      ],
+      "tag": [
+        "known"
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "name": "Mail Server",
+      "ip_address": "9.66.11.12",
+      "org_units": ["blue-team-1"]
+    },
+    {
+      "name": "DNS Server",
+      "ip_address": "9.66.11.13",
+      "org_units": ["blue-team-1"]
+    },
+    {
+      "name": "Web Server",
+      "ip_address": "9.66.11.14",
+      "org_units": ["blue-team-1"]
+    }
+  ],
+  "applications": [
+    {
+      "name": "apache-dmz-mail",
+      "device": "Mail Server"
+    },
+    {
+      "name": "dovecot",
+      "device": "Mail Server"
+    },
+    {
+      "name": "CROND",
+      "device": "Mail Server"
+    },
+    {
+      "name": "CROND",
+      "device": "DNS Server"
+    }
+  ],
+  "org_units": [
+    {
+      "name": "blue-team-1"
+    }
+  ]
+}
