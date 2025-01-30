@@ -166,7 +166,7 @@ class UndirectedRelationshipDTO[T](msgspec.Struct):
 class RelationshipDTO(msgspec.Struct):
     one_way: list[DirectedRelationshipDTO[int]] = field(default_factory=list)
     two_way: list[UndirectedRelationshipDTO[int]] = field(default_factory=list)
-    dependencies: list[DirectedRelationshipDTO[int]] = field(default_factory=list)
+    dependencies: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
     supports: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
     has_identity: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
 
