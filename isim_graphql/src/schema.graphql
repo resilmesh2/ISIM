@@ -45,32 +45,78 @@ type CVE {
     """,
     columnName: "_id"
   )
-  CVE_id: String!
-  access_complexity: String
-  access_vector: String
-  attack_complexity: String
-  attack_vector: String
-  authentication: String
-  availability_impact_v2: String
-  availability_impact_v3: String
-  base_score_v2: Float
-  base_score_v3: Float
-  confidentiality_impact_v2: String
-  confidentiality_impact_v3: String
+  cve_id: String!
+  cwe: [String]!
   description: String!
   impact: [String]!
+  published: String!
+  # patched: String
+  ref_tags: [String]!
+  # Properties from CVSS v2
+  access_complexity_v2: String
+  access_vector_v2: String
+  authentication_v2: String
+  availability_impact_v2: String
+  confidentiality_impact_v2: String
   integrity_impact_v2: String
-  integrity_impact_v3: String
-  obtain_all_privilege: Boolean
-  obtain_other_privilege: Boolean
-  obtain_user_privilege: Boolean
-  patched: String
-  privileges_required: String
-  published_date: String!
-  scope: String
-  user_interaction: String
-  vendor_description: String
+  base_score_v2: Float
+  obtain_all_privilege_v2: Boolean
+  obtain_other_privilege_v2: Boolean
+  obtain_user_privilege_v2: Boolean
+  # Properties from CVSS v3.0
+  attack_complexity_v30: String
+  attack_vector_v30: String
+  availability_impact_v30: String
+  base_score_v30: Float
+  confidentiality_impact_v30: String
+  integrity_impact_v30: String
+  privileges_required_v30: String
+  scope_v30: String
+  user_interaction_v30: String
+  # Properties from CVSS v3.1
+  attack_vector_v31: String
+  attack_complexity_v31: String
+  privileges_required_v31: String
+  user_interaction_v31: String
+  scope_v31: String
+  confidentiality_impact_v31: String
+  integrity_impact_v31: String
+  availability_impact_v31: String
+  base_score_v31: Float
+  # Properties from CVSS v4.0
+  attack_vector_v40: String
+  attack_complexity_v40: String
+  attack_requirements_v40: String
+  privileges_required_v40: String
+  user_interaction_v40: String
+  vulnerable_system_confidentiality_v40: String
+  vulnerable_system_integrity_v40: String
+  vulnerable_system_availability_v40: String
+  subsequent_system_confidentiality_v40: String
+  subsequent_system_integrity_v40: String
+  subsequent_system_availability_v40: String
+  base_score_v40: Float
+  # vendor_description: String
   vulnerability: Vulnerability! @relationship(type:  "REFERS_TO", direction: IN)
+  # Other possible properties:
+  #  vector_string_v2
+  #  base_severity_v2
+  #  exploitability_score_v2
+  #  impact_score_v2
+  #  ac_insuf_info_v2
+  #  user_interaction_required_v2
+  #  vector_string_v30
+  #  base_severity_v30
+  #  exploitability_score_v30
+  #  impact_score_v30
+  #  vector_string_v31
+  #  base_severity_v31
+  #  exploitability_score_v31
+  #  impact_score_v31
+  #  vector_string_v40
+  #  base_severity_v40
+  #  cpe_type
+  #  last_modified
 }
 
 type Device {
