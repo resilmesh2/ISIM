@@ -188,7 +188,7 @@ type IP {
   tag: [String]
   domain_names: [DomainName!]! @relationship(type:  "RESOLVES_TO", properties: "ResolvesTo", direction: OUT)
   uris: [URI!]! @relationship(type: "IDENTIFIES", direction: OUT)
-  nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", direction: IN)
+  nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", properties: "HasAssigned", direction: IN)
   subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: OUT)
 }
 
@@ -216,7 +216,7 @@ type NodeObject @node(labels: "Node") {
     """,
     columnName: "_id"
   )
-  ips: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT)
+  ips: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT, properties: "HasAssigned")
   host: Host @relationship(type:  "IS_A", direction: OUT)
   is_dependent_on_nodes: [NodeObject!]! @relationship(type:  "IS_DEPENDENT_ON", direction: OUT)
   is_connected_to_nodes: [NodeObject!]! @relationship(type:  "IS_CONNECTED_TO", direction: OUT)
@@ -343,4 +343,9 @@ type NetworkServiceOn @relationshipProperties {
   end: String
   start: String
   tag: [String]
+}
+
+type HasAssigned @relationshipProperties {
+    start: String,
+    end: String
 }
