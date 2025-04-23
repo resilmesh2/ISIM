@@ -6,6 +6,7 @@ This repository consists of three subcomponents:
 * GraphQL subcomponent in the folder `isim_graphql`.
 
 Database adapter is intended to be an installable package, hence it contains poetry files.
+It contains a cleaner that can be executed according to instructions in the adapter's README.md.
 
 For more details, please, see README.md files in subcomponents.
 
