@@ -321,3 +321,6 @@ instructions from this README.md file.
 |Ubuntu 24.04.2 LTS|28.0.4|v2.34.0| 32.0 GiB |x86_64|16 cores|
 |Ubuntu 24.04.1 LTS|26.1.3|v2.14.0| 32.0 GiB |x86_64|6 cores|
 |Ubuntu 22.04.5 LTS|28.0.4|v2.34.0| 64.0 GiB |x86_64|16 cores|
+
+# Guidelines for Defining Missions
+Guidelines on how to define missions are listed in [mission guidelines](docs/mission_guidelines.md).
