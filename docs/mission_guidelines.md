@@ -66,9 +66,16 @@ First, it is necessary to assign IDs to each node. IDs do not have to follow any
 We started to number IDs of missions, services, AND/OR nodes, and hosts from numbers that 
 allow maintaining quick understanding of representation 
 in [example JSON](../isim_rest/test/test_data/cyber_czech_mission_bt1.json). 
-Properties of nodes are self-explaining. Criticality of missions should have value from 1 to 10.
-10 means the most critical mission which would cause a catastrophical impact to organization 
-when not working properly.
+
+Properties of nodes are self-explaining. Criticality of missions can be expressed using two options. 
+It is possible to use an overall criticality of a mission or separate confidentiality, integrity, 
+and availability requirements but not both of these options simultaneously. 
+The criticality should have value from 1 to 10.
+Number 10 means the most critical mission which would cause a catastrophical impact to organization 
+when not working properly. Confidentiality, integrity, and availability requirements are denoted instead 
+of criticality using keys "confidentiality_requirement", "integrity_requirement", and "availability_requirement".
+Individual requirements have values from 1 to 10. Number 10 means the most critical requirement. 
+The organization would encounter catastrophic impact when the requirement is violated.  
 
 Relationships have five subkeys:
 
