@@ -1,0 +1,75 @@
+from pathlib import Path
+from typing import Any, LiteralString, cast
+
+from neo4j_adapter.dtos import IPAssetInformationDTO
+from neo4j_adapter.general_adapter import GeneralAdapter
+
+BASE_DIR = Path(__file__).parent
+
+
+class CriticalityAdapter(GeneralAdapter):
+    def __init__(self, password: str, **kwargs: Any) -> None:
+        super().__init__(password=password, **kwargs)
+
+    def compute_topology_betweenness(self):
+        """
+        Compute betweenness centrality on topology edges with hops count equal to 1.
+
+        :return: information about computation
+        """
+        # TODO prepare a Cypher query for Nmap's traceroute data
+        pass
+
+    def compute_topology_degree(self):
+        """
+        Compute degree centrality on topology edges.
+
+        :return: information about computation
+        """
+        # TODO prepare a Cypher query for Nmap's traceroute data
+        pass
+
+    def _create_graph_projection(self):
+        """
+        This procedure creates a graph projection used to compute centrality values.
+        Centrality values must be computed for unique edges between two nodes.
+        IP flow data consist of five-minute-long time windows, it is complicated to
+        distinguish when a session starts and ends.
+        From the perspective of criticality, the most important is how many hosts communicate to an important host.
+        :return:
+        """
+        query = """CALL gds.graph.project('centralityGraph', ['Node'], {
+                 IS_CONNECTED_TO: {properties: {numberOfConnections: {property: '*', aggregation: 'COUNT'}}}})
+                YIELD graphName AS graph, relationshipProjection AS degreeProjection, 
+                 nodeCount AS nodes, relationshipCount AS rels"""
+        self._run_query(query)
+
+    def _drop_graph_projection(self):
+        """
+        This procedure drops a graph projection used to compute centrality values.
+        :return:
+        """
+        query = "CALL gds.graph.drop('centralityGraph') YIELD graphName"
+        self._run_query(query)
+
+    def compute_ip_flow_degree(self):
+        """
+        Compute degree centrality on graph projection created from IP flow edges.
+        :return:
+        """
+        self._create_graph_projection()
+        query = """CALL gds.degree.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node) 
+        WHERE id(n) = nodeId SET n.degree_centrality = score"""
+        self._run_query(query)
+        self._drop_graph_projection()
+
+    def compute_ip_flow_pagerank(self):
+        """
+        Compute PageRank centrality on graph projection created from IP flow edges.
+        :return:
+        """
+        self._create_graph_projection()
+        query = """CALL gds.pageRank.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node) 
+        WHERE id(n) = nodeId SET n.pagerank_centrality = score"""
+        self._run_query(query)
+        self._drop_graph_projection()
