@@ -9,6 +9,7 @@ class IPAssetInformationDTO:
     subnets: list[str] = field(default_factory=list)
     contacts: list[str] = field(default_factory=list)
     missions: list[str] = field(default_factory=list)
+    nodes : list[dict] = field(default_factory=list)
 
     @property
     def critical(self) -> int:

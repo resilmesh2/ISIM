@@ -397,6 +397,16 @@ components:
             type: string
             format: e-mail
           example: ["admin@test.com"]
+        nodes:
+          type: array
+          items:
+            type: object
+          example: [{
+                "degree_centrality": 1.0,
+                "pagerank_centrality": 0.15,
+                "topology_degree": null,
+                "topology_betweenness": null
+                }]
         critical:
           type: integer
           minimum: 0

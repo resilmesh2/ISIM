@@ -167,8 +167,9 @@ class RESTAdapter(GeneralAdapter):
         WITH ip, [(ip)-[:PART_OF]-(s:Subnet) | s.range] as subnets
         WITH ip, subnets, [(ip)-[:PART_OF]-(s:Subnet)-[:HAS]-(c:Contact) | c.name] as contacts
         WITH ip, subnets, contacts, [(ip)-[:RESOLVES_TO]-(d:DomainName) | d.domain_name] as domains
-        WITH ip, subnets, contacts, domains, [(ip)-[:HAS_ASSIGNED]-(Node)-[:IS_A]-(Host)-[:PROVIDED_BY]-(Component)-[:SUPPORTS]-(m:Mission) | m.name] as missions
-        RETURN ip.address as ip, subnets, contacts, domains, missions
+        WITH ip, subnets, contacts, domains, [(ip)-[:HAS_ASSIGNED]-(n:Node) | {{degree_centrality: n.degree_centrality, pagerank_centrality: n.pagerank_centrality, topology_betweenness: n.topology_betweenness, topology_degree: n.topology_degree}}] as nodes
+        WITH ip, subnets, contacts, domains, nodes, [(ip)-[:HAS_ASSIGNED]-(Node)-[:IS_A]-(Host)-[:PROVIDED_BY]-(Component)-[:SUPPORTS]-(m:Mission) | m.name] as missions
+        RETURN ip.address as ip, subnets, contacts, domains, nodes, missions
         ORDER BY ip.address
         SKIP $offset
         LIMIT $limit
@@ -181,6 +182,7 @@ class RESTAdapter(GeneralAdapter):
                 contacts=ip_info.get("contacts"),
                 missions=ip_info.get("missions"),
                 domain_names=ip_info.get("domains"),
+                nodes=ip_info.get("nodes"),
             )
             for ip_info in data
         ]

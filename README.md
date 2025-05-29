@@ -183,23 +183,29 @@ are also other endpoints allowing to query returning information directly from N
 
 Example of the `/asset_info` output (corresponding to the input above):
 ```json
-[
-	{
-		"ip": "10.0.0.1",
-		"domain_names": [
-			"test.com"
-		],
-		"subnets": [
-			"10.0.0.0/16"
-		],
-		"contacts": [
-			"test@test.test"
-		],
-		"missions": [
-			"Public-Facing Services"
-		],
-		"critical": 1
-	}
+[ 
+    {
+        "ip": "10.0.0.1", 
+        "domain_names": [
+            "test.com"
+        ], 
+        "subnets": [
+            "10.0.0.0/16"
+        ], 
+        "contacts": [
+            "test@test.test"
+        ], 
+        "missions": [
+            "Public-Facing Services"
+        ], 
+        "nodes": [{
+            "degree_centrality": null, 
+            "pagerank_centrality": null, 
+            "topology_degree": null, 
+            "topology_betweenness": null
+        }], 
+        "critical": 1
+    }
 ]
 ```
 

@@ -216,6 +216,10 @@ type NodeObject @node(labels: "Node") {
     """,
     columnName: "_id"
   )
+  degree_centrality: Float
+  pagerank_centrality: Float
+  topology_betweenness: Float
+  topology_degree: Float
   ips: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT, properties: "HasAssigned")
   host: Host @relationship(type:  "IS_A", direction: OUT)
   is_dependent_on_nodes: [NodeObject!]! @relationship(type:  "IS_DEPENDENT_ON", direction: OUT)
