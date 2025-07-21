@@ -1,5 +1,7 @@
+import contextlib
 from dataclasses import dataclass, field
-from ipaddress import ip_address, ip_network
+from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network, IPv4Interface, \
+    IPv6Interface, ip_interface
 from typing import Any, LiteralString
 
 from neo4j_adapter.general_adapter import GeneralAdapter
@@ -27,29 +29,19 @@ class IPAddress:
     address: str
     version: str
     subnet: "Network" = field(init=False)
+    _ip_obj: IPv4Interface | IPv6Interface = field(init=False)
 
     def __post_init__(self):
-        """Validate IP address on creation."""
         try:
-            self._ip_obj = ip_address(self.address)
+            self._ip_obj = ip_interface(self.address)
         except ValueError:
-            raise ValueError(f"Invalid IP address: {self.address}")
+            raise ValueError(f"Invalid IP interface: {self.address}")
 
     @property
-    def ip_object(self):
-        """Get the ipaddress object."""
+    def ip_object(self) -> IPv4Interface | IPv6Interface:
         return self._ip_obj
 
     def find_nearest_subnet(self, networks: list["Network"]) -> "Network":
-        """
-        Find the nearest (most specific) subnet that contains this IP.
-
-        Args:
-            networks: List of Network objects to search
-
-        Returns:
-            The most specific Network that contains this IP, or None if no match
-        """
         best_match = None
         best_prefix_length = -1
 
@@ -57,19 +49,18 @@ class IPAddress:
             if network.version != self.version:
                 continue
 
-            if network.contains_ip(self):
-                if network.prefix_length > best_prefix_length:
-                    best_prefix_length = network.prefix_length
-                    best_match = network
+            if self._ip_obj.ip in network.network_object and network.prefix_length > best_prefix_length:
+                best_match = network
+                best_prefix_length = network.prefix_length
 
         self.subnet = best_match
         return best_match
 
-    def __str__(self):
+    def __str__(self) -> str:
         subnet_info = f" (subnet: {self.subnet.range})" if self.subnet else " (no subnet)"
         return f"IP {self.address}{subnet_info}"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"IPAddress(address='{self.address}', version='{self.version}', subnet={self.subnet})"
 
 
@@ -81,8 +72,9 @@ class Network:
     version: str
     parent_subnet: "Network" = field(init=False)
     child_subnets: set["Network"] = field(default_factory=set)
+    _network_obj: IPv4Network | IPv6Network = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate network range on creation."""
         try:
             self._network_obj = ip_network(self.range, strict=False)
@@ -90,7 +82,7 @@ class Network:
             raise ValueError(f"Invalid network range: {self.range}")
 
     @property
-    def network_object(self):
+    def network_object(self) -> IPv4Network | IPv6Network:
         """Get the ipaddress network object."""
         return self._network_obj
 
@@ -98,20 +90,6 @@ class Network:
     def prefix_length(self):
         """Get the prefix length of this network."""
         return self._network_obj.prefixlen
-
-    def contains_ip(self, ip_addr: IPAddress) -> bool:
-        """
-        Check if this network contains the given IP address.
-
-        Args:
-            ip_addr: IPAddress object to check
-
-        Returns:
-            True if the IP is contained in this network
-        """
-        if self.version != ip_addr.version:
-            return False
-        return ip_addr.ip_object in self._network_obj
 
     def contains_network(self, other_network: "Network") -> bool:
         """
@@ -123,11 +101,7 @@ class Network:
         Returns:
             True if the other network is a subnet of this network
         """
-        if self.version != other_network.version:
-            return False
-        if self.range == other_network.range:
-            return False
-        return other_network.network_object.subnet_of(self._network_obj)
+        return ip_interface(other_network.range) in self.network_object
 
     def find_nearest_parent(self, potential_parents: list["Network"]) -> "Network":
         """
@@ -143,10 +117,9 @@ class Network:
         best_prefix_length = -1
 
         for parent in potential_parents:
-            if parent.contains_network(self):
-                if parent.prefix_length > best_prefix_length:
-                    best_prefix_length = parent.prefix_length
-                    best_parent = parent
+            if parent.contains_network(self) and parent.prefix_length > best_prefix_length:
+                best_prefix_length = parent.prefix_length
+                best_parent = parent
 
         if best_parent:
             self.parent_subnet = best_parent
@@ -166,7 +139,7 @@ class Network:
 class NetworkManager:
     """Manages collections of IP addresses and networks with relationship building."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ip_addresses: list[IPAddress] = []
         self.networks: list[Network] = []
 
@@ -182,12 +155,12 @@ class NetworkManager:
         self.networks.append(network)
         return network
 
-    def build_ip_subnet_relationships(self):
+    def build_ip_subnet_relationships(self) -> None:
         """Build relationships between IP addresses and their nearest subnets."""
         for ip_addr in self.ip_addresses:
             ip_addr.find_nearest_subnet(self.networks)
 
-    def build_network_hierarchy(self):
+    def build_network_hierarchy(self) -> None:
         """Build parent-child relationships between networks."""
         # Sort networks by prefix length (most specific first)
         sorted_networks = sorted(self.networks, key=lambda n: n.prefix_length, reverse=True)
@@ -205,7 +178,7 @@ class NetworkManager:
 class Neo4jIpSubnetSynchronize:
     """Extended version of IpSubnetSynchronize with hierarchy processing."""
 
-    def __init__(self, adapter: "IpSubnetSynchronize"):
+    def __init__(self, adapter: "IpSubnetSynchronize") -> None:
         self.adapter = adapter
         self.manager = NetworkManager()
 
@@ -219,8 +192,6 @@ class Neo4jIpSubnetSynchronize:
         # Fetch existing data
         ips, subnets = self.adapter.fetch_ips_and_subnets()
 
-        print(f"Fetched {len(ips)} IP addresses and {len(subnets)} subnets")
-
         # Load into manager
         self._load_data_into_manager(ips, subnets)
 
@@ -231,7 +202,7 @@ class Neo4jIpSubnetSynchronize:
         # Generate Neo4j update data
         return self._generate_neo4j_data()
 
-    def _load_data_into_manager(self, ips: list[dict[str, str]], subnets: list[dict[str, str]]):
+    def _load_data_into_manager(self, ips: list[dict[str, str]], subnets: list[dict[str, str]]) -> None:
         """Load fetched data into the network manager."""
         # Clear existing data
         self.manager.ip_addresses.clear()
@@ -239,17 +210,13 @@ class Neo4jIpSubnetSynchronize:
 
         # Add networks
         for subnet in subnets:
-            try:
+            with contextlib.suppress(ValueError):
                 self.manager.add_network(subnet["range"], subnet["version"])
-            except ValueError as e:
-                print(f"Skipping invalid subnet: {e}")
 
         # Add IPs
         for ip in ips:
-            try:
+            with contextlib.suppress(ValueError):
                 self.manager.add_ip(ip["address"], ip["version"])
-            except ValueError as e:
-                print(f"Skipping invalid IP: {e}")
 
     def _generate_neo4j_data(self) -> dict[str, Any]:
         """Generate data structure for Neo4j loading."""
@@ -355,7 +322,6 @@ class Neo4jIpSubnetSynchronize:
         Returns:
             Complete results of the synchronization
         """
-        print("Starting hierarchy synchronization...")
 
         # Process hierarchy
         processed_data = self.fetch_and_process_hierarchy()
@@ -373,18 +339,15 @@ class Neo4jIpSubnetSynchronize:
 
     def print_hierarchy_preview(self) -> None:
         """Print a preview of the hierarchy structure."""
-        print("\n=== Hierarchy Preview ===")
 
         # Show root networks and their immediate children
         root_networks = [n for n in self.manager.networks if n.parent_subnet is None]
 
         for root in sorted(root_networks, key=lambda n: n.prefix_length):
-            print(f"\nRoot: {root.range} (/{root.prefix_length})")
 
             # Show direct children
             children = sorted(root.child_subnets, key=lambda n: n.prefix_length)
             for child in children:
-                print(f"  └─ {child.range} (/{child.prefix_length})")
 
                 # Show IPs in this child subnet
                 ips_in_child = [ip for ip in self.manager.ip_addresses if ip.subnet == child]
@@ -395,7 +358,7 @@ class Neo4jIpSubnetSynchronize:
 
 
 # Example usage
-def example_usage():
+def example_usage() -> None:
     """Example of how to use the Neo4j hierarchy integration."""
 
     # Assuming you have an existing IpSubnetSynchronize instance
@@ -411,8 +374,6 @@ def example_usage():
     # processed_data = hierarchy_sync.fetch_and_process_hierarchy()
     # hierarchy_sync.print_hierarchy_preview()
     # load_result = hierarchy_sync.load_hierarchy_to_neo4j(processed_data)
-
-    print("Example usage shown in comments above")
 
 
 if __name__ == "__main__":
