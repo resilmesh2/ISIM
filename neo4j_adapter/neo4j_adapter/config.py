@@ -15,18 +15,18 @@ CONF_DIR = BASE_DIR.parent / "config"
 class OrganizationConfig:
     name: str
     domain_names: list[str]
-    organization_subnets: list[str]
+    ip_ranges: list[str]
 
     def __post_init__(self) -> None:
-        [ip_network(subnet) for subnet in self.organization_subnets]  # IP validation.
+        [ip_network(subnet) for subnet in self.ip_ranges]  # IP validation.
 
     @cached_property
     def ipv4_subnets(self) -> list[IPv4Network]:
-        return [IPv4Network(subnet) for subnet in self.organization_subnets if ip_network(subnet).version == 4]
+        return [IPv4Network(subnet) for subnet in self.ip_ranges if ip_network(subnet).version == 4]
 
     @cached_property
     def ipv6_subnets(self) -> list[IPv6Network]:
-        return [IPv6Network(subnet) for subnet in self.organization_subnets if ip_network(subnet).version == 6]
+        return [IPv6Network(subnet) for subnet in self.ip_ranges if ip_network(subnet).version == 6]
 
 
 @dataclass

@@ -1,5 +1,4 @@
-company:
-  domain_names: ["127.0.0.1:7233"]
-  subnet:
-    ipv4_ranges: ["192.168.0.1/24"]
-    ipv6_ranges: []
+organization:
+  name: "test"
+  domain_names: ["test.cz"]
+  ip_ranges: ["192.168.0.1/24"]
