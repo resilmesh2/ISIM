@@ -1,7 +1,13 @@
 import contextlib
 from dataclasses import dataclass, field
-from ipaddress import ip_address, ip_network, IPv4Address, IPv6Address, IPv4Network, IPv6Network, IPv4Interface, \
-    IPv6Interface, ip_interface
+from ipaddress import (
+    IPv4Interface,
+    IPv4Network,
+    IPv6Interface,
+    IPv6Network,
+    ip_interface,
+    ip_network,
+)
 from typing import Any, LiteralString
 
 from neo4j_adapter.general_adapter import GeneralAdapter
@@ -21,6 +27,64 @@ class IpSubnetSynchronize(GeneralAdapter):
         subnets = [{"range": record["range"], "version": record["version"]} for record in subnets_result]
         return ips, subnets
 
+    def load_hierarchy_to_neo4j(self, processed_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Load the processed hierarchy back to Neo4j.
+
+        Args:
+            processed_data: Data returned from fetch_and_process_hierarchy()
+
+        Returns:
+            Result of the Neo4j operation
+        """
+        # Clear existing PART_OF relationships between subnets
+        clear_query = """
+        MATCH (s1:Subnet)-[r:PART_OF]->(s2:Subnet)
+        DELETE r
+        """
+
+        self._run_query(clear_query)
+
+        # Prepare input for the existing Cypher query
+        input_data = {"subnets": processed_data["subnets"]}
+
+        # Use the existing subnet processing query
+        subnet_query: LiteralString = """
+           WITH $input AS input_
+               CALL {
+           WITH input_
+               UNWIND input_.subnets AS subnets
+               MERGE (subnet: Subnet {range: subnets.ip_range})
+           SET subnet.note = subnets.note
+           SET subnet.version = subnets.version
+               FOREACH (p IN subnets.parents |
+               MERGE (parent:Subnet {range: p})
+               MERGE (subnet)-[:PART_OF]->(parent)
+               )
+               }
+               RETURN count(*) as processed_subnets \
+        """
+
+        subnet_result = self._run_query(query=subnet_query, input=input_data)
+
+        # Update IP-subnet relationships
+        ip_subnet_query: LiteralString = """
+        UNWIND $ips AS ip_data
+        MATCH (ip:IP {address: ip_data.address})
+        OPTIONAL MATCH (ip)-[old_rel:PART_OF]->(old_subnet:Subnet)
+        DELETE old_rel
+        WITH ip, ip_data
+        WHERE ip_data.subnet IS NOT NULL
+        MATCH (subnet:Subnet {range: ip_data.subnet})
+        MERGE (ip)-[:PART_OF]->(subnet)
+        """
+
+        ip_result = self._run_query(query=ip_subnet_query, ips=processed_data["ips"])
+
+        return {
+            "subnet_processing": subnet_result,
+            "ip_processing": ip_result,
+        }
 
 @dataclass
 class IPAddress:
@@ -31,11 +95,11 @@ class IPAddress:
     subnet: "Network" = field(init=False)
     _ip_obj: IPv4Interface | IPv6Interface = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         try:
             self._ip_obj = ip_interface(self.address)
-        except ValueError:
-            raise ValueError(f"Invalid IP interface: {self.address}")
+        except ValueError as err:
+            raise ValueError(f"Invalid IP interface: {self.address}") from err
 
     @property
     def ip_object(self) -> IPv4Interface | IPv6Interface:
@@ -60,9 +124,6 @@ class IPAddress:
         subnet_info = f" (subnet: {self.subnet.range})" if self.subnet else " (no subnet)"
         return f"IP {self.address}{subnet_info}"
 
-    def __repr__(self) -> str:
-        return f"IPAddress(address='{self.address}', version='{self.version}', subnet={self.subnet})"
-
 
 @dataclass
 class Network:
@@ -78,8 +139,12 @@ class Network:
         """Validate network range on creation."""
         try:
             self._network_obj = ip_network(self.range, strict=False)
-        except ValueError:
-            raise ValueError(f"Invalid network range: {self.range}")
+        except ValueError as err:
+            raise ValueError(f"Invalid network range: {self.range}") from err
+        if self.version == "4":
+            self.parent_subnet = Network(range="0.0.0.0/0", version=self.version)
+        elif self.version == "6":
+            self.parent_subnet = Network(range="::/0", version=self.version)
 
     @property
     def network_object(self) -> IPv4Network | IPv6Network:
@@ -87,21 +152,13 @@ class Network:
         return self._network_obj
 
     @property
-    def prefix_length(self):
+    def prefix_length(self) -> int:
         """Get the prefix length of this network."""
         return self._network_obj.prefixlen
 
     def contains_network(self, other_network: "Network") -> bool:
-        """
-        Check if this network contains another network.
 
-        Args:
-            other_network: Network object to check
-
-        Returns:
-            True if the other network is a subnet of this network
-        """
-        return ip_interface(other_network.range) in self.network_object
+        return ip_interface(other_network.range) in self.network_object and other_network.prefix_length > self.prefix_length
 
     def find_nearest_parent(self, potential_parents: list["Network"]) -> "Network":
         """
@@ -208,12 +265,10 @@ class Neo4jIpSubnetSynchronize:
         self.manager.ip_addresses.clear()
         self.manager.networks.clear()
 
-        # Add networks
         for subnet in subnets:
             with contextlib.suppress(ValueError):
                 self.manager.add_network(subnet["range"], subnet["version"])
 
-        # Add IPs
         for ip in ips:
             with contextlib.suppress(ValueError):
                 self.manager.add_ip(ip["address"], ip["version"])
@@ -240,80 +295,7 @@ class Neo4jIpSubnetSynchronize:
             }
             ip_data.append(ip_entry)
 
-        return {"subnets": subnet_data, "ips": ip_data, "statistics": self._get_statistics()}
-
-    def _get_statistics(self) -> dict[str, int]:
-        """Get processing statistics."""
-        root_networks = [n for n in self.manager.networks if n.parent_subnet is None]
-        orphaned_ips = [ip for ip in self.manager.ip_addresses if ip.subnet is None]
-
-        return {
-            "total_networks": len(self.manager.networks),
-            "total_ips": len(self.manager.ip_addresses),
-            "root_networks": len(root_networks),
-            "orphaned_ips": len(orphaned_ips),
-            "hierarchy_relationships": sum(1 for n in self.manager.networks if n.parent_subnet),
-            "ip_subnet_relationships": sum(1 for ip in self.manager.ip_addresses if ip.subnet),
-        }
-
-    def load_hierarchy_to_neo4j(self, processed_data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Load the processed hierarchy back to Neo4j.
-
-        Args:
-            processed_data: Data returned from fetch_and_process_hierarchy()
-
-        Returns:
-            Result of the Neo4j operation
-        """
-        # Clear existing PART_OF relationships between subnets
-        clear_query = """
-        MATCH (s1:Subnet)-[r:PART_OF]->(s2:Subnet)
-        DELETE r
-        """
-        self.adapter._run_query(clear_query)
-
-        # Prepare input for the existing Cypher query
-        input_data = {"subnets": processed_data["subnets"]}
-
-        # Use the existing subnet processing query
-        subnet_query: LiteralString = """
-           WITH $input AS input_
-               CALL {
-           WITH input_
-               UNWIND input_.subnets AS subnets
-               MERGE (subnet: Subnet {range: subnets.ip_range})
-           SET subnet.note = subnets.note
-           SET subnet.version = subnets.version
-               FOREACH (p IN subnets.parents |
-               MERGE (parent:Subnet {range: p})
-               MERGE (subnet)-[:PART_OF]->(parent)
-               )
-               }
-               RETURN count(*) as processed_subnets \
-        """
-
-        subnet_result = self.adapter._run_query(query=subnet_query, input=input_data)
-
-        # Update IP-subnet relationships
-        ip_subnet_query: LiteralString = """
-        UNWIND $ips AS ip_data
-        MATCH (ip:IP {address: ip_data.address})
-        OPTIONAL MATCH (ip)-[old_rel:PART_OF]->(old_subnet:Subnet)
-        DELETE old_rel
-        WITH ip, ip_data
-        WHERE ip_data.subnet IS NOT NULL
-        MATCH (subnet:Subnet {range: ip_data.subnet})
-        MERGE (ip)-[:PART_OF]->(subnet)
-        """
-
-        ip_result = self.adapter._run_query(query=ip_subnet_query, ips=processed_data["ips"])
-
-        return {
-            "subnet_processing": subnet_result,
-            "ip_processing": ip_result,
-            "statistics": processed_data["statistics"],
-        }
+        return {"subnets": subnet_data, "ips": ip_data}
 
     def run_full_hierarchy_sync(self) -> dict[str, Any]:
         """
@@ -326,35 +308,12 @@ class Neo4jIpSubnetSynchronize:
         # Process hierarchy
         processed_data = self.fetch_and_process_hierarchy()
 
-        print("Hierarchy processing complete:")
-        for key, value in processed_data["statistics"].items():
-            print(f"  {key}: {value}")
-
         # Load back to Neo4j
         print("\nLoading hierarchy to Neo4j...")
-        result = self.load_hierarchy_to_neo4j(processed_data)
+        result = self.adapter.load_hierarchy_to_neo4j(processed_data)
 
         print("Hierarchy synchronization complete!")
         return result
-
-    def print_hierarchy_preview(self) -> None:
-        """Print a preview of the hierarchy structure."""
-
-        # Show root networks and their immediate children
-        root_networks = [n for n in self.manager.networks if n.parent_subnet is None]
-
-        for root in sorted(root_networks, key=lambda n: n.prefix_length):
-
-            # Show direct children
-            children = sorted(root.child_subnets, key=lambda n: n.prefix_length)
-            for child in children:
-
-                # Show IPs in this child subnet
-                ips_in_child = [ip for ip in self.manager.ip_addresses if ip.subnet == child]
-                for ip in ips_in_child[:3]:  # Show first 3 IPs
-                    print(f"    └─ IP: {ip.address}")
-                if len(ips_in_child) > 3:
-                    print(f"    └─ ... and {len(ips_in_child) - 3} more IPs")
 
 
 # Example usage
@@ -369,11 +328,6 @@ def example_usage() -> None:
 
     # Run the full synchronization
     hierarchy_sync.run_full_hierarchy_sync()
-
-    # Or run step by step for more control
-    # processed_data = hierarchy_sync.fetch_and_process_hierarchy()
-    # hierarchy_sync.print_hierarchy_preview()
-    # load_result = hierarchy_sync.load_hierarchy_to_neo4j(processed_data)
 
 
 if __name__ == "__main__":
