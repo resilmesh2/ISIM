@@ -18,6 +18,7 @@ class AssetManagementConfig(AppConfig):
 
     def ready(self) -> None:
         config = ISIMConfig.get()
+
         initial_data = {
             "subnets": [
                 {
@@ -25,8 +26,21 @@ class AssetManagementConfig(AppConfig):
                     "note": "Internet",
                 },
                 {"ip_range": "::/0", "note": "Internet"},
-            ]
+            ],
+            "hosts": [],
         }
+
+        for host in config.org_config.hosts:
+            initial_data["hosts"].append(
+                {
+                    "ip_address": host.ip_address,
+                    "domain_names": host.domain_names,
+                    "subnets": host.subnets,
+                    "tag": ["config"],
+                    "version": host.version,
+                }
+            )
+
         client = RESTAdapter(
             password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
         )
