@@ -1,4 +1,5 @@
-organization:
-  name: "test"
-  domain_names: ["test.cz"]
-  ip_ranges: ["192.168.0.1/24"]
+name: "test"
+hosts:
+  - ip_address: "127.0.0.1"
+    domain_names: ["test.cz"]
+    subnets: ["127.0.0.0/24"]
