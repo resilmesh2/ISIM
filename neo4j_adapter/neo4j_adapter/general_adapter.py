@@ -2,7 +2,7 @@
 from typing import Any, LiteralString, cast
 
 from neo4j import GraphDatabase, basic_auth
-from neo4j._api import NotificationMinimumSeverity, NotificationDisabledCategory
+from neo4j._api import NotificationDisabledCategory
 from neo4j._sync.driver import Driver
 
 
