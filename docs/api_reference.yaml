@@ -21,7 +21,7 @@ paths:
             application/json:
               schema:
                 type: string
-                example: 'Processed successfully'
+                example: 'Processed successfully. If some assets support missions, use /missions endpoint to add descriptions of missions.'
         "422":
           description: Bad input
           content:

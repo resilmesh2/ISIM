@@ -79,7 +79,8 @@ def assets(request: HttpRequest) -> Response:
         return Response(
             "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    return Response("Processed successfully", status=status.HTTP_201_CREATED)
+    return Response("Processed successfully. If some assets support missions, use /missions endpoint to add descriptions of missions.",
+                    status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])

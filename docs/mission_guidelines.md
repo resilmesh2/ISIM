@@ -72,7 +72,9 @@ It is possible to use an overall criticality of a mission or separate confidenti
 and availability requirements but not both of these options simultaneously. 
 The criticality should have value from 1 to 10.
 Number 10 means the most critical mission which would cause a catastrophical impact to organization 
-when not working properly. Confidentiality, integrity, and availability requirements are denoted instead 
+when not working properly. On the contrary, number 1 expresses a limited adverse impact to the organization. 
+Numbers in the middle of the range indicate a serious adverse impact.
+Confidentiality, integrity, and availability requirements are denoted instead 
 of criticality using keys "confidentiality_requirement", "integrity_requirement", and "availability_requirement".
 Individual requirements have values from 1 to 10. Number 10 means the most critical requirement. 
 The organization would encounter catastrophic impact when the requirement is violated.  
