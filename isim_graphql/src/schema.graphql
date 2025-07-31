@@ -353,3 +353,28 @@ type HasAssigned @relationshipProperties {
     start: String,
     end: String
 }
+
+type Query {
+  total_event_count: Int!
+    @cypher(
+      statement:" MATCH (e:SecurityEvent) RETURN count(e)"
+    )
+  total_cve_count: Int!
+    @cypher(
+      statement: "MATCH (cve:Vulnerability) RETURN count(DISTINCT cve)"
+    )
+  allTags: [String]!
+    @cypher(
+      statement: """
+      MATCH (n:IP)
+      WHERE n.tag IS NOT NULL
+      UNWIND n.tag AS tag
+      RETURN DISTINCT tag
+      """
+    )
+}
+
+type Mutation {
+  updateIPTag(id: Int!, tag: [String]!): IP
+    @cypher(statement: "MATCH (n:IP) WHERE id(n) = $id SET n.tag = $tag RETURN n")
+}
