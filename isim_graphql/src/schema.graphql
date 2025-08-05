@@ -356,15 +356,35 @@ type HasAssigned @relationshipProperties {
 }
 
 type Mutation {  
-  insertSubnet(note: String!, range: String!, parentSubnet: ID): Subnet
-    @cypher(
-      statement: """
-        CREATE (s:Subnet {note: $note, range: $range})
-        WITH s, $parentSubnet AS parent_range
-        MATCH (p:Subnet) WHERE p.range = parent_range
-        MERGE (s)-[:PART_OF]->(p)
-        RETURN s
-      """,
-      columnName: "s"
+    linkSubnetToParent(subnetRange: String!, parentSubnetRange: String!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange}), (p:Subnet {range: $parentSubnetRange})
+          CREATE (s)-[:PART_OF]->(p)
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    linkSubnetToOrgUnit(subnetRange: String!, orgUnitName: String!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange}), (o:OrganizationUnit {name: $orgUnitName})
+          CREATE (s)-[:PART_OF]->(o)
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    mergeSubnetWithContacts(subnetRange: String!, contactNames: [String!]!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange})
+          UNWIND $contactNames AS contact_name
+          MERGE (c:Contact {name: contact_name})
+          MERGE (s)-[:HAS]->(c)
+          RETURN s
+        """,
+        columnName: "s"
     )
 }
