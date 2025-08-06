@@ -387,4 +387,37 @@ type Mutation {
         """,
         columnName: "s"
     )
+
+    unlinkSubnetFromParent(subnetRange: String!, parentRange: String!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange})-[r:PART_OF]->(oldParent:Subnet)
+          DELETE r
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    unlinkSubnetFromOrgUnit(subnetRange: String!, orgUnitName: String!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange})-[r:PART_OF]->(oldOrgUnit:OrganizationUnit)
+          DELETE r
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    unlinkSubnetFromContacts(subnetRange: String!, contactNames: [String!]!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange})
+          UNWIND $contactNames AS contact_name
+          MATCH (c:Contact {name: contact_name})
+          MATCH (s)-[r:HAS]->(c)
+          DELETE r
+          RETURN s
+        """,
+        columnName: "s"
+    )
 }
