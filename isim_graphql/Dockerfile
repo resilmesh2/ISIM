@@ -4,7 +4,8 @@ RUN mkdir -p /app
 WORKDIR /app
 
 COPY package.json .
-RUN npm install
+RUN npm cache clean --force
+RUN --network=host npm install --force --default-timeout=300 --verbose
 COPY . .
 RUN npm run build
 

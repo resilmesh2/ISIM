@@ -1,0 +1,3 @@
+# /app/crontab
+# Run execute_automations.py every minute to check for due automations
+* 0 * * * /usr/local/bin/python /app/execute_automations.py >> /app/logs/automation.log 2>&1
