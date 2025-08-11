@@ -1,212 +1,90 @@
 active_automations:
-  21bcd437:
-    avg_risk_score: 4.6
-    calculation_method: geometric_mean
+  97cb5069:
+    avg_risk_score: 5.63
+    calculation_method: weighted_avg
     calculation_mode: calculate
     components:
-    - currentValue: 6.8
+    - currentValue: 5
+      maxValue: 10
+      name: Compliance Risk
+      neo4jProperty: compliance_risk
+      weight: 0.25
+    - currentValue: 5
       maxValue: 10
       name: Asset Criticality
       neo4jProperty: criticality
-      weight: 0.3333333333333333
-    - currentValue: 3.5
+      weight: 0.25
+    - currentValue: 5
       maxValue: 10
       name: CVSS Vulnerability Score
       neo4jProperty: cvss_score
-      weight: 0.3333333333333333
-    - currentValue: 3.5
+      weight: 0.25
+    - currentValue: 7.5
       maxValue: 10
       name: Threat Detection Score
       neo4jProperty: threatScore
-      weight: 0.3333333333333333
-    created_date: '2025-08-08T11:05:57.887248'
+      weight: 0.25
+    created_date: '2025-08-11T10:44:21.701739'
     custom_formula: ''
     formula_config:
-      asset_criticality: 0.3333333333333333
-      cvss_vulnerability_score: 0.3333333333333333
-      threat_detection_score: 0.3333333333333333
+      asset_criticality: 0.25
+      compliance_risk: 0.25
+      cvss_vulnerability_score: 0.25
+      threat_detection_score: 0.25
     formula_name: Custom Formula
-    last_run: '2025-08-11T10:05:07.721085'
+    last_run: '2025-08-11T13:40:53.187383'
     nodes_updated: 1
     target_property: Risk Score
-    target_type: ip
+    target_type: subnet
     target_values:
-    - 192.168.2.70
+    - 192.168.3.0/24
     update_frequency: minute
-  6ab76ee0:
-    avg_risk_score: 4.6
-    calculation_method: sum
-    calculation_mode: calculate
-    components:
-    - currentValue: 6.8
-      maxValue: 10
-      name: Asset Criticality
-      neo4jProperty: criticality
-      weight: 0.3333333333333333
-    - currentValue: 3.5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.3333333333333333
-    - currentValue: 3.5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.3333333333333333
-    created_date: '2025-08-08T10:53:13.445547'
-    custom_formula: ''
-    formula_config:
-      asset_criticality: 0.3333333333333333
-      cvss_vulnerability_score: 0.3333333333333333
-      threat_detection_score: 0.3333333333333333
-    formula_name: Custom Formula
-    last_run: '2025-08-11T10:05:07.840353'
-    nodes_updated: 1
-    target_property: Risk Score
-    target_type: ip
-    target_values:
-    - 192.168.2.137
-    update_frequency: minute
-  d886f052:
+  active_formula: null
+  fe9c1724:
     avg_risk_score: 5.0
     calculation_method: weighted_avg
     calculation_mode: calculate
     components:
     - currentValue: 5
       maxValue: 10
+      name: Compliance Risk
+      neo4jProperty: compliance_risk
+      weight: 0.25
+    - currentValue: 5
+      maxValue: 10
       name: Asset Criticality
       neo4jProperty: criticality
-      weight: 0.3333333333333333
+      weight: 0.25
     - currentValue: 5
       maxValue: 10
       name: CVSS Vulnerability Score
       neo4jProperty: cvss_score
-      weight: 0.3333333333333333
+      weight: 0.25
     - currentValue: 5
       maxValue: 10
       name: Threat Detection Score
       neo4jProperty: threatScore
-      weight: 0.3333333333333333
-    created_date: '2025-08-08T13:14:42.812069'
+      weight: 0.25
+    created_date: '2025-08-11T13:32:38.120001'
     custom_formula: ''
     formula_config:
-      asset_criticality: 0.3333333333333333
-      cvss_vulnerability_score: 0.3333333333333333
-      threat_detection_score: 0.3333333333333333
+      asset_criticality: 0.25
+      compliance_risk: 0.25
+      cvss_vulnerability_score: 0.25
+      threat_detection_score: 0.25
     formula_name: Custom Formula
-    last_run: '2025-08-11T10:05:08.021414'
+    last_run: '2025-08-11T13:40:53.359057'
     nodes_updated: 1
     target_property: Risk Score
-    target_type: ip
+    target_type: subnet
     target_values:
-    - 192.168.2.214
+    - 192.168.3.0/24
     update_frequency: minute
-  db6e3bbf:
-    avg_risk_score: 4.6
-    calculation_method: max
-    calculation_mode: calculate
-    components:
-    - currentValue: 6.8
-      maxValue: 10
-      name: Asset Criticality
-      neo4jProperty: criticality
-      weight: 0.3333333333333333
-    - currentValue: 3.5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.3333333333333333
-    - currentValue: 3.5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.3333333333333333
-    created_date: '2025-08-08T10:42:35.941360'
-    custom_formula: ''
-    formula_config:
-      asset_criticality: 0.3333333333333333
-      cvss_vulnerability_score: 0.3333333333333333
-      threat_detection_score: 0.3333333333333333
-    formula_name: Custom Formula
-    last_run: '2025-08-11T10:05:08.105927'
-    nodes_updated: 2
-    target_property: Risk Score
-    target_type: ip
-    target_values:
-    - 192.168.2.49
-    - 192.168.2.137
-    update_frequency: minute
-  ec02f24b:
-    avg_risk_score: 4.6
-    calculation_method: sum
-    calculation_mode: calculate
-    components:
-    - currentValue: 6.8
-      maxValue: 10
-      name: Asset Criticality
-      neo4jProperty: criticality
-      weight: 0.3333333333333333
-    - currentValue: 3.5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.3333333333333333
-    - currentValue: 3.5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.3333333333333333
-    created_date: '2025-08-08T10:54:32.543346'
-    custom_formula: ''
-    formula_config:
-      asset_criticality: 0.3333333333333333
-      cvss_vulnerability_score: 0.3333333333333333
-      threat_detection_score: 0.3333333333333333
-    formula_name: Custom Formula
-    last_run: '2025-08-11T10:05:08.180452'
-    nodes_updated: 1
-    target_property: Risk Score
-    target_type: ip
-    target_values:
-    - 192.168.2.135
-    update_frequency: minute
-  f28780b8:
-    avg_risk_score: 4.6
-    calculation_method: geometric_mean
-    calculation_mode: calculate
-    components:
-    - currentValue: 6.8
-      maxValue: 10
-      name: Asset Criticality
-      neo4jProperty: criticality
-      weight: 0.3333333333333333
-    - currentValue: 3.5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.3333333333333333
-    - currentValue: 3.5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.3333333333333333
-    created_date: '2025-08-08T11:45:30.053303'
-    custom_formula: ''
-    formula_config:
-      asset_criticality: 0.3333333333333333
-      cvss_vulnerability_score: 0.3333333333333333
-      threat_detection_score: 0.3333333333333333
-    formula_name: Custom Formula
-    last_run: '2025-08-11T10:05:08.259233'
-    nodes_updated: 1
-    target_property: Risk Score
-    target_type: ip
-    target_values:
-    - 192.168.2.205
-    update_frequency: minute
-active_formula:
   name: a44eb742
   type: custom
+active_formula:
+  name: compliance_focused
+  type: predefined
 available_components:
   asset_age_risk:
     description: Patch currency and maintenance status
@@ -317,22 +195,27 @@ execution_settings:
 last_risk_calculation:
   applied_to: 'subnet: 192.168.3.0/24'
   average_risk_score: 5.0
+  calculation_method: weighted_avg
   calculation_mode: calculate
   components:
     Asset Criticality:
       value: 5
-      weight: 0.3333333333333333
+      weight: 0.25
     CVSS Vulnerability Score:
       value: 5
-      weight: 0.3333333333333333
+      weight: 0.25
+    Compliance Risk:
+      value: 5
+      weight: 0.25
     Threat Detection Score:
       value: 5
-      weight: 0.3333333333333333
+      weight: 0.25
+  custom_formula: ''
   formula_name: Custom Formula
   nodes_updated: 1
   target_property: Risk Score
-  timestamp: '2025-08-11T10:02:55.830646'
-  update_frequency: manual
+  timestamp: '2025-08-11T13:32:38.120307'
+  update_frequency: minute
 predefined_formulas:
   balanced_security:
     components:

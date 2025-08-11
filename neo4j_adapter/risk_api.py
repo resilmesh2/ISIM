@@ -20,7 +20,7 @@ import os
 app = Flask(__name__)
 CORS(app, 
      origins=['http://localhost:4200', 'http://localhost:3000', '*'],  # Angular dev server + Node.js
-     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],        # Allow DELETE explicitly
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'],
      supports_credentials=True)
 
@@ -161,7 +161,6 @@ def create_custom_formula():
             "modified_date": datetime.now().strftime('%Y-%m-%d')
         }
         
-        # Add to custom formulas
         if 'custom_formulas' not in config:
             config['custom_formulas'] = {}
         config['custom_formulas'][formula_id] = formula
@@ -362,7 +361,6 @@ def save_custom_component():
             "neo4j_property": data.get('neo4jProperty', component_key)
         }
         
-        # Add to available components
         if 'available_components' not in config:
             config['available_components'] = {}
         config['available_components'][component_key] = new_component
@@ -381,6 +379,85 @@ def save_custom_component():
         logger.error(f"Error saving custom component: {e}")
         return jsonify({"error": str(e)}), 500
 
+def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
+    """Build calculation based on selected method"""
+    
+    logger.info(f"Building calculation with method: {method}")
+    
+    if method == 'weighted_avg':
+        weighted_terms = []
+        total_weight = 0
+        
+        for comp in components:
+            comp_name = comp.get('name', '').replace(' ', '_').lower()
+            weight = formula_config.get(comp_name, 0)
+            current_value = float(comp.get('currentValue', 0))
+            
+            if weight > 0:
+                weighted_terms.append(f"({current_value} * {weight})")
+                total_weight += weight
+        
+        if not weighted_terms:
+            return "0"
+        
+        calculation = " + ".join(weighted_terms)
+        return f"(({calculation}) / {total_weight})"
+    
+    elif method == 'max':
+        values = []
+        for comp in components:
+            current_value = float(comp.get('currentValue', 0))
+            values.append(str(current_value))
+        
+        if not values:
+            return "0"
+        
+        if len(values) == 1:
+            return values[0]
+        else:
+            # Build nested CASE WHEN for finding maximum
+            max_calc = values[0]
+            for val in values[1:]:
+                max_calc = f"CASE WHEN {val} > {max_calc} THEN {val} ELSE {max_calc} END"
+            return max_calc
+    
+    elif method == 'sum':
+        terms = []
+        for comp in components:
+            current_value = float(comp.get('currentValue', 0))
+            terms.append(str(current_value))
+        return " + ".join(terms) if terms else "0"
+    
+    elif method == 'geometric_mean':
+        values = []
+        for comp in components:
+            current_value = float(comp.get('currentValue', 0))
+            # Avoid zero in geometric mean
+            values.append(f"CASE WHEN {current_value} > 0 THEN {current_value} ELSE 0.1 END")
+        
+        if not values:
+            return "0"
+        
+        n = len(values)
+        product = " * ".join(values)
+        # Use ^ operator instead of pow function
+        return f"(({product})^(1.0/{n}))"
+
+    elif method == 'custom_formula' and custom_formula:
+        # Replace component names with their values
+        formula = custom_formula
+        for comp in components:
+            comp_name = comp.get('name', '')
+            current_value = float(comp.get('currentValue', 0))
+            # Replace component name with its value in the formula
+            formula = formula.replace(comp_name, str(current_value))
+        return formula
+    
+    else:
+        # Default to weighted average
+        logger.warning(f"Unknown method {method}, defaulting to weighted_avg")
+        return build_calculation(components, formula_config, 'weighted_avg')
+
 @app.route('/api/risk/apply-configuration', methods=['POST'])
 def apply_risk_configuration():
     """Apply risk configuration from drag-drop interface"""
@@ -395,6 +472,11 @@ def apply_risk_configuration():
         update_frequency = data.get('updateFrequency', 'manual')
         target_property = data.get('targetProperty', 'Risk Score')
         formula_name = data.get('formulaName', 'Custom Formula')
+        
+        calculation_method = data.get('calculationMethod', 'weighted_avg')
+        custom_formula = data.get('customFormula', '')
+        
+        logger.info(f"Received calculation method: {calculation_method}")
         
         # Build formula configuration
         formula_config = {}
@@ -432,23 +514,10 @@ def apply_risk_configuration():
             else:
                 match_clause = "MATCH (n:Node)"
             
-            # Build calculation using user values
-            weighted_terms = []
-            total_weight = 0
+            # Build calculation based on selected method
+            calculation = build_calculation(components, formula_config, calculation_method, custom_formula)
             
-            for comp in components:
-                weight = float(comp.get('weight', 0))
-                current_value = float(comp.get('currentValue', 0))
-                
-                if weight > 0:
-                    weighted_terms.append(f"({current_value} * {weight})")
-                    total_weight += weight
-            
-            if weighted_terms:
-                calculation = " + ".join(weighted_terms)
-                calculation = f"(({calculation}) / {total_weight})"
-            else:
-                calculation = "0"
+            logger.info(f"Calculation: {calculation}")
             
             # Execute query
             prop_name = f"`{target_property}`" if ' ' in target_property else target_property
@@ -487,8 +556,8 @@ def apply_risk_configuration():
             'target_type': target_type,
             'target_values': target_values,
             'calculation_mode': calculation_mode,
-            'calculation_method': data.get('calculationMethod', 'weighted_avg'), 
-            'custom_formula': data.get('customFormula', ''),
+            'calculation_method': calculation_method,
+            'custom_formula': custom_formula,
             'target_property': target_property,
             'update_frequency': update_frequency,
             'created_date': datetime.now().isoformat(),
@@ -515,6 +584,8 @@ def apply_risk_configuration():
             'update_frequency': update_frequency,
             'target_property': target_property,
             'calculation_mode': calculation_mode,
+            'calculation_method': calculation_method,
+            'custom_formula': custom_formula, 
             'components': {comp['name']: {'weight': comp.get('weight', 0), 'value': comp.get('currentValue', 0)} for comp in components}
         }
         
@@ -534,7 +605,7 @@ def apply_risk_configuration():
     except Exception as e:
         logger.error(f"Error applying configuration: {e}")
         return jsonify({'error': str(e)}), 500
-       
+          
 if __name__ == '__main__':
     #Start Flask API
     logger.info("Starting Risk Assessment API on port 5000")

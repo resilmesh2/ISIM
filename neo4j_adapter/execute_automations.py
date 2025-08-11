@@ -7,7 +7,7 @@ Location: /app/execute_automations.py
 import yaml
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any  # ADD THIS
+from typing import Dict, Any
 from neo4j import GraphDatabase
 import os
 
@@ -77,11 +77,21 @@ def load_automations() -> Dict[str, Any]:
     try:
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file) or {}
-            return config.get('active_automations', {})
+            automations = config.get('active_automations', {})
+            
+            # Filter out None or invalid automation entries
+            valid_automations = {}
+            for automation_id, automation_config in automations.items():
+                if automation_config and isinstance(automation_config, dict):
+                    valid_automations[automation_id] = automation_config
+                else:
+                    logger.warning(f"Skipping invalid automation {automation_id}")
+            
+            return valid_automations
     except Exception as e:
         logger.error(f"Failed to load automations: {e}")
         return {}
-
+    
 def update_last_run(automation_id: str):
     """Update the last run time in the config"""
     config_path = "/config/risk_assessment_config.yaml"
@@ -308,6 +318,11 @@ def main():
         return
     
     for automation_id, config in automations.items():
+        # Skip if config is None or not a dictionary
+        if not config or not isinstance(config, dict):
+            logger.warning(f"Skipping automation {automation_id} - invalid or missing configuration")
+            continue
+            
         frequency = config.get('update_frequency', 'manual')
         logger.info(f"Checking automation {automation_id} (frequency: {frequency})")
         
