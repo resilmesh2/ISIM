@@ -10,16 +10,12 @@ import logging
 from datetime import datetime
 import uuid
 from typing import Dict, Any, Optional, List
-import threading
-import time
-import subprocess
-import json
 from neo4j import GraphDatabase
 import os
 
 app = Flask(__name__)
 CORS(app, 
-     origins=['http://localhost:4200', 'http://localhost:3000', '*'],  # Angular dev server + Node.js
+     origins=['http://localhost:4201', 'http://localhost:3000', '*'],  # Angular dev server + Node.js
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'],
      supports_credentials=True)
