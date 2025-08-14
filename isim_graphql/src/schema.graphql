@@ -45,7 +45,7 @@ type CVE {
     """,
     columnName: "_id"
   )
-  cve_id: String!
+  CVE_id: String!
   cwe: [String]!
   description: String!
   impact: [String]!
@@ -236,7 +236,9 @@ type OrganizationUnit {
   )
   name: String!
   subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: IN)
-  physical_environments: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT)
+  physical_environments: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT),
+  parent_org_unit: [OrganizationUnit!]! @relationship(type: "PART_OF", direction: OUT)
+  contacts: [Contact!]! @relationship(type: "HAS", direction: OUT)
 }
 
 type PhysicalEnvironment {
@@ -355,7 +357,7 @@ type HasAssigned @relationshipProperties {
     end: String
 }
 
-type Mutation {  
+type Mutation {
     linkSubnetToParent(subnetRange: String!, parentSubnetRange: String!): Subnet
       @cypher(
         statement: """
@@ -419,5 +421,50 @@ type Mutation {
           RETURN s
         """,
         columnName: "s"
+    )
+
+    linkOrgUnitToParentOrg(orgUnitName: String!, parentOrgUnitName: String!): OrganizationUnit
+      @cypher(
+        statement: """
+          MATCH (org:OrganizationUnit {name: $orgUnitName}), (parent:OrganizationUnit {name: $parentOrgUnitName})
+          CREATE (org)-[:PART_OF]->(parent)
+          RETURN org
+        """,
+        columnName: "org"
+    )
+
+    mergeOrgUnitWithContacts(orgUnitName: String!, contactNames: [String!]!): OrganizationUnit
+      @cypher(
+        statement: """
+          MATCH (org:OrganizationUnit {name: $orgUnitName})
+          UNWIND $contactNames AS contact_name
+          MERGE (c:Contact {name: contact_name})
+          MERGE (org)-[:HAS]->(c)
+          RETURN org
+        """,
+        columnName: "org"
+    )
+
+    unlinkOrgUnitFromParents(orgUnitName: String!): OrganizationUnit
+      @cypher(
+        statement: """
+          MATCH (org:OrganizationUnit {name: $orgUnitName})-[r:PART_OF]->(oldParent:OrganizationUnit)
+          DELETE r
+          RETURN org
+        """,
+        columnName: "org"
+    )
+
+    unlinkOrgUnitFromContacts(orgUnitName: String!, contactNames: [String!]!): OrganizationUnit
+      @cypher(
+        statement: """
+          MATCH (org:OrganizationUnit {name: $orgUnitName})
+          UNWIND $contactNames AS contact_name
+          MATCH (c:Contact {name: contact_name})
+          MATCH (org)-[r:HAS]->(c)
+          DELETE r
+          RETURN org
+        """,
+        columnName: "org"
     )
 }
