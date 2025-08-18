@@ -37,6 +37,107 @@ type Contact {
   subnets: [Subnet!]! @relationship(type: "HAS", direction: IN)
 }
 
+type CVSSv2 {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
+
+  vector_string: String
+  access_vector: String
+  access_complexity: String
+  authentication: String
+  confidentiality_impact: String
+  integrity_impact: String
+  availability_impact: String
+  base_score: Float
+  base_severity: String
+  exploitability_score: Float
+  impact_score: Float
+  ac_insuf_info: Boolean
+  obtain_all_privilege: Boolean
+  obtain_user_privilege: Boolean
+  obtain_other_privilege: Boolean
+  user_interaction_required: Boolean
+}
+
+type CVSSv30 {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
+
+  vector_string: String
+  attack_vector: String
+  attack_complexity: String
+  privileges_required: String
+  user_interaction: String
+  scope: String
+  confidentiality_impact: String
+  integrity_impact: String
+  availability_impact: String
+  base_score: Float
+  base_severity: String
+  exploitability_score: Float
+  impact_score: Float
+}
+
+type CVSSv31 {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
+
+  vector_string: String
+  attack_vector: String
+  attack_complexity: String
+  privileges_required: String
+  user_interaction: String
+  scope: String
+  confidentiality_impact: String
+  integrity_impact: String
+  availability_impact: String
+  base_score: Float
+  base_severity: String
+  exploitability_score: Float
+  impact_score: Float
+}
+
+type CVSSv40 {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
+
+  vector_string: String
+  attack_vector: String
+  attack_complexity: String
+  attack_requirements: String
+  privileges_required: String
+  user_interaction: String
+  vulnerable_system_confidentiality: String
+  vulnerable_system_integrity: String
+  vulnerable_system_availability: String
+  subsequent_system_confidentiality: String
+  subsequent_system_integrity: String
+  subsequent_system_availability: String
+  base_score: Float
+  base_severity: String
+  exploit_maturity: String
+}
+
 type CVE {
   _id: ID! @cypher(
     statement: """
@@ -45,92 +146,22 @@ type CVE {
     """,
     columnName: "_id"
   )
-  CVE_id: String!
-  cwe: [String]
-  description: String
-  impact: [String]
-  published_date: String
-  # patched: String
-  ref_tags: [String]
-  # Properties from CVSS v2
-  access_complexity_v2: String
-  access_vector_v2: String
-  authentication_v2: String
-  availability_impact_v2: String
-  confidentiality_impact_v2: String
-  integrity_impact_v2: String
-  base_score_v2: Float
-  obtain_all_privilege_v2: Boolean
-  obtain_other_privilege_v2: Boolean
-  obtain_user_privilege_v2: Boolean
-  # Properties from CVSS v3.0
-  attack_complexity_v30: String
-  attack_vector_v30: String
-  availability_impact_v30: String
-  base_score_v30: Float
-  confidentiality_impact_v30: String
-  integrity_impact_v30: String
-  privileges_required_v30: String
-  scope_v30: String
-  user_interaction_v30: String
-  # Properties from CVSS v3.1
-  attack_vector_v31: String
-  attack_complexity_v31: String
-  privileges_required_v31: String
-  user_interaction_v31: String
-  scope_v31: String
-  confidentiality_impact_v31: String
-  integrity_impact_v31: String
-  availability_impact_v31: String
-  base_score_v31: Float
-  # Properties from CVSS v4.0
-  attack_vector_v40: String
-  attack_complexity_v40: String
-  attack_requirements_v40: String
-  privileges_required_v40: String
-  user_interaction_v40: String
-  vulnerable_system_confidentiality_v40: String
-  vulnerable_system_integrity_v40: String
-  vulnerable_system_availability_v40: String
-  subsequent_system_confidentiality_v40: String
-  subsequent_system_integrity_v40: String
-  subsequent_system_availability_v40: String
-  base_score_v40: Float
-  # vendor_description: String
-  # New properties
-  base_score_v3: String
-  attack_vector: String
-  attack_complexity: String
-  access_complexity: String
-  access_vector: String
-  privileges_required: String
-  user_interaction: String
-  scope: String
-  authentication: String
-  confidentiality_impact_v3: String
-  integrity_impact_v3: String
-  availability_impact_v3: String
+
+  cve_id: String!                                 # ID of the CVE.
+  description: String!                            # Description of the CVE.
+  cwe: String                                     # Common Weakness Enumeration (CWE) associated with the CVE.
+  cpe_type: String!                               # CPE type associated with the CVE.
+  ref_tags: [String]                              # Reference tags.
+  published: String!                              # Publication date of the CVE.
+  last_modified: String!                          # Last modified date of the CVE.
+  result_impacts: [String]                        # List of impacts determined by the categorizer.
+
 
   vulnerability: Vulnerability! @relationship(type:  "REFERS_TO", direction: IN)
-  # Other possible properties:
-  #  vector_string_v2
-  #  base_severity_v2
-  #  exploitability_score_v2
-  #  impact_score_v2
-  #  ac_insuf_info_v2
-  #  user_interaction_required_v2
-  #  vector_string_v30
-  #  base_severity_v30
-  #  exploitability_score_v30
-  #  impact_score_v30
-  #  vector_string_v31
-  #  base_severity_v31
-  #  exploitability_score_v31
-  #  impact_score_v31
-  #  vector_string_v40
-  #  base_severity_v40
-  #  cpe_type
-  #  last_modified
+  cvss_v2: CVSSv2 @relationship(type: "HAS_CVSS_v2", direction: OUT)
+  cvss_v30: CVSSv30 @relationship(type: "HAS_CVSS_v30", direction: OUT)
+  cvss_v31: CVSSv31 @relationship(type: "HAS_CVSS_v31", direction: OUT)
+  cvss_v40: CVSSv40 @relationship(type: "HAS_CVSS_v40", direction: OUT)
 }
 
 type Device {
