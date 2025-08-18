@@ -46,12 +46,12 @@ type CVE {
     columnName: "_id"
   )
   CVE_id: String!
-  cwe: [String]!
-  description: String!
-  impact: [String]!
-  published: String!
+  cwe: [String]
+  description: String
+  impact: [String]
+  published_date: String
   # patched: String
-  ref_tags: [String]!
+  ref_tags: [String]
   # Properties from CVSS v2
   access_complexity_v2: String
   access_vector_v2: String
@@ -97,6 +97,20 @@ type CVE {
   subsequent_system_availability_v40: String
   base_score_v40: Float
   # vendor_description: String
+  # New properties
+  base_score_v3: String
+  attack_vector: String
+  attack_complexity: String
+  access_complexity: String
+  access_vector: String
+  privileges_required: String
+  user_interaction: String
+  scope: String
+  authentication: String
+  confidentiality_impact_v3: String
+  integrity_impact_v3: String
+  availability_impact_v3: String
+
   vulnerability: Vulnerability! @relationship(type:  "REFERS_TO", direction: IN)
   # Other possible properties:
   #  vector_string_v2
