@@ -147,14 +147,14 @@ type CVE {
     columnName: "_id"
   )
 
-  cve_id: String!                                 # ID of the CVE.
-  description: String!                            # Description of the CVE.
-  cwe: String                                     # Common Weakness Enumeration (CWE) associated with the CVE.
-  cpe_type: String!                               # CPE type associated with the CVE.
-  ref_tags: [String]                              # Reference tags.
-  published: String!                              # Publication date of the CVE.
-  last_modified: String!                          # Last modified date of the CVE.
-  result_impacts: [String]                        # List of impacts determined by the categorizer.
+  cve_id: String!
+  description: String!
+  cwe: [String]
+  cpe_type: [String]!
+  ref_tags: [String]
+  published: String!
+  last_modified: String!
+  result_impacts: [String]
 
 
   vulnerability: Vulnerability! @relationship(type:  "REFERS_TO", direction: IN)
@@ -306,7 +306,7 @@ type SoftwareVersion {
     """,
     columnName: "_id"
   )
-  tag: [String]!
+  tag: [String]
   version: String!
   hosts: [Host!]! @relationship(type: "ON", properties: "SoftwareOn", direction: OUT)
   network_services: [NetworkService!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
