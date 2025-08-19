@@ -29,6 +29,7 @@ urlpatterns = [
     path("org-units", views.org_units, name="org-units"),
     path("applications", views.applications, name="applications"),
     path("cves", views.cves, name="cves"),
+    path("cves", views.ip_hierarchy_sync, name="ip-hierarchy-sync"),
     re_path(r"^cve/(?P<cve_id>CVE-\d{4}-\d{4,7})$", views.cve, name="cve"),
     re_path(r"^ip/(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/cve", views.ip_cves, name="ip_cves"),
 ]

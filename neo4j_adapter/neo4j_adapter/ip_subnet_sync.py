@@ -22,7 +22,7 @@ class SubnetToParent:
     parent: IP_NET_TYPE | None
 
 
-class IpSubnetSynchronize(GeneralAdapter):
+class IpSubnetSynchronizer(GeneralAdapter):
     def __init__(self, password: str, **kwargs: Any) -> None:
         super().__init__(password=password, **kwargs)
         self.duration = "P21D"
@@ -121,6 +121,11 @@ class IpSubnetSynchronize(GeneralAdapter):
             "ip_processing": ip_result,
         }
 
+    def run(self):
+        ip, subnets = self.fetch_ips_and_subnets()
+        prepared_data = self.prepare_data_for_neo4j(ip, subnets)
+        self.load_hierarchy_to_neo4j(prepared_data["ips"], prepared_data["subnets"])
+
 
 
 def main():
@@ -149,7 +154,7 @@ def main():
     # ]
 
 
-    syncer = IpSubnetSynchronize(password="supertestovaciheslo")  # ← Set real password
+    syncer = IpSubnetSynchronizer(password="supertestovaciheslo")  # ← Set real password
     ip, subnets = syncer.fetch_ips_and_subnets()
     prepared_data = syncer.prepare_data_for_neo4j(ip, subnets)
     syncer.load_hierarchy_to_neo4j(prepared_data["ips"], prepared_data["subnets"])

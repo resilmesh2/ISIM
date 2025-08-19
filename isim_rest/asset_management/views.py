@@ -12,6 +12,7 @@ from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
 from neo4j_adapter.rest_adapter import RESTAdapter
+from neo4j_adapter.ip_subnet_sync import IpSubnetSynchronizer
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
@@ -146,3 +147,13 @@ def ip_cves(request: HttpRequest, ip: str) -> Response:
     limit = get_limit(request)
     offset = get_offset(request)
     return Response(client.get_ip_cve(ip=ip, limit=limit, offset=offset), status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def ip_hierarchy_sync() -> Response:
+    synchronizer = IpSubnetSynchronizer(
+    password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+
+    )
+    synchronizer.run()
+    return Response("Processed successfully", status=status.HTTP_201_CREATED)
