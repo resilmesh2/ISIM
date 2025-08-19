@@ -149,11 +149,12 @@ def ip_cves(request: HttpRequest, ip: str) -> Response:
     return Response(client.get_ip_cve(ip=ip, limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
-@api_view(["GET"])
-def ip_hierarchy_sync() -> Response:
+@api_view(["POST"])
+def ip_hierarchy_sync(request: HttpRequest) -> Response:
     synchronizer = IpSubnetSynchronizer(
-    password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
-
+        user=config.neo4j_config.user,
+        password=config.neo4j_config.password,
+        bolt=config.neo4j_config.bolt,
     )
     synchronizer.run()
-    return Response("Processed successfully", status=status.HTTP_201_CREATED)
+    return Response({"message": "Processed successfully"}, status=status.HTTP_201_CREATED)
