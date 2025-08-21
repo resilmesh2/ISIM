@@ -512,4 +512,10 @@ type Mutation {
         """,
         columnName: "org"
     )
+
+    updateIPTag(address: String!, tag: [String]!): IP
+      @cypher(
+        statement: "MATCH (ip:IP {address: $address}) SET ip.tag = $tag RETURN ip",
+        columnName: "ip"
+      )
 }
