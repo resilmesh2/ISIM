@@ -286,6 +286,225 @@ def delete_custom_formula(formula_id: str):
         logger.error(f"Error deleting formula: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/components/custom', methods=['GET'])
+def get_custom_components():
+    """Get all custom components"""
+    try:
+        config = load_config()
+        if not config:
+            return jsonify({"error": "Config file not found"}), 500
+        
+        # Filter only custom components from available_components
+        available_components = config.get('available_components', {})
+        custom_components = []
+        
+        for component_key, component_data in available_components.items():
+            if component_data.get('type') == 'custom':
+                custom_components.append({
+                    'id': component_key,
+                    'name': component_data.get('name', component_key),
+                    'description': component_data.get('description', ''),
+                    'type': component_data.get('type', 'custom'),
+                    'maxValue': component_data.get('max_value', 10),
+                    'neo4jProperty': component_data.get('neo4j_property', component_key),
+                    'icon': component_data.get('icon', '🔧')
+                })
+        
+        return jsonify(custom_components)
+        
+    except Exception as e:
+        logger.error(f"Error getting custom components: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/components/custom/<component_id>', methods=['DELETE'])
+def delete_custom_component(component_id: str):
+    """Delete a custom component"""
+    try:
+        config = load_config()
+        if not config:
+            return jsonify({"error": "Config file not found"}), 500
+        
+        # Find the component key by matching the generated ID
+        available_components = config.get('available_components', {})
+        component_key_to_delete = None
+        
+        # Convert component_id to int for comparison
+        try:
+            target_id = int(component_id)
+        except ValueError:
+            component_key_to_delete = component_id
+        else:
+            # Find the component key that generates this ID
+            for component_key, component_data in available_components.items():
+                generated_id = hash(component_key) % 100000
+                if generated_id == target_id:
+                    component_key_to_delete = component_key
+                    break
+        
+        if not component_key_to_delete:
+            return jsonify({"error": "Component not found"}), 404
+            
+        if component_key_to_delete not in available_components:
+            return jsonify({"error": "Component not found"}), 404
+            
+        component = available_components[component_key_to_delete]
+        if component.get('type') != 'custom':
+            return jsonify({"error": "Cannot delete non-custom component"}), 400
+        
+        # Remove the component
+        del available_components[component_key_to_delete]
+        
+        # Save updated config
+        if save_config(config):
+            return jsonify({
+                "success": True,
+                "message": f"Component {component_key_to_delete} deleted successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to save config"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error deleting custom component: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/components/neo4j-property/<neo4j_property>', methods=['DELETE'])
+def delete_neo4j_property(neo4j_property: str):
+    """Delete a component property from all nodes in Neo4j"""
+    driver = None
+    try:
+        logger.info(f"Starting Neo4j property deletion for: {neo4j_property}")
+        
+        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+        logger.info(f"Neo4j driver created successfully")
+        
+        # Use a write transaction to ensure the changes are committed
+        def delete_property_transaction(tx, formatted_prop):
+            # First check how many nodes have this property
+            check_query = f"""
+            MATCH (n:Node)
+            WHERE n.{formatted_prop} IS NOT NULL
+            RETURN count(n) as nodeCount
+            """
+            
+            logger.info(f"Checking existing nodes with query: {check_query}")
+            check_result = tx.run(check_query)
+            check_record = check_result.single()
+            nodes_with_property = check_record["nodeCount"] if check_record else 0
+            
+            logger.info(f"Found {nodes_with_property} nodes with property {neo4j_property}")
+            
+            if nodes_with_property == 0:
+                return 0, nodes_with_property, 0
+            
+            # Delete the property from all nodes that have it
+            delete_query = f"""
+            MATCH (n:Node)
+            WHERE n.{formatted_prop} IS NOT NULL
+            REMOVE n.{formatted_prop}
+            RETURN count(n) as nodesUpdated
+            """
+            
+            logger.info(f"Executing Neo4j deletion query: {delete_query}")
+            delete_result = tx.run(delete_query)
+            
+            delete_record = delete_result.single()
+            nodes_updated = delete_record["nodesUpdated"] if delete_record else 0
+            
+            logger.info(f"Transaction reports {nodes_updated} nodes updated")
+            
+            # Verify deletion within the same transaction
+            verify_result = tx.run(check_query)
+            verify_record = verify_result.single()
+            remaining_nodes = verify_record["nodeCount"] if verify_record else 0
+            
+            logger.info(f"Verification within transaction: {remaining_nodes} nodes still have the property")
+            
+            return nodes_updated, nodes_with_property, remaining_nodes
+
+        # Format property name for Neo4j query
+        formatted_prop = f"`{neo4j_property}`" if ' ' in neo4j_property or '-' in neo4j_property else neo4j_property
+        logger.info(f"Formatted property name: {formatted_prop}")
+        
+        # Execute the deletion in a write transaction
+        with driver.session() as session:
+            nodes_updated, nodes_found, remaining_nodes = session.execute_write(
+                delete_property_transaction, formatted_prop
+            )
+            
+            logger.info(f"Transaction completed: {nodes_updated} nodes updated, {remaining_nodes} remaining")
+            
+            return jsonify({
+                "success": True,
+                "message": f"Property {neo4j_property} deleted from {nodes_updated} nodes in Neo4j",
+                "nodesUpdated": nodes_updated,
+                "nodesFound": nodes_found,
+                "remainingNodes": remaining_nodes,
+                "transactionCommitted": True
+            })
+            
+    except Exception as e:
+        logger.error(f"Error deleting Neo4j property {neo4j_property}: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error args: {e.args}")
+        return jsonify({
+            "success": False,
+            "error": f"Failed to delete Neo4j property: {str(e)}",
+            "property": neo4j_property
+        }), 500
+        
+    finally:
+        if driver:
+            driver.close()
+            
+@app.route('/api/components/neo4j-property-test/<neo4j_property>', methods=['GET'])
+def test_neo4j_property_deletion(neo4j_property: str):
+    """Test endpoint to check if Neo4j property deletion would work"""
+    driver = None
+    try:
+        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+        
+        with driver.session() as session:
+            # Format property name for Neo4j query
+            formatted_prop = f"`{neo4j_property}`" if ' ' in neo4j_property or '-' in neo4j_property else neo4j_property
+            
+            # Check how many nodes have this property
+            check_query = f"""
+            MATCH (n:Node)
+            WHERE n.{formatted_prop} IS NOT NULL
+            RETURN count(n) as nodeCount, collect(n.{formatted_prop})[0..5] as sampleValues
+            """
+            
+            logger.info(f"Testing Neo4j query: {check_query}")
+            result = session.run(check_query)
+            
+            record = result.single()
+            node_count = record["nodeCount"]
+            sample_values = record["sampleValues"]
+            
+            logger.info(f"Found {node_count} nodes with property {neo4j_property}")
+            
+            return jsonify({
+                "success": True,
+                "message": f"Found {node_count} nodes with property '{neo4j_property}'",
+                "nodeCount": node_count,
+                "sampleValues": sample_values,
+                "formattedProperty": formatted_prop,
+                "originalProperty": neo4j_property,
+                "neo4jUri": NEO4J_URI,
+                "neo4jUser": NEO4J_USER
+            })
+            
+    except Exception as e:
+        logger.error(f"Error testing Neo4j property: {e}")
+        return jsonify({
+            "success": False,
+            "error": f"Failed to test Neo4j property: {str(e)}"
+        }), 500
+        
+    finally:
+        if driver:
+            driver.close()
+
 @app.route('/api/components/available', methods=['GET'])
 def get_risk_available_components():
     """Get all available risk components from config"""
@@ -539,7 +758,6 @@ def apply_risk_configuration():
         
         driver.close()
         
-        # PROPERLY SAVE AUTOMATION INFO TO EXISTING CONFIG
         config = load_config()
         if not config:
             config = {}

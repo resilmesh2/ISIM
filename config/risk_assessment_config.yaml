@@ -1,150 +1,30 @@
 active_automations:
-  3883d765:
-    avg_risk_score: 5.0
+  c410d02d:
+    avg_risk_score: 10.0
     calculation_method: weighted_avg
     calculation_mode: calculate
     components:
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Shadow IT Risk
-      neo4jProperty: shadow_it_risk
-      weight: 0.15
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Intelligence
-      neo4jProperty: threat_intel_risk
-      weight: 0.35
-    created_date: '2025-08-13T10:20:23.303098'
-    custom_formula: ''
-    formula_config:
-      cvss_vulnerability_score: 0.25
-      shadow_it_risk: 0.15
-      threat_detection_score: 0.25
-      threat_intelligence: 0.35
-    formula_name: Custom Formula
-    last_run: '2025-08-13T14:26:06.910796'
-    nodes_updated: 2
-    target_property: Risk Score
-    target_type: subnet
-    target_values:
-    - 192.168.4.0/24
-    update_frequency: minute
-  66c75f0a:
-    avg_risk_score: 5.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Shadow IT Risk
-      neo4jProperty: shadow_it_risk
-      weight: 0.15
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Intelligence
-      neo4jProperty: threat_intel_risk
-      weight: 0.35
-    created_date: '2025-08-13T10:18:12.963426'
-    custom_formula: ''
-    formula_config:
-      cvss_vulnerability_score: 0.25
-      shadow_it_risk: 0.15
-      threat_detection_score: 0.25
-      threat_intelligence: 0.35
-    formula_name: Custom Formula
-    last_run: '2025-08-13T10:19:07.025847'
-    nodes_updated: 2
-    target_property: Risk Score
-    target_type: subnet
-    target_values:
-    - 192.168.4.0/24
-    update_frequency: daily
-  88f7fea4:
-    avg_risk_score: 5.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Shadow IT Risk
-      neo4jProperty: shadow_it_risk
-      weight: 0.15
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Intelligence
-      neo4jProperty: threat_intel_risk
-      weight: 0.35
-    created_date: '2025-08-13T10:15:30.174204'
-    custom_formula: ''
-    formula_config:
-      cvss_vulnerability_score: 0.25
-      shadow_it_risk: 0.15
-      threat_detection_score: 0.25
-      threat_intelligence: 0.35
-    formula_name: Custom Formula
-    last_run: '2025-08-13T14:26:07.003600'
-    nodes_updated: 1
-    target_property: Risk Score
-    target_type: subnet
-    target_values:
-    - 192.168.3.0/24
-    update_frequency: minute
-  97cb5069:
-    avg_risk_score: 5.63
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
+    - currentValue: 10
       maxValue: 10
       name: Compliance Risk
       neo4jProperty: compliance_risk
       weight: 0.25
-    - currentValue: 5
+    - currentValue: 10
       maxValue: 10
       name: Asset Criticality
       neo4jProperty: criticality
       weight: 0.25
-    - currentValue: 5
+    - currentValue: 10
       maxValue: 10
       name: CVSS Vulnerability Score
       neo4jProperty: cvss_score
       weight: 0.25
-    - currentValue: 7.5
+    - currentValue: 10
       maxValue: 10
       name: Threat Detection Score
       neo4jProperty: threatScore
       weight: 0.25
-    created_date: '2025-08-11T10:44:21.701739'
+    created_date: '2025-08-22T14:16:53.311365'
     custom_formula: ''
     formula_config:
       asset_criticality: 0.25
@@ -152,207 +32,7 @@ active_automations:
       cvss_vulnerability_score: 0.25
       threat_detection_score: 0.25
     formula_name: Custom Formula
-    last_run: '2025-08-13T14:26:07.089886'
-    nodes_updated: 1
-    target_property: Risk Score
-    target_type: subnet
-    target_values:
-    - 192.168.3.0/24
-    update_frequency: minute
-  9f895f41:
-    avg_risk_score: 5.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Shadow IT Risk
-      neo4jProperty: shadow_it_risk
-      weight: 0.15
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Intelligence
-      neo4jProperty: threat_intel_risk
-      weight: 0.35
-    created_date: '2025-08-13T10:17:36.819027'
-    custom_formula: ''
-    formula_config:
-      cvss_vulnerability_score: 0.25
-      shadow_it_risk: 0.15
-      threat_detection_score: 0.25
-      threat_intelligence: 0.35
-    formula_name: Custom Formula
-    last_run: '2025-08-13T14:20:07.418368'
-    nodes_updated: 2
-    target_property: Risk Score
-    target_type: subnet
-    target_values:
-    - 192.168.4.0/24
-    update_frequency: hourly
-  a7c0bc67:
-    avg_risk_score: 5.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Shadow IT Risk
-      neo4jProperty: shadow_it_risk
-      weight: 0.15
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Intelligence
-      neo4jProperty: threat_intel_risk
-      weight: 0.35
-    created_date: '2025-08-13T10:57:19.058899'
-    custom_formula: ''
-    formula_config:
-      cvss_vulnerability_score: 0.25
-      shadow_it_risk: 0.15
-      threat_detection_score: 0.25
-      threat_intelligence: 0.35
-    formula_name: Custom Formula
-    last_run: '2025-08-13T14:26:07.167895'
-    nodes_updated: 1
-    target_property: Risk Score
-    target_type: subnet
-    target_values:
-    - 192.168.3.0/24
-    update_frequency: minute
-  ab4073bc:
-    avg_risk_score: 5.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: Compliance Risk
-      neo4jProperty: compliance_risk
-      weight: 0.4
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.3
-    - currentValue: 5
-      maxValue: 10
-      name: External Exposure
-      neo4jProperty: external_exposure
-      weight: 0.1
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.2
-    created_date: '2025-08-11T13:52:12.532619'
-    custom_formula: ''
-    formula_config:
-      compliance_risk: 0.4
-      cvss_vulnerability_score: 0.3
-      external_exposure: 0.1
-      threat_detection_score: 0.2
-    formula_name: Custom Formula
-    last_run: '2025-08-13T14:26:07.237659'
-    nodes_updated: 1
-    target_property: Risk Score
-    target_type: subnet
-    target_values:
-    - 192.168.3.0/24
-    update_frequency: minute
-  f817b530:
-    avg_risk_score: 5.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Shadow IT Risk
-      neo4jProperty: shadow_it_risk
-      weight: 0.15
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Intelligence
-      neo4jProperty: threat_intel_risk
-      weight: 0.35
-    created_date: '2025-08-13T10:16:43.958115'
-    custom_formula: ''
-    formula_config:
-      cvss_vulnerability_score: 0.25
-      shadow_it_risk: 0.15
-      threat_detection_score: 0.25
-      threat_intelligence: 0.35
-    formula_name: Custom Formula
-    last_run: '2025-08-13T14:26:07.314637'
-    nodes_updated: 2
-    target_property: Risk Score
-    target_type: subnet
-    target_values:
-    - 192.168.4.0/24
-    update_frequency: minute
-  fe9c1724:
-    avg_risk_score: 5.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: Compliance Risk
-      neo4jProperty: compliance_risk
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Asset Criticality
-      neo4jProperty: criticality
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.25
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.25
-    created_date: '2025-08-11T13:32:38.120001'
-    custom_formula: ''
-    formula_config:
-      asset_criticality: 0.25
-      compliance_risk: 0.25
-      cvss_vulnerability_score: 0.25
-      threat_detection_score: 0.25
-    formula_name: Custom Formula
-    last_run: '2025-08-13T14:26:07.400669'
+    last_run: '2025-08-27T11:33:07.601596'
     nodes_updated: 1
     target_property: Risk Score
     target_type: subnet
@@ -403,22 +83,6 @@ available_components:
     name: External Exposure
     neo4j_property: external_exposure
     type: exposure
-  ljlkj:
-    description: Security component for risk assessment
-    icon: "\U0001F512"
-    max_value: 10
-    min_value: 0
-    name: ljlkj
-    neo4j_property: ljlkj
-    type: custom
-  post_test:
-    description: Performance component for risk assessment
-    icon: "\u26A1"
-    max_value: 10
-    min_value: 0
-    name: post test
-    neo4j_property: post_test
-    type: custom
   shadow_it_risk:
     description: Unauthorized asset and service discovery
     icon: "\U0001F464"
@@ -427,22 +91,6 @@ available_components:
     name: Shadow IT Risk
     neo4j_property: shadow_it_risk
     type: governance
-  test:
-    description: Security component for risk assessment
-    icon: "\U0001F512"
-    max_value: 10
-    min_value: 0
-    name: test
-    neo4j_property: test
-    type: custom
-  test3:
-    description: Compliance component for risk assessment
-    icon: "\U0001F4CB"
-    max_value: 10
-    min_value: 0
-    name: Test3
-    neo4j_property: Test3
-    type: custom
   threatScore:
     description: Wazuh-based active threat detection
     icon: "\u26A0\uFE0F"
@@ -459,32 +107,62 @@ available_components:
     name: Threat Intelligence
     neo4j_property: threat_intel_risk
     type: threat
-custom_formulas: {}
+custom_formulas:
+  2c2fd4a6:
+    components:
+      compliance_risk: 0
+      criticality: 0
+      cvss_score: 0
+      external_exposure: 0
+      jkhj: 1
+      post_test: 0
+      threatScore: 0
+    created_by: user
+    created_date: '2025-08-22'
+    description: jhgjh
+    modified_date: '2025-08-22'
+    name: jygj
+  c9f63bde:
+    components:
+      compliance_risk: 0.2
+      criticality: 0.2
+      cvss_score: 0.1
+      external_exposure: 0.1
+      post_test: 0.2
+      threatScore: 0.2
+    created_by: user
+    created_date: '2025-08-20'
+    description: kjhkjh
+    modified_date: '2025-08-20'
+    name: jhk
 execution_settings:
   max_retries: 3
   retry_delay_minutes: 10
   timeout_minutes: 60
 last_risk_calculation:
-  applied_to: 'subnet: 192.168.4.0/24'
-  average_risk_score: 5.0
+  applied_to: 'subnet: 192.168.3.0/24'
+  average_risk_score: 10.0
   calculation_method: weighted_avg
   calculation_mode: calculate
   components:
+    Asset Criticality:
+      value: 10
+      weight: 0.25
     CVSS Vulnerability Score:
-      value: 5
-      weight: 0.4
-    Shadow IT Risk:
-      value: 5
-      weight: 0.3
+      value: 10
+      weight: 0.25
+    Compliance Risk:
+      value: 10
+      weight: 0.25
     Threat Detection Score:
-      value: 5
-      weight: 0.3
+      value: 10
+      weight: 0.25
   custom_formula: ''
   formula_name: Custom Formula
-  nodes_updated: 2
+  nodes_updated: 1
   target_property: Risk Score
-  timestamp: '2025-08-13T10:59:59.947402'
-  update_frequency: manual
+  timestamp: '2025-08-22T14:16:53.311627'
+  update_frequency: minute
 predefined_formulas:
   balanced_security:
     components:

@@ -38,6 +38,8 @@ services:
     depends_on:
       neo4j:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER=neo4j
@@ -45,6 +47,7 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./config:/config
+      - ./.env:/app/.env:ro
     networks:
       - casm_isim_test_network
     restart: unless-stopped
@@ -76,7 +79,7 @@ services:
 
 networks:
   casm_isim_test_network:
-    external: true
+    #external: true
     name: casm_isim_test_network
 
 volumes:

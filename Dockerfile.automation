@@ -9,7 +9,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
-RUN pip install --no-cache-dir neo4j flask flask-cors pyyaml
+RUN pip install --no-cache-dir neo4j flask flask-cors pyyaml python-dotenv opensearch-py
 
 # Create logs directory
 RUN mkdir -p /app/logs && \
@@ -17,6 +17,9 @@ RUN mkdir -p /app/logs && \
 
 # Copy application files
 COPY neo4j_adapter/ /app/
+
+# Copy .env file
+COPY .env /app/.env
 
 # Fix line endings using sed
 RUN sed -i 's/\r$//' /app/crontab /app/start.sh /app/*.py

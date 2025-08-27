@@ -1,3 +1,7 @@
 # /app/crontab
 # Run execute_automations.py every minute to check for due automations
 * * * * * /usr/local/bin/python /app/execute_automations.py >> /app/logs/automation.log 2>&1
+# Run threat_calcs every minute
+* * * * * /usr/local/bin/python /app/threat_calcs.py >> /app/logs/threat_calcs.log 2>&1
+# Run isim_calcs every 5 minutes
+*/5 * * * * /usr/local/bin/python /app/isim_calcs.py >> /app/logs/isim_calcs.log 2>&1

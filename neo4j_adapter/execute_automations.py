@@ -10,6 +10,9 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 from neo4j import GraphDatabase
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,9 +23,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://neo4j:7687")
-NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://neo4j:7687")
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 
 def should_run_automation(automation: Dict[str, Any]) -> bool:
     """Check if automation should run based on frequency and last run time"""
@@ -287,7 +290,6 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
         
         n = len(values)
         product = " * ".join(values)
-        # Use ^ operator instead of pow function
         return f"(({product})^(1.0/{n}))"
 
     elif method == 'custom_formula' and custom_formula:
