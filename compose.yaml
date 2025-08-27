@@ -30,7 +30,7 @@ services:
       - casm_isim_test_network
 
   neo4j:
-    image: neo4j:5.21.0
+    image: neo4j:5.26.10
     environment:
       - NEO4J_AUTH=neo4j/supertestovaciheslo
       - NEO4J_PLUGINS=["apoc"]
