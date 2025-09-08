@@ -129,105 +129,48 @@ def execute_automation(automation_id: str, config: dict):
             target_values = config.get('target_values', [])
             target_property = config.get('target_property', 'Risk Score')
             
-            # Extract calculation method
             calculation_method = config.get('calculation_method', 'weighted_avg')
             custom_formula = config.get('custom_formula', '')
             
             logger.info(f"Using calculation method: {calculation_method}")
             logger.info(f"Target property: '{target_property}'")
             
-            # Build match clause
-            if target_type == 'network':
-                conditions = []
-                for network in target_values:
-                    prefix = '.'.join(network.split('.')[:2])
-                    conditions.append(f"ip.address STARTS WITH '{prefix}.'")
-                where_clause = " OR ".join(conditions)
-                match_clause = f"""
-                MATCH (subnet:Subnet)<-[:PART_OF]-(ip:IP)<-[:HAS_ASSIGNED]-(n:Node)
-                WHERE {where_clause}
-                """
-            elif target_type == 'subnet':
-                subnet_list = "', '".join(target_values)
-                match_clause = f"""
-                MATCH (subnet:Subnet)<-[:PART_OF]-(ip:IP)<-[:HAS_ASSIGNED]-(n:Node)
-                WHERE subnet.range IN ['{subnet_list}']
-                """
-            elif target_type == 'ip':
-                ip_list = "', '".join(target_values)
-                match_clause = f"""
-                MATCH (n:Node)-[:HAS_ASSIGNED]->(ip:IP)
-                WHERE ip.address IN ['{ip_list}']
-                """
-            else:
-                match_clause = "MATCH (n:Node)"
-            
-            logger.info(f"Target type: {target_type}, Target values: {target_values}")
-            logger.info(f"Match clause: {match_clause}")
-            
             # Build calculation
             calculation = build_calculation(components, formula_config, calculation_method, custom_formula)
             
-            logger.info(f"Calculation: {calculation}")
-
-            if ' ' in target_property:
-                set_clause = f"SET n.`{target_property}` ="
-                return_prop = f"n.`{target_property}`"
+            # Format property name for Neo4j
+            if ' ' in target_property or '-' in target_property:
+                formatted_property = f"`{target_property}`"
             else:
-                set_clause = f"SET n.{target_property} ="
-                return_prop = f"n.{target_property}"
+                formatted_property = target_property
             
-            # Build query with proper property handling
-            query = f"""
-            {match_clause}
-            WITH n, {calculation} AS rawScore
-            {set_clause}
-                CASE
-                    WHEN rawScore < 0 THEN 0.0
-                    WHEN rawScore > 10 THEN 10.0
-                    ELSE toFloat(rawScore)
-                END
-            RETURN count(n) AS nodesUpdated,
-                   round(avg({return_prop}), 2) AS avgRiskScore,
-                   collect({return_prop})[0..5] AS sampleValues
-            """
-            
-            logger.info(f"Executing query...")
-            logger.debug(f"Full query: {query}")
+            # Build and execute query with proper property name
+            if target_type == 'all':
+                query = f"""
+                MATCH (n:Node)
+                SET n.{formatted_property} = {calculation}
+                RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                """
+            else:
+                # Build where clause based on target
+                where_conditions = build_where_clause(target_type, target_values)
+                query = f"""
+                MATCH (n:Node)
+                WHERE {where_conditions}
+                SET n.{formatted_property} = {calculation}
+                RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                """
             
             result = session.run(query)
             record = result.single()
             
             if record:
-                nodes_updated = record.get('nodesUpdated', 0)
-                avg_score = record.get('avgRiskScore', 0)
-                sample_values = record.get('sampleValues', [])
-                logger.info(f"Updated {nodes_updated} nodes, avg score: {avg_score}")
-                logger.info(f"Sample values: {sample_values}")
+                nodes_updated = record['nodes_updated']
+                avg_risk = record['avg_risk']
+                logger.info(f"Updated {nodes_updated} nodes. Average {target_property}: {avg_risk}")
                 
-                # Verify the update
-                verify_query = f"""
-                MATCH (n:Node)-[:HAS_ASSIGNED]->(ip:IP)
-                WHERE ip.address IN {target_values}
-                RETURN ip.address AS ip, {return_prop} AS riskScore
-                """
-                logger.info("Verifying update...")
-                verify_result = session.run(verify_query)
-                for rec in verify_result:
-                    logger.info(f"Verified - IP: {rec['ip']}, Risk Score: {rec['riskScore']}")
-                
-                # Update last_run
+                # Update automation metadata
                 update_last_run(automation_id)
-            else:
-                logger.warning("No record returned from query")
-            
-    except Exception as e:
-        logger.error(f"Error executing automation {automation_id}: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-    finally:
-        driver.close()
-
 def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
     """Build calculation based on selected method"""
     

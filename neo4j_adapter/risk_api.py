@@ -920,7 +920,7 @@ def update_neo4j_property():
     except Exception as e:
         logger.error(f"Error updating Neo4j property: {e}")
         return jsonify({"error": str(e)}), 500
-
+    
 def update_risk_scores(session, component_property, component_value):
     """Update risk scores for nodes after component value change"""
     try:
@@ -962,24 +962,20 @@ def update_risk_scores(session, component_property, component_value):
                         
                         risk_query = f"""
                         MATCH (n:Node)
-                        SET n.risk_score = ({calculation}) * 10
-                        RETURN avg(n.risk_score) as avg_risk
+                        SET n.`Risk Score` = ({calculation}) * 10
+                        RETURN avg(n.`Risk Score`) as avg_risk
                         """
                         
                         result = session.run(risk_query)
                         record = result.single()
                         avg_risk = record['avg_risk'] if record else 0
                         
-                        logger.info(f"Updated risk scores. Average risk: {avg_risk}")
+                        logger.info(f"Updated Risk Score values. Average risk: {avg_risk}")
                         
                         automation['last_run'] = datetime.now().isoformat()
                         automation['avg_risk_score'] = float(avg_risk)
                         config['active_automations'][auto_id] = automation
                         save_config(config)
-                        
-    except Exception as e:
-        logger.error(f"Error updating risk scores: {e}")
-
 @app.route('/api/components/custom/<component_id>/config', methods=['PUT'])
 def update_custom_component_config(component_id):
     """Update configuration for a custom component"""
