@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Neo4j connection configuration from environment
+# Neo4j connection configuration
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://neo4j:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
@@ -184,8 +184,8 @@ def main():
               <-[:ON]-(sv:SoftwareVersion)
               <-[:IN]-(v:Vulnerability)
               -[:REFERS_TO]->(c:CVE)
-        WHERE c.base_score_v31 IS NOT NULL
-        WITH n, avg(c.base_score_v31) AS avgCvss
+        WHERE c.base_score_v3 IS NOT NULL
+        WITH n, avg(c.base_score_v3) AS avgCvss
         SET n.cvss_score = avgCvss
         RETURN count(n)            AS nodesUpdated,
                round(avg(avgCvss),2) AS globalAverageCvss
