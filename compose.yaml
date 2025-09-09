@@ -33,7 +33,7 @@ services:
     image: neo4j:5.26.10
     environment:
       - NEO4J_AUTH=neo4j/supertestovaciheslo
-      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_PLUGINS=["apoc", "graph-data-science"]
       - NEO4J_apoc_export_file_enabled=true
       - NEO4J_apoc_import_file_enabled=true
       - NEO4J_apoc_import_file_use__neo4j__config=true
