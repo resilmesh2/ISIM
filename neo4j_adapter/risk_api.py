@@ -976,6 +976,10 @@ def update_risk_scores(session, component_property, component_value):
                         automation['avg_risk_score'] = float(avg_risk)
                         config['active_automations'][auto_id] = automation
                         save_config(config)
+                        
+    except Exception as e:
+        logger.error(f"Error updating risk scores: {e}")
+
 @app.route('/api/components/custom/<component_id>/config', methods=['PUT'])
 def update_custom_component_config(component_id):
     """Update configuration for a custom component"""
