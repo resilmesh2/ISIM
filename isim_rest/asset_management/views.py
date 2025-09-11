@@ -8,7 +8,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view  # type: ignore
 from rest_framework.response import Response
 
-from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO, MissionListInputDTO, NmapTopologyDTO
+from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO, MissionListInputDTO, NmapTopologyDTO, \
+    EasmDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
 from neo4j_adapter.rest_adapter import RESTAdapter
@@ -77,6 +78,23 @@ def assets(request: HttpRequest) -> Response:
         data.flatten_related_relationships()
         json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
         client.store_assets(json_string)
+    except ValidationError as e:
+        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    return Response("Processed successfully. If some assets support missions, use /missions endpoint to add descriptions of missions.",
+                    status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def easm(request: HttpRequest) -> Response:
+    request_body = request.body
+    try:
+        data = msgspec.json.decode(request_body, type=list[EasmDTO], dec_hook=dec_hook_ip)
+        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        client.store_easm(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     except (ClientError, TransientError, DatabaseError) as e:
