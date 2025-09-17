@@ -1,5 +1,5 @@
-from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network
-from typing import TYPE_CHECKING
+from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network, IPv4Address
+from typing import TYPE_CHECKING, Any
 
 import msgspec
 from msgspec import field
@@ -174,3 +174,14 @@ class RelationshipDTO(msgspec.Struct):
 class MissionListInputDTO(msgspec.Struct):
     nodes: NodeMissionDTO
     relationships: RelationshipDTO
+
+
+class NmapTopologyDTO(msgspec.Struct):
+    data: list[dict[str, Any]]
+    time: str
+
+
+class MissionCriticalityDTO(msgspec.Struct):
+    ip: str = field(name="ip")
+    hostname: str = field(name="hostname")
+    criticality: float = field(name="criticality")

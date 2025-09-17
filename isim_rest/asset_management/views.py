@@ -1,4 +1,5 @@
 import json
+from typing import List
 
 import msgspec.json
 from django.http import HttpRequest
@@ -8,10 +9,16 @@ from rest_framework import status
 from rest_framework.decorators import api_view  # type: ignore
 from rest_framework.response import Response
 
-from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO, MissionListInputDTO
+from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO, MissionListInputDTO, NmapTopologyDTO, \
+    MissionCriticalityDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
+from neo4j_adapter.csa_adapter import CSAAdapter
 from neo4j_adapter.rest_adapter import RESTAdapter
+
+from neo4j_adapter.criticality_adapter import CriticalityAdapter
+from neo4j_adapter.nmap_topology_adapter import NmapTopologyAdapter
+import structlog
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
@@ -147,3 +154,88 @@ def ip_cves(request: HttpRequest, ip: str) -> Response:
     limit = get_limit(request)
     offset = get_offset(request)
     return Response(client.get_ip_cve(ip=ip, limit=limit, offset=offset), status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+def traceroute(request: HttpRequest, logger=structlog.get_logger()) -> Response:
+    nmap_adapter = NmapTopologyAdapter(
+        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+    )
+
+    request_body = request.body
+    logger.info(f"Request body: {request_body}")
+    try:
+        data = msgspec.json.decode(request_body, type=NmapTopologyDTO)
+        logger.info(f"Data: {data}")
+        json_string = json.dumps(json.loads(msgspec.json.encode(data)))
+        logger.info(f"JSON string: {json_string}")
+        nmap_adapter.create_topology(json_string)
+    except ValidationError as e:
+        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    return Response(
+        "Processed successfully.",
+        status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def betweenness_centrality(request: HttpRequest) -> Response:
+    criticality_adapter = CriticalityAdapter(
+        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+    )
+    criticality_adapter.compute_topology_betweenness()
+    return Response(
+        "Processed successfully.",
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(["POST"])
+def degree_centrality(request: HttpRequest) -> Response:
+    criticality_adapter = CriticalityAdapter(
+        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+    )
+    criticality_adapter.compute_topology_degree()
+    return Response(
+        "Processed successfully.",
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(["POST"])
+def store_criticality(request: HttpRequest, logger=structlog.get_logger()) -> Response:
+    csa_adapter = CSAAdapter(
+        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+    )
+    request_body = request.body
+    logger.info(f"Request body: {request_body}")
+    try:
+        data = msgspec.json.decode(request_body, type=List[MissionCriticalityDTO])
+        logger.info(f"Data: {data}")
+        json_string = json.dumps(json.loads(msgspec.json.encode(data)))
+        logger.info(f"JSON string: {json_string}")
+        csa_adapter.store_criticality(json_string)
+    except ValidationError as e:
+        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    return Response(
+        "Processed successfully.",
+        status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def combine_criticality(request: HttpRequest) -> Response:
+    csa_adapter = CSAAdapter(
+        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+    )
+    csa_adapter.combine_criticality()
+    return Response(
+        "Processed successfully.",
+        status=status.HTTP_200_OK
+    )
