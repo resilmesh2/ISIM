@@ -26,16 +26,13 @@ class CSAAdapter(GeneralAdapter):
     def combine_criticality(self) -> None:
         query = """
         MATCH (n:Node)
-        WITH max(n.topology_betweenness) AS max_betweenness, min(n.topology_betweenness) AS min_betweenness
+        WITH max(n.topology_betweenness) AS max_betweenness, min(n.topology_betweenness) AS min_betweenness,
+        count(n) AS count_of_nodes
         MATCH (n:Node)
-        WITH n, max_betweenness, min_betweenness
-        MATCH (source:Node)-[r:IS_CONNECTED_TO]->(target:Node)
-        WHERE r.hops = 1 
-        WITH n, max_betweenness, min_betweenness, count(r) AS count_of_edges
-        WITH n, count_of_edges, max_betweenness, min_betweenness,
+        WITH n, max_betweenness, min_betweenness, count_of_nodes,
         CASE 
           WHEN n.topology_degree IS NULL THEN 1
-          ELSE 9*(n.topology_degree / (2*count_of_edges)) + 1
+          ELSE 9*(n.topology_degree / count_of_nodes) + 1
         END AS topology_degree_norm,
         CASE 
           WHEN n.topology_betweenness IS NULL THEN 1
@@ -47,7 +44,8 @@ class CSAAdapter(GeneralAdapter):
         END AS mission_criticality
         SET n.topology_degree_norm = topology_degree_norm 
         SET n.topology_betweenness_norm = topology_betweenness_norm 
-        SET n.final_criticality = ((9*n.topology_degree_norm*n.topology_betweenness_norm / 100) + 1) * mission_criticality
-        """
+        SET n.mission_criticality = mission_criticality 
+        SET n.final_criticality = ((9*n.topology_degree_norm*n.topology_betweenness_norm / 100) + 1) * n.mission_criticality
+                """
         query = cast(LiteralString, query)
         self._run_query(query)
