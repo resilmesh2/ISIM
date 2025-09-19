@@ -171,6 +171,12 @@ def execute_automation(automation_id: str, config: dict):
                 
                 # Update automation metadata
                 update_last_run(automation_id)
+                
+    except Exception as e:
+        logger.error(f"Error executing automation {automation_id}: {e}")
+    finally:
+        driver.close()
+
 def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
     """Build calculation based on selected method"""
     
