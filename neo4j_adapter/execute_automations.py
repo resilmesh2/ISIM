@@ -177,6 +177,19 @@ def execute_automation(automation_id: str, config: dict):
     finally:
         driver.close()
 
+def build_where_clause(target_type: str, target_values: list) -> str:
+    """Build WHERE clause for Neo4j query based on target type"""
+    if target_type == 'all':
+        return "1=1"  # Always true
+    elif target_type == 'subnet':
+        subnet_list = [f"'{subnet}'" for subnet in target_values]
+        return f"(n)<-[:HAS_ASSIGNED]-(:IP)-[:PART_OF]->(:Subnet {{range: IN [{','.join(subnet_list)}]}})"
+    elif target_type == 'ip':
+        ip_list = [f"'{ip}'" for ip in target_values]
+        return f"(n)<-[:HAS_ASSIGNED]-(:IP {{address: IN [{','.join(ip_list)}]}})"
+    else:
+        return "1=1"
+
 def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
     """Build calculation based on selected method"""
     
