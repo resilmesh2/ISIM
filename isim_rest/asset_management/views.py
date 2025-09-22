@@ -230,9 +230,9 @@ def store_criticality(request: HttpRequest, logger=structlog.get_logger()) -> Re
     request_body = request.body
     logger.info(f"Request body: {request_body}")
     try:
-        data = msgspec.json.decode(request_body, type=List[MissionCriticalityDTO])
+        data = msgspec.json.decode(request_body, type=List[MissionCriticalityDTO], dec_hook=dec_hook_ip)
         logger.info(f"Data: {data}")
-        json_string = json.dumps(json.loads(msgspec.json.encode(data)))
+        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
         logger.info(f"JSON string: {json_string}")
         csa_adapter.store_criticality(json_string)
     except ValidationError as e:

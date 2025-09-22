@@ -195,6 +195,6 @@ class NmapTopologyDTO(msgspec.Struct):
 
 
 class MissionCriticalityDTO(msgspec.Struct):
-    ip: str = field(name="ip")
+    ip: IP_TYPE = field(name="ip")
     hostname: str = field(name="hostname")
     criticality: float = field(name="criticality")
