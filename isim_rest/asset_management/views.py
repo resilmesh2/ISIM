@@ -25,7 +25,7 @@ DEFAULT_OFFSET = 0
 
 config = AppConfig.get()
 client = RESTAdapter(
-    password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+    password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
 )
 
 
@@ -176,7 +176,7 @@ def ip_cves(request: HttpRequest, ip: str) -> Response:
 @api_view(["POST"])
 def traceroute(request: HttpRequest, logger=structlog.get_logger()) -> Response:
     nmap_adapter = NmapTopologyAdapter(
-        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
     )
 
     request_body = request.body
@@ -201,7 +201,7 @@ def traceroute(request: HttpRequest, logger=structlog.get_logger()) -> Response:
 @api_view(["POST"])
 def betweenness_centrality(request: HttpRequest) -> Response:
     criticality_adapter = CriticalityAdapter(
-        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
     )
     criticality_adapter.compute_topology_betweenness()
     return Response(
@@ -213,7 +213,7 @@ def betweenness_centrality(request: HttpRequest) -> Response:
 @api_view(["POST"])
 def degree_centrality(request: HttpRequest) -> Response:
     criticality_adapter = CriticalityAdapter(
-        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
     )
     criticality_adapter.compute_topology_degree()
     return Response(
@@ -225,7 +225,7 @@ def degree_centrality(request: HttpRequest) -> Response:
 @api_view(["POST"])
 def store_criticality(request: HttpRequest, logger=structlog.get_logger()) -> Response:
     csa_adapter = CSAAdapter(
-        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
     )
     request_body = request.body
     logger.info(f"Request body: {request_body}")
@@ -249,7 +249,7 @@ def store_criticality(request: HttpRequest, logger=structlog.get_logger()) -> Re
 @api_view(["POST"])
 def combine_criticality(request: HttpRequest) -> Response:
     csa_adapter = CSAAdapter(
-        password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
     )
     csa_adapter.combine_criticality()
     return Response(
