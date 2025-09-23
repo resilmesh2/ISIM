@@ -1243,12 +1243,12 @@ def apply_risk_configuration():
             'custom_formula': custom_formula,
             'target_property': target_property,
             'update_frequency': update_frequency,
+            'enabled': True,
             'created_date': datetime.now().isoformat(),
             'nodes_updated': nodes_updated,
             'avg_risk_score': float(avg_score) if avg_score is not None else 0.0
         }
 
-        # Add sections if they don't exist
         if update_frequency != 'manual':
             if 'active_automations' not in config:
                 config['active_automations'] = {}
@@ -1288,7 +1288,7 @@ def apply_risk_configuration():
     except Exception as e:
         logger.error(f"Error applying configuration: {e}")
         return jsonify({'error': str(e)}), 500
-          
+                  
 def load_component_config() -> Optional[Dict[str, Any]]:
     """Load component automation configuration"""
     try:
@@ -1412,34 +1412,7 @@ def save_component_automation():
     except Exception as e:
         logger.error(f"Error saving component automation: {e}")
         return jsonify({'error': str(e)}), 500
-
-# Add endpoint to get active component automations
-@app.route('/api/components/automation/active', methods=['GET'])
-def get_active_component_automations():
-    """Get all active component automations"""
-    try:
-        config = load_component_config()
-        automations = config.get('active_component_automations', {})
-        
-        # Filter out expired automations
-        active = {}
-        now = datetime.now()
-        
-        for auto_id, auto_data in automations.items():
-            if auto_data.get('expires_at'):
-                expires = datetime.fromisoformat(auto_data['expires_at'])
-                if expires < now:
-                    continue  # Skip expired
-            active[auto_id] = auto_data
-        
-        return jsonify({
-            'success': True,
-            'automations': active
-        })
-    except Exception as e:
-        logger.error(f"Error getting component automations: {e}")
-        return jsonify({'error': str(e)}), 500
-    
+   
 @app.route('/api/components/automation/test', methods=['POST'])
 def test_component_query():
     """Test a component automation query"""
@@ -1630,6 +1603,127 @@ def list_component_automations():
         logger.error(f"Error listing automations: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/components/automation/active', methods=['GET'])
+def get_active_component_automations():
+    """Get all active component automations"""
+    try:
+        config = load_component_config()
+        automations = config.get('active_component_automations', {})
+        
+        # Filter out expired automations
+        active = {}
+        now = datetime.now()
+        
+        for auto_id, auto_data in automations.items():
+            if auto_data.get('expires_at'):
+                expires = datetime.fromisoformat(auto_data['expires_at'])
+                if expires < now:
+                    continue  # Skip expired
+            active[auto_id] = auto_data
+        
+        return jsonify({
+            'success': True,
+            'automations': active
+        })
+    except Exception as e:
+        logger.error(f"Error getting component automations: {e}")
+        return jsonify({'error': str(e)}), 500
+ 
+@app.route('/api/components/automation/<automation_id>/pause', methods=['PUT'])
+def pause_risk_automation(automation_id):
+    """Pause a risk formula automation"""
+    try:
+        config = load_config()  # Main config
+        automations = config.get('active_automations', {})
+        
+        if automation_id not in automations:
+            return jsonify({'error': 'Automation not found'}), 404
+        
+        automations[automation_id]['enabled'] = False
+        
+        if save_config(config):  # Save main config
+            logger.info(f"Paused risk automation {automation_id}")
+            return jsonify({'success': True, 'message': 'Automation paused'})
+        else:
+            return jsonify({'error': 'Failed to save configuration'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error pausing risk automation: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/components/automation/<automation_id>/resume', methods=['PUT'])
+def resume_risk_automation(automation_id):
+    """Resume a risk formula automation"""
+    try:
+        config = load_config()  # Main config
+        automations = config.get('active_automations', {})
+        
+        if automation_id not in automations:
+            return jsonify({'error': 'Automation not found'}), 404
+        
+        automations[automation_id]['enabled'] = True
+        
+        if save_config(config):  # Save main config
+            logger.info(f"Resumed risk automation {automation_id}")
+            return jsonify({'success': True, 'message': 'Automation resumed'})
+        else:
+            return jsonify({'error': 'Failed to save configuration'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error resuming risk automation: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/risk/automations/active', methods=['GET'])
+def get_active_risk_formula_automations():
+    """Get all active risk formula automations for the UI"""
+    try:
+        config = load_config()
+        if not config:
+            return jsonify({'error': 'Config file not found'}), 500
+            
+        automations = config.get('active_automations', {})
+        
+        # Transform for frontend consumption
+        transformed_automations = {}
+        for auto_id, automation in automations.items():
+            transformed_automations[auto_id] = {
+                **automation,
+                'componentName': automation.get('formula_name', 'Unknown Formula'),
+                'component_name': automation.get('formula_name', 'Unknown Formula'),
+                'enabled': automation.get('enabled', True)  # Default to enabled if not specified
+            }
+        
+        return jsonify({
+            'success': True,
+            'automations': transformed_automations
+        })
+    except Exception as e:
+        logger.error(f"Error getting risk formula automations: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/components/automation/<automation_id>', methods=['DELETE'])
+def delete_risk_automation(automation_id):
+    """Delete a risk formula automation"""
+    try:
+        config = load_config()  # Main config
+        automations = config.get('active_automations', {})
+        
+        if automation_id not in automations:
+            return jsonify({'error': 'Automation not found'}), 404
+        
+        automation_name = automations[automation_id].get('formula_name', automation_id)  # Use formula_name
+        del automations[automation_id]
+        
+        if save_config(config):  # Save main config
+            logger.info(f"Deleted risk automation {automation_id}")
+            return jsonify({'success': True, 'message': f'Risk automation {automation_name} deleted'})
+        else:
+            return jsonify({'error': 'Failed to save configuration'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error deleting risk automation: {e}")
+        return jsonify({'error': str(e)}), 500
+    
 if __name__ == '__main__':
     #Start Flask API
     logger.info("Starting Risk Assessment API on port 5000")
