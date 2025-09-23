@@ -17,7 +17,7 @@ class Neo4jConfig:
 
 @dataclass
 class Config:
-    neo4j_config: Neo4jConfig
+    neo4j: Neo4jConfig
 
 
 class AppConfig:

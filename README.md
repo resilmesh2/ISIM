@@ -37,15 +37,15 @@ docker compose up -d --build
 
 # Configuration
 Configuration files are located in the [config](config) folder. Currently, the project provides configuration file
-for local (`config.ini`) and dockerized (`config_docker.ini`) deployment. 
+for local (`config.yaml`) and dockerized (`config_docker.yaml`) deployment. 
 
 The configuration is rather simple, the ini files contain a single section
 
-```ini
-[neo4j_config]
-bolt = bolt://localhost:7687
-user = neo4j
-password = supertestovaciheslo
+```yaml
+neo4j:
+  password: supertestovaciheslo
+  bolt: bolt://neo4j:7687
+  user: neo4j
 ```
 
 - bolt: URI of the Neo4j database
