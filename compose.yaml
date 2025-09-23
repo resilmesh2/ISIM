@@ -8,7 +8,7 @@ services:
       neo4j:
         condition: service_healthy
     volumes:
-      - ./config/conf_docker.ini:/app/config/conf.ini
+      - ./config/config_docker.yaml:/app/config/config.yaml
     restart: unless-stopped
     networks:
       - casm_isim_test_network

@@ -1,11 +1,12 @@
-from configparser import ConfigParser
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
+from dacite import from_dict
 
 from isim_rest.neo4j_rest.settings import BASE_DIR
 
 CONF_DIR = BASE_DIR.parent / "config"
-
 
 @dataclass
 class Neo4jConfig:
@@ -24,10 +25,18 @@ class AppConfig:
 
     @classmethod
     def get(cls, config_path: Path | None = None) -> Config:
-        config_parser = ConfigParser()
-        if cls._config is None:
-            if config_path is None:  # pragma: no cover
-                config_path = CONF_DIR / "conf.ini"
-            config_parser.read(config_path)
-            cls._config = Config(neo4j_config=Neo4jConfig(**dict(config_parser["neo4j_config"])))
+        # Return cached config if it exists
+        if cls._config is not None:
+            return cls._config
+
+        # Set default config path if none provided
+        if config_path is None:
+            config_path = CONF_DIR / "config.yaml"
+
+        # Load and parse config file
+        with config_path.open() as f:
+            raw_config = yaml.safe_load(f)
+
+        # Convert dict to Config object and cache it
+        cls._config = from_dict(Config, raw_config)
         return cls._config
