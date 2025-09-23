@@ -10,7 +10,7 @@ from rest_framework.decorators import api_view  # type: ignore
 from rest_framework.response import Response
 
 from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO, MissionListInputDTO, NmapTopologyDTO, \
-    MissionCriticalityDTO
+    MissionCriticalityDTO, EasmDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
 from neo4j_adapter.csa_adapter import CSAAdapter
@@ -80,6 +80,23 @@ def assets(request: HttpRequest) -> Response:
         data.flatten_related_relationships()
         json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
         client.store_assets(json_string)
+    except ValidationError as e:
+        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    return Response("Processed successfully. If some assets support missions, use /missions endpoint to add descriptions of missions.",
+                    status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def easm(request: HttpRequest) -> Response:
+    request_body = request.body
+    try:
+        data = msgspec.json.decode(request_body, type=list[EasmDTO], dec_hook=dec_hook_ip)
+        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        client.store_easm(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     except (ClientError, TransientError, DatabaseError) as e:
@@ -213,9 +230,9 @@ def store_criticality(request: HttpRequest, logger=structlog.get_logger()) -> Re
     request_body = request.body
     logger.info(f"Request body: {request_body}")
     try:
-        data = msgspec.json.decode(request_body, type=List[MissionCriticalityDTO])
+        data = msgspec.json.decode(request_body, type=List[MissionCriticalityDTO], dec_hook=dec_hook_ip)
         logger.info(f"Data: {data}")
-        json_string = json.dumps(json.loads(msgspec.json.encode(data)))
+        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
         logger.info(f"JSON string: {json_string}")
         csa_adapter.store_criticality(json_string)
     except ValidationError as e:

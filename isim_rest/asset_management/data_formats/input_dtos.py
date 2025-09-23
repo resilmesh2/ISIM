@@ -78,6 +78,19 @@ class OrgUnitDTO(msgspec.Struct):
     parents: list[str] = field(default_factory=list)
 
 
+class EasmDTO(msgspec.Struct):
+    port: str
+    protocol: str
+    service: str
+    ip: IP_TYPE | None = None
+    domain_name: str | None = None
+    software_versions: list[dict[str, str]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.ip is None and self.domain_name is None:
+            raise ValueError("Either IP or domain is necessary!")
+
+
 class AssetListInputDTO(msgspec.Struct):
     hosts: list[HostDTO] = field(default_factory=list)
     subnets: list[SubnetDTO] = field(default_factory=list)
@@ -182,6 +195,6 @@ class NmapTopologyDTO(msgspec.Struct):
 
 
 class MissionCriticalityDTO(msgspec.Struct):
-    ip: str = field(name="ip")
+    ip: IP_TYPE = field(name="ip")
     hostname: str = field(name="hostname")
     criticality: float = field(name="criticality")
