@@ -25,18 +25,14 @@ class AppConfig:
 
     @classmethod
     def get(cls, config_path: Path | None = None) -> Config:
-        # Return cached config if it exists
         if cls._config is not None:
             return cls._config
 
-        # Set default config path if none provided
         if config_path is None:
             config_path = CONF_DIR / "config.yaml"
 
-        # Load and parse config file
         with config_path.open() as f:
             raw_config = yaml.safe_load(f)
 
-        # Convert dict to Config object and cache it
         cls._config = from_dict(Config, raw_config)
         return cls._config
