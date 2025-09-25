@@ -1723,6 +1723,83 @@ def delete_risk_automation(automation_id):
     except Exception as e:
         logger.error(f"Error deleting risk automation: {e}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/components/automation/<automation_id>/workflow', methods=['GET'])
+def get_automation_workflow(automation_id):
+    """Get automation workflow configuration"""
+    try:
+        config = load_config()
+        automations = config.get('active_automations', {})
+        
+        if automation_id not in automations:
+            return jsonify({'error': 'Automation not found'}), 404
+        
+        automation = automations[automation_id]
+        
+        # Return workflow structure
+        workflow = {
+            'components': automation.get('components', []),
+            'formula': automation.get('custom_formula', ''),
+            'calculation_method': automation.get('calculation_method', 'weighted_avg')
+        }
+        
+        return jsonify({
+            'success': True,
+            'workflow': workflow
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting automation workflow: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/components/automation/<automation_id>/workflow', methods=['PUT'])
+def update_automation_workflow(automation_id):
+    """Update automation workflow configuration"""
+    try:
+        data = request.get_json()
+        config = load_config()
+        automations = config.get('active_automations', {})
+        
+        if automation_id not in automations:
+            return jsonify({'error': 'Automation not found'}), 404
+        
+        # Update the automation with workflow data
+        automations[automation_id]['components'] = data.get('components', [])
+        automations[automation_id]['custom_formula'] = data.get('formula', '')
+        
+        if save_config(config):
+            return jsonify({'success': True, 'message': 'Workflow updated'})
+        else:
+            return jsonify({'error': 'Failed to save configuration'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error updating automation workflow: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/components/automation/<automation_id>', methods=['PUT'])
+def update_automation_configuration(automation_id):
+    """Update general automation configuration"""
+    try:
+        data = request.get_json()
+        config = load_config()
+        automations = config.get('active_automations', {})
+        
+        if automation_id not in automations:
+            return jsonify({'error': 'Automation not found'}), 404
+        
+        # Update automation properties
+        for key, value in data.items():
+            if key in ['enabled', 'components', 'formula', 'update_frequency']:
+                automations[automation_id][key] = value
+        
+        if save_config(config):
+            return jsonify({'success': True, 'message': 'Automation updated'})
+        else:
+            return jsonify({'error': 'Failed to save configuration'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error updating automation: {e}")
+        return jsonify({'error': str(e)}), 500
     
 if __name__ == '__main__':
     #Start Flask API
