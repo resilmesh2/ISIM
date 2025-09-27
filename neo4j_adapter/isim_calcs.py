@@ -150,8 +150,15 @@ def main():
           apoc.coll.max(allRaw) AS maxB
         UNWIND range(0, size(allIds)-1) AS idx
         WITH
-          gds.util.asNode(allIds[idx])          AS n,
-          toFloat((allRaw[idx] - minB) / (maxB - minB)) AS normB
+          gds.util.asNode(allIds[idx]) AS n,
+          allRaw[idx] AS rawValue,
+          minB,
+          maxB
+        WITH n,
+          CASE 
+            WHEN maxB - minB = 0 THEN 0.0
+            ELSE toFloat((rawValue - minB) / (maxB - minB))
+          END AS normB
         SET n.normalizedBetweenness = normB
         RETURN count(*) AS nodesUpdated
         """
@@ -171,8 +178,15 @@ def main():
           apoc.coll.max(allRaw) AS maxD
         UNWIND range(0, size(allIds)-1) AS idx
         WITH
-          gds.util.asNode(allIds[idx])          AS n,
-          toFloat((allRaw[idx] - minD) / (maxD - minD)) AS normD
+          gds.util.asNode(allIds[idx]) AS n,
+          allRaw[idx] AS rawValue,
+          minD,
+          maxD
+        WITH n,
+          CASE 
+            WHEN maxD - minD = 0 THEN 0.0
+            ELSE toFloat((rawValue - minD) / (maxD - minD))
+          END AS normD
         SET n.normalizedDegree = normD
         RETURN count(*) AS nodesUpdated
         """

@@ -208,8 +208,8 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
                 weighted_terms.append(f"({current_value} * {weight})")
                 total_weight += weight
         
-        if not weighted_terms:
-            return "0"
+        if not weighted_terms or total_weight == 0:
+            return "0.0"
         
         calculation = " + ".join(weighted_terms)
         return f"(({calculation}) / {total_weight})"
@@ -221,13 +221,11 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
             values.append(str(current_value))
         
         if not values:
-            return "0"
-        
+            return "0.0"
         
         if len(values) == 1:
             return values[0]
         else:
-            # Build nested CASE WHEN for finding maximum
             max_calc = values[0]
             for val in values[1:]:
                 max_calc = f"CASE WHEN {val} > {max_calc} THEN {val} ELSE {max_calc} END"
@@ -238,37 +236,33 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
         for comp in components:
             current_value = float(comp.get('currentValue', 0))
             terms.append(str(current_value))
-        return " + ".join(terms) if terms else "0"
+        return " + ".join(terms) if terms else "0.0"
     
     elif method == 'geometric_mean':
         values = []
         for comp in components:
             current_value = float(comp.get('currentValue', 0))
-            # Avoid zero in geometric mean
             values.append(f"CASE WHEN {current_value} > 0 THEN {current_value} ELSE 0.1 END")
         
         if not values:
-            return "0"
+            return "0.0"
         
         n = len(values)
         product = " * ".join(values)
         return f"(({product})^(1.0/{n}))"
 
     elif method == 'custom_formula' and custom_formula:
-        # Replace component names with their values
         formula = custom_formula
         for comp in components:
             comp_name = comp.get('name', '')
             current_value = float(comp.get('currentValue', 0))
-            # Replace component name with its value in the formula
             formula = formula.replace(comp_name, str(current_value))
         return formula
     
     else:
-        # Default to weighted average
         logger.warning(f"Unknown method {method}, defaulting to weighted_avg")
         return build_calculation(components, formula_config, 'weighted_avg')
-    
+        
 def main():
     """Main execution function"""
     logger.info("="*50)

@@ -1065,15 +1065,13 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
             max_value = comp.get('maxValue', 10)
             
             if weight > 0:
-                # Use Neo4j property reference instead of currentValue
                 weighted_terms.append(f"(COALESCE(n.{neo4j_property}, 0) / {max_value} * {weight})")
                 total_weight += weight
         
-        if not weighted_terms:
-            return "0"
+        if not weighted_terms or total_weight == 0:
+            return "0.0"
         
         calculation = " + ".join(weighted_terms)
-        # Multiply by 10 to get 0-10 scale
         return f"(({calculation}) / {total_weight} * 10)"
     
     elif method == 'max':
@@ -1084,12 +1082,11 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
             values.append(f"(COALESCE(n.{neo4j_property}, 0) / {max_value} * 10)")
         
         if not values:
-            return "0"
+            return "0.0"
         
         if len(values) == 1:
             return values[0]
         else:
-            # Build nested CASE WHEN for finding maximum
             max_calc = values[0]
             for val in values[1:]:
                 max_calc = f"CASE WHEN {val} > {max_calc} THEN {val} ELSE {max_calc} END"
@@ -1101,48 +1098,46 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
             neo4j_property = comp.get('neo4jProperty')
             max_value = comp.get('maxValue', 10)
             terms.append(f"(COALESCE(n.{neo4j_property}, 0) / {max_value})")
-        # Cap at 10
-        return f"CASE WHEN ({' + '.join(terms)} * 10) > 10 THEN 10 ELSE ({' + '.join(terms)} * 10) END" if terms else "0"
+        
+        if not terms:
+            return "0.0"
+            
+        sum_expr = ' + '.join(terms)
+        return f"CASE WHEN ({sum_expr} * 10) > 10 THEN 10.0 ELSE ({sum_expr} * 10) END"
     
     elif method == 'geometric_mean':
         values = []
         for comp in components:
             neo4j_property = comp.get('neo4jProperty')
             max_value = comp.get('maxValue', 10)
-            # Avoid zero in geometric mean
             values.append(f"CASE WHEN COALESCE(n.{neo4j_property}, 0) > 0 THEN (n.{neo4j_property} / {max_value}) ELSE 0.1 END")
         
         if not values:
-            return "0"
+            return "0.0"
         
         n = len(values)
         product = " * ".join(values)
-        # Multiply by 10 to get 0-10 scale
         return f"((({product})^(1.0/{n})) * 10)"
 
     elif method == 'custom_formula' and custom_formula:
-        # Replace component names with Neo4j property references
         formula = custom_formula
         for comp in components:
             comp_name = comp.get('name', '')
             neo4j_property = comp.get('neo4jProperty', comp_name.replace(' ', '_').lower())
             max_value = comp.get('maxValue', 10)
-            # Replace component name with Neo4j property reference
             formula = formula.replace(comp_name, f"(COALESCE(n.{neo4j_property}, 0) / {max_value} * 10)")
         return formula
     
     else:
-        # Default to weighted average
         logger.warning(f"Unknown method {method}, defaulting to weighted_avg")
         return build_calculation(components, formula_config, 'weighted_avg')
-    
+       
 @app.route('/api/risk/apply-configuration', methods=['POST'])
 def apply_risk_configuration():
     """Apply risk configuration from drag-drop interface"""
     try:
         data = request.get_json()
         
-        # Extract all user inputs
         components = data.get('components', [])
         target_type = data.get('targetType')
         target_values = data.get('targetValues', [])
@@ -1156,17 +1151,14 @@ def apply_risk_configuration():
         
         logger.info(f"Received calculation method: {calculation_method}")
         
-        # Build formula configuration
         formula_config = {}
         for comp in components:
             comp_name = comp.get('name', '').replace(' ', '_').lower()
             formula_config[comp_name] = float(comp.get('weight', 0))
         
-        # Execute on Neo4j
         driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
         
         with driver.session() as session:
-            # Build match clause based on target
             if target_type == 'network':
                 conditions = []
                 for network in target_values:
@@ -1192,12 +1184,10 @@ def apply_risk_configuration():
             else:
                 match_clause = "MATCH (n:Node)"
             
-            # Build calculation based on selected method
             calculation = build_calculation(components, formula_config, calculation_method, custom_formula)
             
             logger.info(f"Calculation: {calculation}")
             
-            # Execute query
             prop_name = f"`{target_property}`" if ' ' in target_property else target_property
             
             query = f"""
@@ -1217,11 +1207,14 @@ def apply_risk_configuration():
             record = result.single()
             
             nodes_updated = record.get('nodesUpdated', 0) if record else 0
-            avg_score = record.get('avgRiskScore', 0) if record else 0
-
-            # Fix null values
-            if avg_score is None:
-                avg_score = 0
+            avg_score = record.get('avgRiskScore') if record else None
+            
+            # Critical fix: Handle NaN and None values
+            if avg_score is None or (isinstance(avg_score, float) and (avg_score != avg_score)):  # NaN check
+                avg_score = 0.0
+            else:
+                avg_score = float(avg_score)
+            
             if nodes_updated is None:
                 nodes_updated = 0
         
@@ -1231,7 +1224,6 @@ def apply_risk_configuration():
         if not config:
             config = {}
         
-        # Create automation tracking data
         automation_data = {
             'formula_name': formula_name,
             'formula_config': formula_config,
@@ -1246,7 +1238,7 @@ def apply_risk_configuration():
             'enabled': True,
             'created_date': datetime.now().isoformat(),
             'nodes_updated': nodes_updated,
-            'avg_risk_score': float(avg_score) if avg_score is not None else 0.0
+            'avg_risk_score': avg_score
         }
 
         if update_frequency != 'manual':
@@ -1257,12 +1249,11 @@ def apply_risk_configuration():
             config['active_automations'][automation_id] = automation_data
             logger.info(f"Saving automation {automation_id}")
         
-        # Always save last calculation info
         config['last_risk_calculation'] = {
             'formula_name': formula_name,
             'applied_to': f"{target_type}: {', '.join(map(str, target_values[:3]))}{'...' if len(target_values) > 3 else ''}",
             'nodes_updated': nodes_updated,
-            'average_risk_score': float(avg_score) if avg_score is not None else 0.0,
+            'average_risk_score': avg_score,
             'timestamp': datetime.now().isoformat(),
             'update_frequency': update_frequency,
             'target_property': target_property,
@@ -1272,9 +1263,8 @@ def apply_risk_configuration():
             'components': {comp['name']: {'weight': comp.get('weight', 0), 'value': comp.get('currentValue', 0)} for comp in components}
         }
         
-        # Save the updated config
         if save_config(config):
-            logger.info(f"Successfully saved automation to config. Frequency: {update_frequency}")
+            logger.info(f"Successfully saved automation to config")
         else:
             logger.error("Failed to save automation to config")
         
@@ -1288,7 +1278,7 @@ def apply_risk_configuration():
     except Exception as e:
         logger.error(f"Error applying configuration: {e}")
         return jsonify({'error': str(e)}), 500
-                  
+                      
 def load_component_config() -> Optional[Dict[str, Any]]:
     """Load component automation configuration"""
     try:

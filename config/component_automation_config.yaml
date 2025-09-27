@@ -1,4 +1,15 @@
-active_component_automations: {}
+active_component_automations:
+  comp_auto_dghgf:
+    component_name: dghgf
+    component_id: dghgf
+    neo4j_property: dghgf
+    update_frequency: daily
+    calculation_method: query_result
+    target_property: dghgf
+    enabled: false
+    created_at: '2025-09-27T16:51:47.739044'
+    last_run: null
+    last_modified: '2025-09-27T17:17:11.464720'
 component_automation_history: {}
 last_execution:
   timestamp: null
