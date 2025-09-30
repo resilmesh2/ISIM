@@ -58,13 +58,13 @@ class AppConfig:
         with config_path.open() as f:
             raw_config = yaml.safe_load(f)
 
-        cls._config = from_dict(Config, raw_config)
-
         if org_config_path is None:
-            org_config_path = CONF_DIR / "conf_organization.yaml"
+            org_config_path = CONF_DIR / "config_organization.yaml"
         with org_config_path.open() as f:
-            raw_config = yaml.safe_load(f)
+            raw_org_config = yaml.safe_load(f)
 
-        cls._config.organization = from_dict(OrganizationConfig, raw_config)
+        raw_config["organization"] = raw_org_config
+
+        cls._config = from_dict(Config, raw_config)
 
         return cls._config
