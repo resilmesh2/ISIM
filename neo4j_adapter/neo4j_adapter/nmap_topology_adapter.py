@@ -28,6 +28,6 @@ class NmapTopologyAdapter(GeneralAdapter):
                 "ON MATCH SET rel.last_detection = datetime(value.time) " \
                 "ON CREATE SET rel.last_detection = datetime(value.time)"
 
-        params = {'nmap_result': nmap_result}
+        params = {"nmap_result": nmap_result}
 
         self._run_query(query, **params)

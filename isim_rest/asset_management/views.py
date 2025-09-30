@@ -1,25 +1,28 @@
 import json
-from typing import List
 
 import msgspec.json
+import structlog
 from django.http import HttpRequest
 from msgspec import ValidationError
 from neo4j.exceptions import ClientError, DatabaseError, TransientError
+from neo4j_adapter.criticality_adapter import CriticalityAdapter
+from neo4j_adapter.csa_adapter import CSAAdapter
+from neo4j_adapter.ip_subnet_sync import IpSubnetSynchronizer
+from neo4j_adapter.nmap_topology_adapter import NmapTopologyAdapter
+from neo4j_adapter.rest_adapter import RESTAdapter
 from rest_framework import status
 from rest_framework.decorators import api_view  # type: ignore
 from rest_framework.response import Response
 
-from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO, MissionListInputDTO, NmapTopologyDTO, \
-    MissionCriticalityDTO, EasmDTO
+from isim_rest.asset_management.data_formats.input_dtos import (
+    AssetListInputDTO,
+    EasmDTO,
+    MissionCriticalityDTO,
+    MissionListInputDTO,
+    NmapTopologyDTO,
+)
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
-from neo4j_adapter.csa_adapter import CSAAdapter
-from neo4j_adapter.rest_adapter import RESTAdapter
-from neo4j_adapter.ip_subnet_sync import IpSubnetSynchronizer
-
-from neo4j_adapter.criticality_adapter import CriticalityAdapter
-from neo4j_adapter.nmap_topology_adapter import NmapTopologyAdapter
-import structlog
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
@@ -231,7 +234,7 @@ def store_criticality(request: HttpRequest, logger=structlog.get_logger()) -> Re
     request_body = request.body
     logger.info(f"Request body: {request_body}")
     try:
-        data = msgspec.json.decode(request_body, type=List[MissionCriticalityDTO], dec_hook=dec_hook_ip)
+        data = msgspec.json.decode(request_body, type=list[MissionCriticalityDTO], dec_hook=dec_hook_ip)
         logger.info(f"Data: {data}")
         json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
         logger.info(f"JSON string: {json_string}")

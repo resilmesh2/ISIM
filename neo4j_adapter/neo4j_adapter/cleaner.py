@@ -1,25 +1,27 @@
-from neo4j_adapter.general_adapter import GeneralAdapter
 from typing import Any
+
+from neo4j_adapter.general_adapter import GeneralAdapter
+
 
 class Cleaner(GeneralAdapter):
     def __init__(self, password: str, **kwargs: Any) -> None:
         super().__init__(password=password, **kwargs)
-        self.duration = 'P21D'
+        self.duration = "P21D"
 
-    def clean_old_vulnerabilities(self):
+    def clean_old_vulnerabilities(self) -> None:
         query = """CALL apoc.periodic.commit('
-                WITH datetime() - duration($duration) AS popTime 
+                WITH datetime() - duration($duration) AS popTime
                 MATCH (vul:Vulnerability)-[r:IN]->(s:SoftwareVersion)
-                WHERE r.end < popTime 
-                WITH r LIMIT $limit 
-                DELETE r 
+                WHERE r.end < popTime
+                WITH r LIMIT $limit
+                DELETE r
                 RETURN count(*)', {limit:1000, duration: $duration})"""
 
-        params = {'duration': self.duration}
+        params = {"duration": self.duration}
 
         self._run_query(query, **params)
 
-    def clean_host_layer(self):
+    def clean_host_layer(self) -> None:
         query = "CALL apoc.periodic.commit('" \
                 "WITH datetime() - duration($duration) AS popTime " \
                 "MATCH (ns:NetworkService)-[r1:ON]->(h1:Host) " \
@@ -31,11 +33,11 @@ class Cleaner(GeneralAdapter):
                 "DELETE r1, r2 " \
                 "RETURN count(*)', {limit:1000, duration: $duration})"
 
-        params = {'duration': self.duration}
+        params = {"duration": self.duration}
 
         self._run_query(query, **params)
 
-    def clean_network_layer(self):
+    def clean_network_layer(self) -> None:
         query = "CALL apoc.periodic.commit('" \
                 "WITH datetime() - duration($duration) AS popTime " \
                 "MATCH (ip:IP)-[r1:RESOLVES_TO]->(d:DomainName) " \
@@ -50,11 +52,11 @@ class Cleaner(GeneralAdapter):
                 "DELETE r1, r2, r3 " \
                 "RETURN count(*)', {limit:1000, duration: $duration})"
 
-        params = {'duration': self.duration}
+        params = {"duration": self.duration}
 
         self._run_query(query, **params)
 
-    def clean_security_events(self):
+    def clean_security_events(self) -> None:
         query = "CALL apoc.periodic.commit('" \
                 "WITH datetime() - duration($duration) AS popTime " \
                 "MATCH (secEvent:SecurityEvent) " \
@@ -63,6 +65,6 @@ class Cleaner(GeneralAdapter):
                 "DETACH DELETE secEvent " \
                 "RETURN count(*)', {limit:1000, duration: $duration})"
 
-        params = {'duration': self.duration}
+        params = {"duration": self.duration}
 
         self._run_query(query, **params)

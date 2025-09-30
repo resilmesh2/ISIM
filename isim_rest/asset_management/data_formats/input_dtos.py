@@ -1,4 +1,4 @@
-from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network, IPv4Address
+from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network
 from typing import TYPE_CHECKING, Any
 
 import msgspec

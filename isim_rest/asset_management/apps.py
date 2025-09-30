@@ -3,12 +3,12 @@ import json
 import msgspec
 from django.apps.config import AppConfig
 from neo4j.exceptions import ClientError
+from neo4j_adapter.rest_adapter import RESTAdapter
 from structlog import getLogger
 
 from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig as ISIMConfig
-from neo4j_adapter.rest_adapter import RESTAdapter
 
 logger = getLogger()
 

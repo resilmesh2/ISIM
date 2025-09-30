@@ -2,13 +2,12 @@ from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network, ip
 from typing import cast
 
 import pytest
-
 from neo4j_adapter.ip_subnet_sync import (
-    IPToSubnet,
     IP_NET_TYPE,
     IP_TYPE,
-    SubnetToParent,
     IpSubnetSynchronizer,
+    IPToSubnet,
+    SubnetToParent,
 )
 
 
@@ -53,7 +52,6 @@ class TestIPSubnetSynchronizer:
         self.all_ips: list[IP_TYPE] = self.ipv4_addresses + self.ipv6_addresses
         self.all_networks: list[IP_NET_TYPE] = self.ipv4_networks + self.ipv6_networks
 
-
     def test_find_closest_network(self) -> None:
         """Test the _find_closest_network static method."""
         # IPv4 test cases
@@ -61,7 +59,7 @@ class TestIPSubnetSynchronizer:
         closest1 = self.synchronizer._find_closest_network(ip1, self.ipv4_networks)
         assert closest1 == ip_network("192.168.1.0/24")  # Most specific match
 
-        ip2 = cast(IPv4Interface, ip_interface("172.16.100.100/32"))
+        ip2 = cast("IPv4Interface", ip_interface("172.16.100.100/32"))
         closest2 = self.synchronizer._find_closest_network(ip2, self.ipv4_networks)
         assert closest2 == ip_network("172.16.0.0/12")
 
@@ -70,33 +68,33 @@ class TestIPSubnetSynchronizer:
         closest3 = self.synchronizer._find_closest_network(ip3, self.ipv6_networks)
         assert closest3 == ip_network("2001:db8:0:1::/64")  # Most specific match
 
-        ip4 = cast(IPv6Interface, ip_interface("2001:db8:9:9::5/128"))
+        ip4 = cast("IPv6Interface", ip_interface("2001:db8:9:9::5/128"))
         closest4 = self.synchronizer._find_closest_network(ip4, self.ipv6_networks)
         assert closest4 == ip_network("2001:db8::/32")  # Less specific match
 
         # No match case
-        ip5 = cast(IPv4Interface, ip_interface("8.8.8.8/32"))
+        ip5 = cast("IPv4Interface", ip_interface("8.8.8.8/32"))
         closest5 = self.synchronizer._find_closest_network(ip5, self.ipv4_networks)
         assert closest5 is None  # No match
 
     def test_find_closest_parent(self) -> None:
         """Test the _find_closest_parent static method."""
         # IPv4 test cases
-        subnet1 = cast(IPv4Network, ip_network("192.168.1.0/24"))
+        subnet1 = cast("IPv4Network", ip_network("192.168.1.0/24"))
         parent1 = self.synchronizer._find_closest_parent(subnet1, self.ipv4_networks)
         assert parent1 == ip_network("192.168.0.0/16")  # Direct parent
 
-        subnet2 = cast(IPv4Network, ip_network("192.168.1.128/25"))  # Not in the list
+        subnet2 = cast("IPv4Network", ip_network("192.168.1.128/25"))  # Not in the list
         parent2 = self.synchronizer._find_closest_parent(subnet2, self.ipv4_networks)
         assert parent2 == ip_network("192.168.1.0/24")  # Parent from list
 
         # IPv6 test cases
-        subnet3 = cast(IPv6Network, ip_network("2001:db8:0:1::/64"))
+        subnet3 = cast("IPv6Network", ip_network("2001:db8:0:1::/64"))
         parent3 = self.synchronizer._find_closest_parent(subnet3, self.ipv6_networks)
         assert parent3 == ip_network("2001:db8::/32")  # Direct parent
 
         # No parent case
-        subnet4 = cast(IPv4Network, ip_network("8.0.0.0/8"))  # Not in hierarchy
+        subnet4 = cast("IPv4Network", ip_network("8.0.0.0/8"))  # Not in hierarchy
         parent4 = self.synchronizer._find_closest_parent(subnet4, self.ipv4_networks)
         assert parent4 is None  # No parent
 
@@ -138,11 +136,11 @@ class TestIPSubnetSynchronizer:
         """Test the _parse_ips_for_cypher static method."""
         # Create sample IPToSubnet instances
         ip_to_subnet1 = IPToSubnet(
-            ip_address=cast(IPv4Interface, ip_interface("192.168.1.10/32")),
-            subnet=cast(IPv4Network, ip_network("192.168.1.0/24")),
+            ip_address=cast("IPv4Interface", ip_interface("192.168.1.10/32")),
+            subnet=cast("IPv4Network", ip_network("192.168.1.0/24")),
         )
         ip_to_subnet2 = IPToSubnet(
-            ip_address=cast(IPv4Interface, ip_interface("10.0.0.5/32")),
+            ip_address=cast("IPv4Interface", ip_interface("10.0.0.5/32")),
             subnet=None,  # Test with None subnet
         )
 
@@ -162,11 +160,11 @@ class TestIPSubnetSynchronizer:
         """Test the _parse_subnets_for_cypher static method."""
         # Create sample SubnetToParent instances
         subnet_to_parent1 = SubnetToParent(
-            subnet=cast(IPv4Network, ip_network("192.168.1.0/24")),
-            parent=cast(IPv4Network, ip_network("192.168.0.0/16")),
+            subnet=cast("IPv4Network", ip_network("192.168.1.0/24")),
+            parent=cast("IPv4Network", ip_network("192.168.0.0/16")),
         )
         subnet_to_parent2 = SubnetToParent(
-            subnet=cast(IPv4Network, ip_network("10.0.0.0/8")),
+            subnet=cast("IPv4Network", ip_network("10.0.0.0/8")),
             parent=None,  # Test with None parent
         )
 

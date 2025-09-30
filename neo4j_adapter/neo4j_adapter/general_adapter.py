@@ -64,9 +64,9 @@ class GeneralAdapter:
         ]
 
         for constraint in constraints:
-            constraint = cast(LiteralString, constraint)
+            constraint = cast("LiteralString", constraint)
             self._run_query(constraint)
 
         for index in indices:
-            index = cast(LiteralString, index)
+            index = cast("LiteralString", index)
             self._run_query(index)
