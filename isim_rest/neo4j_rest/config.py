@@ -41,7 +41,7 @@ class OrganizationConfig:
 @dataclass
 class Config:
     neo4j: Neo4jConfig
-    org_config: OrganizationConfig
+    organization: OrganizationConfig
 
 
 class AppConfig:
@@ -54,7 +54,6 @@ class AppConfig:
 
         if config_path is None:
             config_path = CONF_DIR / "config.yaml"
-
         with config_path.open() as f:
             raw_config = yaml.safe_load(f)
 
@@ -62,11 +61,9 @@ class AppConfig:
 
         if org_config_path is None:
             org_config_path = CONF_DIR / "conf_organization.yaml"
-        with Path.open(org_config_path, "r") as f:
+        with org_config_path.open() as f:
             raw_config = yaml.safe_load(f)
-        org_config = from_dict(OrganizationConfig, raw_config)
-        return cls._config
 
-    @classmethod
-    def _get_org_config(cls) -> Neo4jConfig:
-        return AppConfig.get().neo4j_config
+        cls._config.organization = from_dict(OrganizationConfig, raw_config)
+
+        return cls._config

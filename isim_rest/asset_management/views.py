@@ -262,9 +262,9 @@ def combine_criticality(request: HttpRequest) -> Response:
 @api_view(["POST"])
 def ip_hierarchy_sync(request: HttpRequest) -> Response:
     synchronizer = IpSubnetSynchronizer(
-        user=config.neo4j_config.user,
-        password=config.neo4j_config.password,
-        bolt=config.neo4j_config.bolt,
+        user=config.neo4j.user,
+        password=config.neo4j.password,
+        bolt=config.neo4j.bolt,
     )
     synchronizer.run()
     return Response({"message": "Processed successfully"}, status=status.HTTP_201_CREATED)

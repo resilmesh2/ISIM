@@ -30,7 +30,7 @@ class AssetManagementConfig(AppConfig):
             "hosts": [],
         }
 
-        for host in config.org_config.hosts:
+        for host in config.organization.hosts:
             initial_data["hosts"].append(
                 {
                     "ip_address": host.ip_address,
