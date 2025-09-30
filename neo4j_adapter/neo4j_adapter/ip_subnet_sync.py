@@ -39,7 +39,6 @@ class IpSubnetSynchronizer(GeneralAdapter):
         parents = [net for net in networks if subnet != net and ip_interface(subnet) in net]
         return max(parents, key=lambda n: n.prefixlen, default=None)
 
-
     def prepare_data_for_neo4j(self, ips: list[IP_TYPE], subnets: list[IP_NET_TYPE]) -> dict[str, Any]:
         """Map IPs to closest subnets and subnets to closest parents, return parsed data."""
         closest_ip_map = [
@@ -121,39 +120,13 @@ class IpSubnetSynchronizer(GeneralAdapter):
             "ip_processing": ip_result,
         }
 
-    def run(self):
+    def run(self) -> None:
         ip, subnets = self.fetch_ips_and_subnets()
         prepared_data = self.prepare_data_for_neo4j(ip, subnets)
         self.load_hierarchy_to_neo4j(prepared_data["ips"], prepared_data["subnets"])
 
 
-
-def main():
-
-    # ips = [
-    #     ip_interface("192.168.1.10/32"),
-    #     ip_interface("192.168.1.200/32"),
-    #     ip_interface("10.0.0.5/32"),
-    #     ip_interface("172.16.5.9/32"),
-    #     ip_interface("2001:db8::1/128"),
-    #     ip_interface("2001:db8:0:1::5/128"),
-    #     ip_interface("fd00::1234/128"),
-    #     ip_interface("fe80::abcd/128"),
-    # ]
-    #
-    # subnets = [
-    #     ip_network("192.168.1.0/24"),
-    #     ip_network("192.168.0.0/16"),
-    #     ip_network("10.0.0.0/8"),
-    #     ip_network("172.16.0.0/12"),
-    #     ip_network("172.0.0.0/8"),
-    #     ip_network("2001:db8::/32"),
-    #     ip_network("2001:db8:0:1::/64"),
-    #     ip_network("fd00::/8"),
-    #     ip_network("fe80::/10"),
-    # ]
-
-
+def main() -> None:
     syncer = IpSubnetSynchronizer(password="supertestovaciheslo")  # ← Set real password
     ip, subnets = syncer.fetch_ips_and_subnets()
     prepared_data = syncer.prepare_data_for_neo4j(ip, subnets)
