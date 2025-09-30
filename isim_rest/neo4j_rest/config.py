@@ -1,4 +1,3 @@
-from configparser import ConfigParser
 from dataclasses import dataclass, field
 from ipaddress import ip_address, ip_network
 from pathlib import Path
@@ -9,7 +8,6 @@ from dacite import from_dict
 from isim_rest.neo4j_rest.settings import BASE_DIR
 
 CONF_DIR = BASE_DIR.parent / "config"
-
 
 @dataclass
 class Neo4jConfig:
@@ -42,7 +40,7 @@ class OrganizationConfig:
 
 @dataclass
 class Config:
-    neo4j_config: Neo4jConfig
+    neo4j: Neo4jConfig
     org_config: OrganizationConfig
 
 
@@ -51,18 +49,22 @@ class AppConfig:
 
     @classmethod
     def get(cls, config_path: Path | None = None, org_config_path: Path | None = None) -> Config:
-        config_parser = ConfigParser()
-        if cls._config is None:
-            if config_path is None:  # pragma: no cover
-                config_path = CONF_DIR / "conf.ini"
-            config_parser.read(config_path)
+        if cls._config is not None:
+            return cls._config
 
-            if org_config_path is None:
-                org_config_path = CONF_DIR / "conf_organization.yaml"
-            with Path.open(org_config_path, "r") as f:
-                raw_config = yaml.safe_load(f)
-            org_config = from_dict(OrganizationConfig, raw_config)
-            cls._config = Config(neo4j_config=Neo4jConfig(**dict(config_parser["neo4j_config"])), org_config=org_config)
+        if config_path is None:
+            config_path = CONF_DIR / "config.yaml"
+
+        with config_path.open() as f:
+            raw_config = yaml.safe_load(f)
+
+        cls._config = from_dict(Config, raw_config)
+
+        if org_config_path is None:
+            org_config_path = CONF_DIR / "conf_organization.yaml"
+        with Path.open(org_config_path, "r") as f:
+            raw_config = yaml.safe_load(f)
+        org_config = from_dict(OrganizationConfig, raw_config)
         return cls._config
 
     @classmethod

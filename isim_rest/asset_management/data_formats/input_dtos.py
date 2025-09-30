@@ -1,5 +1,5 @@
-from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network
-from typing import TYPE_CHECKING
+from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network, IPv4Address
+from typing import TYPE_CHECKING, Any
 
 import msgspec
 from msgspec import field
@@ -76,6 +76,19 @@ class OrgUnitDTO(msgspec.Struct):
     name: str
     locations: list[str] = field(default_factory=list)
     parents: list[str] = field(default_factory=list)
+
+
+class EasmDTO(msgspec.Struct):
+    port: str
+    protocol: str
+    service: str
+    ip: IP_TYPE | None = None
+    domain_name: str | None = None
+    software_versions: list[dict[str, str]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.ip is None and self.domain_name is None:
+            raise ValueError("Either IP or domain is necessary!")
 
 
 class AssetListInputDTO(msgspec.Struct):
@@ -174,3 +187,14 @@ class RelationshipDTO(msgspec.Struct):
 class MissionListInputDTO(msgspec.Struct):
     nodes: NodeMissionDTO
     relationships: RelationshipDTO
+
+
+class NmapTopologyDTO(msgspec.Struct):
+    data: list[dict[str, Any]]
+    time: str
+
+
+class MissionCriticalityDTO(msgspec.Struct):
+    ip: IP_TYPE = field(name="ip")
+    hostname: str = field(name="hostname")
+    criticality: float = field(name="criticality")

@@ -42,7 +42,7 @@ class AssetManagementConfig(AppConfig):
             )
 
         client = RESTAdapter(
-            password=config.neo4j_config.password, bolt=config.neo4j_config.bolt, user=config.neo4j_config.user
+            password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
         )
         try:
             client.init_db()
