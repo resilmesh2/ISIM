@@ -5,6 +5,7 @@ from neo4j_adapter.general_adapter import GeneralAdapter
 
 BASE_DIR = Path(__file__).parent
 
+
 class CSAAdapter(GeneralAdapter):
     def __init__(self, password: str, **kwargs: Any) -> None:
         super().__init__(password=password, **kwargs)
@@ -17,11 +18,10 @@ class CSAAdapter(GeneralAdapter):
                 "MATCH (host)<-[:IS_A]-(node:Node)-[:HAS_ASSIGNED]->(ip)" \
                 "SET node.mission_criticality = result.criticality "
 
-        query = cast(LiteralString, query)
+        query = cast("LiteralString", query)
         params = {"json_string": json_string}
 
         self._run_query(query, **params)
-
 
     def combine_criticality(self) -> None:
         query = """
@@ -30,22 +30,22 @@ class CSAAdapter(GeneralAdapter):
         count(n) AS count_of_nodes
         MATCH (n:Node)
         WITH n, max_betweenness, min_betweenness, count_of_nodes,
-        CASE 
+        CASE
           WHEN n.topology_degree IS NULL THEN 1
           ELSE 9*(n.topology_degree / count_of_nodes) + 1
         END AS topology_degree_norm,
-        CASE 
+        CASE
           WHEN n.topology_betweenness IS NULL THEN 1
           ELSE 9*((n.topology_betweenness - min_betweenness) / (max_betweenness - min_betweenness)) + 1
         END AS topology_betweenness_norm,
-        CASE 
+        CASE
           WHEN n.mission_criticality IS NULL THEN 1
           ELSE n.mission_criticality
         END AS mission_criticality
-        SET n.topology_degree_norm = topology_degree_norm 
-        SET n.topology_betweenness_norm = topology_betweenness_norm 
-        SET n.mission_criticality = mission_criticality 
+        SET n.topology_degree_norm = topology_degree_norm
+        SET n.topology_betweenness_norm = topology_betweenness_norm
+        SET n.mission_criticality = mission_criticality
         SET n.final_criticality = ((9*n.topology_degree_norm*n.topology_betweenness_norm / 100) + 1) * n.mission_criticality
                 """
-        query = cast(LiteralString, query)
+        query = cast("LiteralString", query)
         self._run_query(query)

@@ -33,7 +33,7 @@ class RESTAdapter(GeneralAdapter):
         :return: None
         """
         query = Path(BASE_DIR / "assets/missions_update_query.cypher").read_text()
-        query = cast(LiteralString, query)
+        query = cast("LiteralString", query)
         params = {"json_string": json_string}
 
         self._run_query(query, **params)
@@ -192,7 +192,7 @@ class RESTAdapter(GeneralAdapter):
     def store_assets(self, json_string: str) -> None:
         query = Path(BASE_DIR / "assets/asset_update_query.cypher").read_text()
         params = {"json_string": json_string}
-        query = cast(LiteralString, query)
+        query = cast("LiteralString", query)
         self._run_query(query, **params)
         self._default_ip_address_parent_subnets_constraint()
         self._default_subnet_parent_subnets_constraint()
@@ -200,7 +200,7 @@ class RESTAdapter(GeneralAdapter):
     def store_easm(self, json_string: str) -> None:
         query = Path(BASE_DIR / "assets/easm_cypher_query.cypher").read_text()
         params = {"json_string": json_string}
-        query = cast(LiteralString, query)
+        query = cast("LiteralString", query)
         self._run_query(query, **params)
 
     def _default_ip_address_parent_subnets_constraint(self) -> None:

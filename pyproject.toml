@@ -19,6 +19,7 @@ pyright = "^1.1.378"
 django-stubs = "^5.0.4"
 structlog = "^24.4.0"
 django-cors-headers = "^4.8.0"
+pytest = "^8.4.1"
 
 [tool.poetry.group.dev.dependencies]
 ruff = ">=0.0.261"

@@ -16,7 +16,7 @@ class CriticalityAdapter(GeneralAdapter):
         Centrality values must be computed for results from Nmap traceroute scanning.
         :return:
         """
-        query = """MATCH (source:Node)-[r:IS_CONNECTED_TO]->(target:Node) WHERE r.hops = 1 
+        query = """MATCH (source:Node)-[r:IS_CONNECTED_TO]->(target:Node) WHERE r.hops = 1
                 RETURN gds.graph.project(
                   'topologyGraph',
                   source,
@@ -41,7 +41,7 @@ class CriticalityAdapter(GeneralAdapter):
         :return: information about computation
         """
         self._create_topology_projection()
-        query = """CALL gds.betweenness.stream('topologyGraph') YIELD nodeId, score MATCH (n:Node) 
+        query = """CALL gds.betweenness.stream('topologyGraph') YIELD nodeId, score MATCH (n:Node)
                 WHERE id(n) = nodeId SET n.topology_betweenness = score"""
         self._run_query(query)
         self._drop_topology_projection()
@@ -55,7 +55,7 @@ class CriticalityAdapter(GeneralAdapter):
         self._create_topology_projection()
         query = """CALL gds.degree.stream('topologyGraph')
                 YIELD nodeId, score
-                MATCH (n:Node) 
+                MATCH (n:Node)
                 WHERE id(n) = nodeId SET n.topology_degree = score"""
         self._run_query(query)
         self._drop_topology_projection()
@@ -71,7 +71,7 @@ class CriticalityAdapter(GeneralAdapter):
         """
         query = """CALL gds.graph.project('centralityGraph', ['Node'], {
                  IS_CONNECTED_TO: {properties: {numberOfConnections: {property: '*', aggregation: 'COUNT'}}}})
-                YIELD graphName AS graph, relationshipProjection AS degreeProjection, 
+                YIELD graphName AS graph, relationshipProjection AS degreeProjection,
                  nodeCount AS nodes, relationshipCount AS rels"""
         self._run_query(query)
 
@@ -89,7 +89,7 @@ class CriticalityAdapter(GeneralAdapter):
         :return:
         """
         self._create_graph_projection()
-        query = """CALL gds.degree.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node) 
+        query = """CALL gds.degree.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node)
         WHERE id(n) = nodeId SET n.degree_centrality = score"""
         self._run_query(query)
         self._drop_graph_projection()
@@ -100,7 +100,7 @@ class CriticalityAdapter(GeneralAdapter):
         :return:
         """
         self._create_graph_projection()
-        query = """CALL gds.pageRank.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node) 
+        query = """CALL gds.pageRank.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node)
         WHERE id(n) = nodeId SET n.pagerank_centrality = score"""
         self._run_query(query)
         self._drop_graph_projection()
