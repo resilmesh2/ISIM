@@ -97,7 +97,7 @@ def should_run_component_automation(automation: Dict[str, Any]) -> bool:
     return False
 
 def execute_component_automation(automation_id: str, config: dict):
-    """Execute a single component automation"""
+    """Execute component automation and update both Neo4j properties AND config"""
     
     component_name = config.get('component_name')
     logger.info(f"Executing component automation {automation_id}: {component_name}")
@@ -109,7 +109,7 @@ def execute_component_automation(automation_id: str, config: dict):
             data_source = config.get('data_source', {})
             source_type = data_source.get('type')
             query = data_source.get('query')
-            target_property = config.get('target_property', config.get('component_id'))
+            neo4j_property = config.get('neo4j_property', config.get('component_id'))
             
             value = None
             
@@ -120,24 +120,45 @@ def execute_component_automation(automation_id: str, config: dict):
                 if records and 'value' in records[0]:
                     value = records[0]['value']
                     logger.info(f"Query returned value: {value}")
-            
+                    
             elif source_type == 'static_value':
                 value = data_source.get('value', 0)
                 logger.info(f"Using static value: {value}")
             
-            # Update the component value in the main config
-            if value is not None:
+            # CRITICAL: Update Neo4j properties with the component value
+            if value is not None and neo4j_property:
+                # Format property name for Neo4j
+                if ' ' in neo4j_property or '-' in neo4j_property:
+                    formatted_property = f"`{neo4j_property}`"
+                else:
+                    formatted_property = neo4j_property
+                
+                # Update ALL nodes with this component property value
+                update_query = f"""
+                MATCH (n:Node)
+                SET n.{formatted_property} = $value
+                RETURN count(n) as updated_count
+                """
+                
+                update_result = session.run(update_query, value=float(value))
+                update_record = update_result.single()
+                nodes_updated = update_record['updated_count'] if update_record else 0
+                
+                logger.info(f"Updated {nodes_updated} nodes with {neo4j_property} = {value}")
+                
+                # ALSO update config file for UI display
                 update_component_value(component_name, value)
                 update_last_run(automation_id)
-                logger.info(f"Updated {component_name} to {value}")
+                
+                logger.info(f"Component automation {automation_id} completed: Neo4j + config updated")
             else:
-                logger.warning(f"No value obtained for {component_name}")
+                logger.warning(f"No value or neo4j_property for {component_name}")
                 
     except Exception as e:
-        logger.error(f"Error executing component automation: {e}")
+        logger.error(f"Error executing component automation {automation_id}: {e}")
     finally:
         driver.close()
-
+        
 def update_component_value(component_name: str, value: float):
     """Update component value in main risk assessment config"""
     try:

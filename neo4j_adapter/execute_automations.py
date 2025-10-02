@@ -144,19 +144,32 @@ def execute_automation(automation_id: str, config: dict):
             else:
                 formatted_property = target_property
             
-            # Build and execute query with proper property name
+            # Build query based on target type - use MATCH structure like in risk_api.py
             if target_type == 'all':
                 query = f"""
                 MATCH (n:Node)
                 SET n.{formatted_property} = {calculation}
                 RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
                 """
+            elif target_type == 'subnet':
+                subnet_list = "', '".join(target_values)
+                query = f"""
+                MATCH (subnet:Subnet)<-[:PART_OF]-(ip:IP)<-[:HAS_ASSIGNED]-(n:Node)
+                WHERE subnet.range IN ['{subnet_list}']
+                SET n.{formatted_property} = {calculation}
+                RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                """
+            elif target_type == 'ip':
+                ip_list = "', '".join(target_values)
+                query = f"""
+                MATCH (n:Node)-[:HAS_ASSIGNED]->(ip:IP)
+                WHERE ip.address IN ['{ip_list}']
+                SET n.{formatted_property} = {calculation}
+                RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                """
             else:
-                # Build where clause based on target
-                where_conditions = build_where_clause(target_type, target_values)
                 query = f"""
                 MATCH (n:Node)
-                WHERE {where_conditions}
                 SET n.{formatted_property} = {calculation}
                 RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
                 """
@@ -177,21 +190,23 @@ def execute_automation(automation_id: str, config: dict):
     finally:
         driver.close()
 
-def build_where_clause(target_type: str, target_values: list) -> str:
-    """Build WHERE clause for Neo4j query based on target type"""
-    if target_type == 'all':
-        return "1=1"  # Always true
-    elif target_type == 'subnet':
-        subnet_list = [f"'{subnet}'" for subnet in target_values]
-        return f"(n)<-[:HAS_ASSIGNED]-(:IP)-[:PART_OF]->(:Subnet {{range: IN [{','.join(subnet_list)}]}})"
-    elif target_type == 'ip':
-        ip_list = [f"'{ip}'" for ip in target_values]
-        return f"(n)<-[:HAS_ASSIGNED]-(:IP {{address: IN [{','.join(ip_list)}]}})"
-    else:
-        return "1=1"
-
+# def build_where_clause(target_type: str, target_values: list) -> str:
+#     """Build WHERE clause for Neo4j query based on target type"""
+#     if target_type == 'all':
+#         return "1=1"  # Always true
+#     elif target_type == 'subnet':
+#         # Fix: Use proper string formatting for IN clause
+#         subnet_list = "', '".join(target_values)
+#         return f"(n)<-[:HAS_ASSIGNED]-(:IP)-[:PART_OF]->(:Subnet {{range: IN ['{subnet_list}']}})"
+#     elif target_type == 'ip':
+#         # Fix: Use proper string formatting for IN clause  
+#         ip_list = "', '".join(target_values)
+#         return f"(n)<-[:HAS_ASSIGNED]-(:IP {{address: IN ['{ip_list}']}})"
+#     else:
+#         return "1=1"
+    
 def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
-    """Build calculation based on selected method"""
+    """Build calculation using live Neo4j property values per node"""
     
     logger.info(f"Building calculation with method: {method}")
     
@@ -202,10 +217,17 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
         for comp in components:
             comp_name = comp.get('name', '').replace(' ', '_').lower()
             weight = formula_config.get(comp_name, 0)
-            current_value = float(comp.get('currentValue', 0))
+            # Use the actual Neo4j property, not currentValue
+            neo4j_property = comp.get('neo4jProperty', comp_name)
             
             if weight > 0:
-                weighted_terms.append(f"({current_value} * {weight})")
+                # Reference the property on each node (n.property_name)
+                if ' ' in neo4j_property or '-' in neo4j_property:
+                    property_ref = f"COALESCE(n.`{neo4j_property}`, 0.0)"
+                else:
+                    property_ref = f"COALESCE(n.{neo4j_property}, 0.0)"
+                
+                weighted_terms.append(f"({property_ref} * {weight})")
                 total_weight += weight
         
         if not weighted_terms or total_weight == 0:
@@ -215,54 +237,56 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
         return f"(({calculation}) / {total_weight})"
     
     elif method == 'max':
-        values = []
+        property_refs = []
         for comp in components:
-            current_value = float(comp.get('currentValue', 0))
-            values.append(str(current_value))
+            neo4j_property = comp.get('neo4jProperty', comp.get('name', ''))
+            if ' ' in neo4j_property or '-' in neo4j_property:
+                property_refs.append(f"COALESCE(n.`{neo4j_property}`, 0.0)")
+            else:
+                property_refs.append(f"COALESCE(n.{neo4j_property}, 0.0)")
         
-        if not values:
+        if not property_refs:
             return "0.0"
         
-        if len(values) == 1:
-            return values[0]
+        # Build nested CASE statements for max
+        if len(property_refs) == 1:
+            return property_refs[0]
         else:
-            max_calc = values[0]
-            for val in values[1:]:
-                max_calc = f"CASE WHEN {val} > {max_calc} THEN {val} ELSE {max_calc} END"
+            max_calc = property_refs[0]
+            for prop_ref in property_refs[1:]:
+                max_calc = f"CASE WHEN {prop_ref} > {max_calc} THEN {prop_ref} ELSE {max_calc} END"
             return max_calc
     
     elif method == 'sum':
-        terms = []
+        property_refs = []
         for comp in components:
-            current_value = float(comp.get('currentValue', 0))
-            terms.append(str(current_value))
-        return " + ".join(terms) if terms else "0.0"
+            neo4j_property = comp.get('neo4jProperty', comp.get('name', ''))
+            if ' ' in neo4j_property or '-' in neo4j_property:
+                property_refs.append(f"COALESCE(n.`{neo4j_property}`, 0.0)")
+            else:
+                property_refs.append(f"COALESCE(n.{neo4j_property}, 0.0)")
+        
+        return " + ".join(property_refs) if property_refs else "0.0"
     
-    elif method == 'geometric_mean':
-        values = []
-        for comp in components:
-            current_value = float(comp.get('currentValue', 0))
-            values.append(f"CASE WHEN {current_value} > 0 THEN {current_value} ELSE 0.1 END")
-        
-        if not values:
-            return "0.0"
-        
-        n = len(values)
-        product = " * ".join(values)
-        return f"(({product})^(1.0/{n}))"
-
     elif method == 'custom_formula' and custom_formula:
         formula = custom_formula
         for comp in components:
             comp_name = comp.get('name', '')
-            current_value = float(comp.get('currentValue', 0))
-            formula = formula.replace(comp_name, str(current_value))
+            neo4j_property = comp.get('neo4jProperty', comp_name)
+            
+            # Replace component name with actual property reference
+            if ' ' in neo4j_property or '-' in neo4j_property:
+                property_ref = f"COALESCE(n.`{neo4j_property}`, 0.0)"
+            else:
+                property_ref = f"COALESCE(n.{neo4j_property}, 0.0)"
+            
+            formula = formula.replace(comp_name, property_ref)
         return formula
     
     else:
         logger.warning(f"Unknown method {method}, defaulting to weighted_avg")
         return build_calculation(components, formula_config, 'weighted_avg')
-        
+
 def main():
     """Main execution function"""
     logger.info("="*50)

@@ -1,25 +1,35 @@
 active_component_automations:
-  comp_auto_dghgf:
-    component_name: dghgf
-    component_id: dghgf
-    neo4j_property: dghgf
-    update_frequency: daily
+  comp_auto_test:
+    component_name: Test
+    component_id: test
+    neo4j_property: test
+    update_frequency: minute
     calculation_method: query_result
-    target_property: dghgf
-    enabled: false
-    created_at: '2025-09-27T16:51:47.739044'
+    target_property: test
+    enabled: true
+    created_at: '2025-09-30T12:46:58.340585'
     last_run: null
-    last_modified: '2025-09-27T17:17:11.464720'
-  comp_auto_criticality_1758993022:
-    component_id: criticality
-    component_name: Asset Criticality
-    neo4j_property: criticality
-    update_frequency: daily
+    last_modified: '2025-09-30T12:47:06.536237'
+  comp_auto_casm:
+    component_name: casm
+    component_id: casm
+    neo4j_property: casm
+    update_frequency: manual
     calculation_method: query_result
-    target_property: criticality
+    target_property: casm
     enabled: false
-    created_at: '2025-09-27T17:10:22.893600'
-    last_modified: '2025-09-27T17:17:09.717870'
+    created_at: '2025-09-30T13:51:30.247071'
+    last_run: null
+  comp_auto_casm_1759240291:
+    component_name: casm
+    component_id: casm_1759240291
+    neo4j_property: casm
+    update_frequency: manual
+    calculation_method: query_result
+    target_property: casm
+    enabled: false
+    created_at: '2025-09-30T13:51:32.036170'
+    last_run: null
 component_automation_history: {}
 last_execution:
   timestamp: null

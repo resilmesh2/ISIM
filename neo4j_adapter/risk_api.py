@@ -1050,88 +1050,160 @@ def update_custom_component_config(component_id):
         return jsonify({"error": str(e)}), 500
     
 def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
-    """Build calculation based on selected method using Neo4j properties"""
+    """Build calculation based on selected method using Neo4j properties with proper formatting"""
     
     logger.info(f"Building calculation with method: {method}")
     
     if method == 'weighted_avg':
         weighted_terms = []
         total_weight = 0
+        missing_components = []
         
         for comp in components:
             comp_name = comp.get('name', '').replace(' ', '_').lower()
             weight = formula_config.get(comp_name, 0)
             neo4j_property = comp.get('neo4jProperty', comp_name)
-            max_value = comp.get('maxValue', 10)
             
+            # Check if component has valid property
+            if not neo4j_property:
+                missing_components.append(comp_name)
+                logger.warning(f"Component '{comp_name}' has no neo4jProperty, skipping")
+                continue
+                
             if weight > 0:
-                weighted_terms.append(f"(COALESCE(n.{neo4j_property}, 0) / {max_value} * {weight})")
+                # Use COALESCE to handle missing properties gracefully with proper formatting
+                if ' ' in neo4j_property or '-' in neo4j_property:
+                    property_ref = f"COALESCE(n.`{neo4j_property}`, 0.0)"
+                else:
+                    property_ref = f"COALESCE(n.{neo4j_property}, 0.0)"
+                
+                weighted_terms.append(f"({property_ref} * {weight})")
                 total_weight += weight
         
+        # Log missing components for admin awareness
+        if missing_components:
+            logger.warning(f"Missing components in calculation: {missing_components}")
+        
+        # Handle case where all components are missing
         if not weighted_terms or total_weight == 0:
+            logger.warning("No valid components found for calculation, returning 0.0")
             return "0.0"
         
         calculation = " + ".join(weighted_terms)
-        return f"(({calculation}) / {total_weight} * 10)"
+        return f"(({calculation}) / {total_weight})"
     
     elif method == 'max':
-        values = []
-        for comp in components:
-            neo4j_property = comp.get('neo4jProperty')
-            max_value = comp.get('maxValue', 10)
-            values.append(f"(COALESCE(n.{neo4j_property}, 0) / {max_value} * 10)")
+        property_refs = []
+        missing_components = []
         
-        if not values:
+        for comp in components:
+            neo4j_property = comp.get('neo4jProperty', comp.get('name', ''))
+            comp_name = comp.get('name', 'unknown')
+            
+            if not neo4j_property:
+                missing_components.append(comp_name)
+                continue
+                
+            if ' ' in neo4j_property or '-' in neo4j_property:
+                property_refs.append(f"COALESCE(n.`{neo4j_property}`, 0.0)")
+            else:
+                property_refs.append(f"COALESCE(n.{neo4j_property}, 0.0)")
+        
+        if missing_components:
+            logger.warning(f"Missing components in max calculation: {missing_components}")
+        
+        if not property_refs:
+            logger.warning("No valid properties for max calculation")
             return "0.0"
         
-        if len(values) == 1:
-            return values[0]
+        if len(property_refs) == 1:
+            return property_refs[0]
         else:
-            max_calc = values[0]
-            for val in values[1:]:
-                max_calc = f"CASE WHEN {val} > {max_calc} THEN {val} ELSE {max_calc} END"
+            max_calc = property_refs[0]
+            for prop_ref in property_refs[1:]:
+                max_calc = f"CASE WHEN {prop_ref} > {max_calc} THEN {prop_ref} ELSE {max_calc} END"
             return max_calc
     
     elif method == 'sum':
-        terms = []
-        for comp in components:
-            neo4j_property = comp.get('neo4jProperty')
-            max_value = comp.get('maxValue', 10)
-            terms.append(f"(COALESCE(n.{neo4j_property}, 0) / {max_value})")
+        property_refs = []
+        missing_components = []
         
-        if not terms:
-            return "0.0"
+        for comp in components:
+            neo4j_property = comp.get('neo4jProperty', comp.get('name', ''))
+            comp_name = comp.get('name', 'unknown')
             
-        sum_expr = ' + '.join(terms)
-        return f"CASE WHEN ({sum_expr} * 10) > 10 THEN 10.0 ELSE ({sum_expr} * 10) END"
+            if not neo4j_property:
+                missing_components.append(comp_name)
+                continue
+                
+            if ' ' in neo4j_property or '-' in neo4j_property:
+                property_refs.append(f"COALESCE(n.`{neo4j_property}`, 0.0)")
+            else:
+                property_refs.append(f"COALESCE(n.{neo4j_property}, 0.0)")
+        
+        if missing_components:
+            logger.warning(f"Missing components in sum calculation: {missing_components}")
+        
+        return " + ".join(property_refs) if property_refs else "0.0"
     
     elif method == 'geometric_mean':
-        values = []
-        for comp in components:
-            neo4j_property = comp.get('neo4jProperty')
-            max_value = comp.get('maxValue', 10)
-            values.append(f"CASE WHEN COALESCE(n.{neo4j_property}, 0) > 0 THEN (n.{neo4j_property} / {max_value}) ELSE 0.1 END")
+        property_refs = []
+        missing_components = []
         
-        if not values:
+        for comp in components:
+            neo4j_property = comp.get('neo4jProperty', comp.get('name', ''))
+            comp_name = comp.get('name', 'unknown')
+            
+            if not neo4j_property:
+                missing_components.append(comp_name)
+                continue
+                
+            if ' ' in neo4j_property or '-' in neo4j_property:
+                prop_ref = f"COALESCE(n.`{neo4j_property}`, 0.0)"
+            else:
+                prop_ref = f"COALESCE(n.{neo4j_property}, 0.0)"
+            property_refs.append(f"CASE WHEN {prop_ref} > 0 THEN {prop_ref} ELSE 0.1 END")
+        
+        if missing_components:
+            logger.warning(f"Missing components in geometric mean calculation: {missing_components}")
+        
+        if not property_refs:
             return "0.0"
         
-        n = len(values)
-        product = " * ".join(values)
-        return f"((({product})^(1.0/{n})) * 10)"
+        n = len(property_refs)
+        product = " * ".join(property_refs)
+        return f"(({product})^(1.0/{n}))"
 
     elif method == 'custom_formula' and custom_formula:
         formula = custom_formula
+        missing_replacements = []
+        
         for comp in components:
             comp_name = comp.get('name', '')
-            neo4j_property = comp.get('neo4jProperty', comp_name.replace(' ', '_').lower())
-            max_value = comp.get('maxValue', 10)
-            formula = formula.replace(comp_name, f"(COALESCE(n.{neo4j_property}, 0) / {max_value} * 10)")
+            neo4j_property = comp.get('neo4jProperty', comp_name)
+            
+            if not neo4j_property:
+                missing_replacements.append(comp_name)
+                # Replace with 0.0 for missing components
+                formula = formula.replace(comp_name, "0.0")
+                continue
+            
+            if ' ' in neo4j_property or '-' in neo4j_property:
+                property_ref = f"COALESCE(n.`{neo4j_property}`, 0.0)"
+            else:
+                property_ref = f"COALESCE(n.{neo4j_property}, 0.0)"
+            
+            formula = formula.replace(comp_name, property_ref)
+        
+        if missing_replacements:
+            logger.warning(f"Replaced missing components with 0.0 in custom formula: {missing_replacements}")
+        
         return formula
     
     else:
         logger.warning(f"Unknown method {method}, defaulting to weighted_avg")
         return build_calculation(components, formula_config, 'weighted_avg')
-       
+           
 @app.route('/api/risk/apply-configuration', methods=['POST'])
 def apply_risk_configuration():
     """Apply risk configuration from drag-drop interface"""

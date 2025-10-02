@@ -236,6 +236,11 @@ def main():
           round(max(n.`Risk Score`), 2) AS maxRiskScore
         """
         neo4j_ops.execute_query(risk_score_query, "Calculate final Risk Score")
+
+        drop_graph = """
+        CALL gds.graph.drop('myGraph');
+        """
+        neo4j_ops.execute_query(drop_graph, "Graph cleanup")
         
         # ISIM plugin folder permissions
         logger.info("Running in container - skipping file permission changes")
