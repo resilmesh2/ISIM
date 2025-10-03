@@ -10,26 +10,6 @@ active_component_automations:
     created_at: '2025-09-30T12:46:58.340585'
     last_run: null
     last_modified: '2025-09-30T12:47:06.536237'
-  comp_auto_casm:
-    component_name: casm
-    component_id: casm
-    neo4j_property: casm
-    update_frequency: manual
-    calculation_method: query_result
-    target_property: casm
-    enabled: false
-    created_at: '2025-09-30T13:51:30.247071'
-    last_run: null
-  comp_auto_casm_1759240291:
-    component_name: casm
-    component_id: casm_1759240291
-    neo4j_property: casm
-    update_frequency: manual
-    calculation_method: query_result
-    target_property: casm
-    enabled: false
-    created_at: '2025-09-30T13:51:32.036170'
-    last_run: null
 component_automation_history: {}
 last_execution:
   timestamp: null

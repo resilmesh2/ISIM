@@ -1,15 +1,4 @@
-active_component_automations:
-  comp_auto_test:
-    component_name: Test
-    component_id: test
-    neo4j_property: test
-    update_frequency: minute
-    calculation_method: query_result
-    target_property: test
-    enabled: true
-    created_at: '2025-09-30T12:46:58.340585'
-    last_run: null
-    last_modified: '2025-09-30T12:47:06.536237'
+active_component_automations: {}
 component_automation_history: {}
 last_execution:
   timestamp: null
