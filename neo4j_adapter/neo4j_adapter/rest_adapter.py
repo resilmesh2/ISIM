@@ -242,12 +242,12 @@ class RESTAdapter(GeneralAdapter):
         """
         query_ipv4_delete_internet_relict = """
         MATCH (internet:Subnet {range: "0.0.0.0/0"})
-        MATCH (subnet:Subnet)-[r:PART_OF]->(internet) WHERE count{(subnet)-[:PART_OF]-(:Subnet)} > 1
+        MATCH (subnet:Subnet)-[r:PART_OF]->(internet) WHERE count{(subnet)-[:PART_OF]->(:Subnet)} > 1
         DELETE r
         """
         query_ipv6_delete_internet_relict = """
         MATCH (internet:Subnet {range: "::/0"})
-        MATCH (subnet:Subnet)-[r:PART_OF]->(internet) WHERE count{(subnet)-[:PART_OF]-(:Subnet)} > 1
+        MATCH (subnet:Subnet)-[r:PART_OF]->(internet) WHERE count{(subnet)-[:PART_OF]->(:Subnet)} > 1
         DELETE r
         """
         self._run_query(query_ipv4_without_parents)
