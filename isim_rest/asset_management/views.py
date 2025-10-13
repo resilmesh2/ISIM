@@ -1,4 +1,5 @@
 import json
+from typing import List
 
 import msgspec.json
 import structlog
@@ -20,9 +21,12 @@ from isim_rest.asset_management.data_formats.input_dtos import (
     MissionCriticalityDTO,
     MissionListInputDTO,
     NmapTopologyDTO,
+    SLPEnrichmentDTO,
 )
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
+
+from neo4j_adapter.slp_enrichment_adapter import SLPEnrichmentAdapter
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
@@ -271,3 +275,23 @@ def ip_hierarchy_sync(request: HttpRequest) -> Response:
     )
     synchronizer.run()
     return Response({"message": "Processed successfully"}, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def slp_enrichment(request: HttpRequest) -> Response:
+    slp_enrichment_adapter = SLPEnrichmentAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt,
+                                                  user=config.neo4j.user)
+    request_body = request.body
+    try:
+        data = msgspec.json.decode(request_body, type=List[SLPEnrichmentDTO], dec_hook=dec_hook_ip)
+        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        slp_enrichment_adapter.store_slp_data(json_string)
+    except ValidationError as e:
+        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    return Response(
+        "Processed successfully.",
+        status=status.HTTP_201_CREATED)

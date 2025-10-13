@@ -198,3 +198,12 @@ class MissionCriticalityDTO(msgspec.Struct):
     ip: IP_TYPE = field(name="ip")
     hostname: str = field(name="hostname")
     criticality: float = field(name="criticality")
+
+
+class SLPEnrichmentDTO(msgspec.Struct):
+    domain: str = field(name="domain")
+    ip: IP_TYPE = field(name="ip")
+    # str for sp_risk_score is used for "null" value that must be passed to Neo4j as string
+    sp_risk_score: int | str = field(name="sp_risk_score")
+    subnet: IP_NET_TYPE = field(name="subnet")
+    tag: str = field(name="tag")
