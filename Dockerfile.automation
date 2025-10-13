@@ -9,7 +9,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
-RUN pip install --no-cache-dir neo4j flask flask-cors pyyaml python-dotenv opensearch-py
+RUN pip install --no-cache-dir neo4j flask flask-cors pyyaml python-dotenv opensearch-py temporalio
 
 # Create logs directory
 RUN mkdir -p /app/logs && \

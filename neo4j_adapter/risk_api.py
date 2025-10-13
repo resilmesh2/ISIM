@@ -12,10 +12,13 @@ import uuid
 from typing import Dict, Any, Optional, List
 from neo4j import GraphDatabase
 import os
+from temporalio.client import Client, Schedule, ScheduleActionStartWorkflow, ScheduleSpec, ScheduleIntervalSpec, ScheduleState
+from datetime import timedelta
+import asyncio
 
 app = Flask(__name__)
 CORS(app, 
-     origins=['http://localhost:4201', 'http://localhost:3000', '*'],  # Angular dev server + Node.js
+     origins=['http://localhost:4201', 'http://localhost:3000','http://localhost:5000' '*'],  # Angular dev server + Node.js
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'],
      supports_credentials=True)
@@ -32,6 +35,8 @@ logger = logging.getLogger(__name__)
 # Config file path
 CONFIG_PATH = "/config/risk_assessment_config.yaml"
 COMPONENT_CONFIG_PATH = "/config/component_automation_config.yaml"
+
+TEMPORAL_URL = os.environ.get("TEMPORAL_URL", "temporal:7233")
 
 #IMPORTANT -- POST COMMANDS NEED TO BE SENT TO PORT 5000
 
@@ -328,13 +333,12 @@ def delete_custom_component(component_id: str):
         available_components = config.get('available_components', {})
         component_key_to_delete = None
         
-        # Convert component_id to int for comparison
+        # Find component... (existing code)
         try:
             target_id = int(component_id)
         except ValueError:
             component_key_to_delete = component_id
         else:
-            # Find the component key that generates this ID
             for component_key, component_data in available_components.items():
                 generated_id = hash(component_key) % 100000
                 if generated_id == target_id:
@@ -349,53 +353,64 @@ def delete_custom_component(component_id: str):
             
         component = available_components[component_key_to_delete]
         
-        # Check if it's a custom component (protect system components)
         if component.get('type') != 'custom':
             return jsonify({"error": "Cannot delete non-custom component"}), 400
         
-        # Remove the component
+        # DELETE TEMPORAL SCHEDULE FIRST
+        neo4j_prop = component.get('neo4j_property', component_key_to_delete)
+        schedule_id = f"component-schedule-{neo4j_prop}"
+        
+        async def delete_temporal_schedule():
+            try:
+                client = await get_temporal_client()
+                handle = client.get_schedule_handle(schedule_id)
+                await handle.delete()
+                logger.info(f"Deleted Temporal schedule: {schedule_id}")
+                return True
+            except Exception as e:
+                logger.warning(f"Could not delete Temporal schedule {schedule_id}: {e}")
+                return False
+        
+        temporal_deleted = asyncio.run(delete_temporal_schedule())
+        
+        # Remove the component (existing code continues...)
         del available_components[component_key_to_delete]
         
-        # Save updated config first
         if not save_config(config):
             return jsonify({"error": "Failed to save config"}), 500
         
-        # Now remove associated automation from component_automation_config
+        # Remove automations... (existing code)
         try:
             component_config = load_component_config()
             if component_config and 'active_component_automations' in component_config:
                 automations_to_delete = []
                 
-                # Find all automations related to this component
                 for auto_id, automation in component_config['active_component_automations'].items():
                     if (automation.get('component_id') == component_key_to_delete or
                         auto_id == f"comp_auto_{component_key_to_delete}" or
                         automation.get('neo4j_property') == component.get('neo4j_property')):
                         automations_to_delete.append(auto_id)
                 
-                # Delete found automations
                 for auto_id in automations_to_delete:
                     del component_config['active_component_automations'][auto_id]
-                    logger.info(f"Deleted automation {auto_id} for component {component_key_to_delete}")
+                    logger.info(f"Deleted automation {auto_id}")
                 
-                # Save the updated component config
                 if automations_to_delete:
                     save_component_config(component_config)
-                    logger.info(f"Removed {len(automations_to_delete)} automations for component {component_key_to_delete}")
                     
         except Exception as e:
             logger.error(f"Error removing automations: {e}")
-            # Don't fail the whole deletion if automation cleanup fails
             
         return jsonify({
             "success": True,
-            "message": f"Component {component_key_to_delete} deleted successfully"
+            "message": f"Component {component_key_to_delete} deleted successfully",
+            "temporal_schedule_deleted": temporal_deleted
         })
         
     except Exception as e:
         logger.error(f"Error deleting custom component: {e}")
         return jsonify({"error": str(e)}), 500
-    
+       
 @app.route('/api/components/neo4j-property/<neo4j_property>', methods=['DELETE'])
 def delete_neo4j_property(neo4j_property: str):
     """Delete a component property from all nodes in Neo4j"""
@@ -1340,11 +1355,64 @@ def apply_risk_configuration():
         else:
             logger.error("Failed to save automation to config")
         
+        # Create Temporal schedule if not manual
+        if update_frequency != 'manual':
+            schedule_data = {
+                'automation_id': automation_id,
+                'formula_name': formula_name,
+                'update_frequency': update_frequency,
+                'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://localhost:5000')}/api/automations/execute/{automation_id}"
+            }
+            
+            # Call the schedule creation endpoint
+            try:
+                interval_map = {
+                    'minute': timedelta(minutes=1),
+                    'hourly': timedelta(hours=1),
+                    'daily': timedelta(days=1),
+                    'weekly': timedelta(weeks=1),
+                    'monthly': timedelta(days=30)
+                }
+                
+                interval = interval_map.get(update_frequency, timedelta(hours=1))
+                schedule_id = f"automation-schedule-{automation_id}"
+                
+                async def create_automation_schedule():
+                    client = await get_temporal_client()
+                    
+                    await client.create_schedule(
+                        schedule_id,
+                        Schedule(
+                            action=ScheduleActionStartWorkflow(
+                                "RiskFormulaCalculationWorkflow",
+                                schedule_data,
+                                id=f"risk-formula-calc-{automation_id}",
+                                task_queue="risk-calculations",
+                            ),
+                            spec=ScheduleSpec(
+                                intervals=[ScheduleIntervalSpec(every=interval)]
+                            ),
+                            state=ScheduleState(
+                                note=f"{formula_name} - {update_frequency}",
+                                paused=False
+                            )
+                        )
+                    )
+                    logger.info(f"Created Temporal schedule {schedule_id}")
+                
+                asyncio.run(create_automation_schedule())
+                logger.info(f"Temporal schedule created for automation {automation_id}")
+                
+            except Exception as e:
+                logger.error(f"Failed to create Temporal schedule: {e}")
+                # Continue anyway - automation is saved, just schedule creation failed
+        
         return jsonify({
             'success': True,
             'nodesUpdated': nodes_updated,
             'avgRiskScore': avg_score,
-            'automationEnabled': update_frequency != 'manual'
+            'automationEnabled': update_frequency != 'manual',
+            'automation_id': automation_id if update_frequency != 'manual' else None
         })
         
     except Exception as e:
@@ -1863,6 +1931,819 @@ def update_automation_configuration(automation_id):
         logger.error(f"Error updating automation: {e}")
         return jsonify({'error': str(e)}), 500
     
+    # Temporal scheduling endpoints
+async def get_temporal_client():
+    """Connect to Temporal server"""
+    return await Client.connect(TEMPORAL_URL)
+
+@app.route('/api/components/schedule/start', methods=['POST'])
+def start_component_schedule():
+    """Start a Temporal schedule for component calculation"""
+    try:
+        data = request.get_json()
+        component_id = data.get('component_id')
+        update_frequency = data.get('update_frequency', 'hourly')
+        
+        if not component_id:
+            return jsonify({'success': False, 'error': 'component_id required'}), 400
+        
+        schedule_id = f"component-schedule-{component_id}"
+        
+        interval_map = {
+            'minute': timedelta(minutes=1),
+            'hourly': timedelta(hours=1),
+            'daily': timedelta(days=1),
+            'weekly': timedelta(weeks=1),
+            'monthly': timedelta(days=30)
+        }
+        
+        interval = interval_map.get(update_frequency, timedelta(hours=1))
+        
+        # Prepare workflow input with execution endpoint
+        workflow_input = {
+            'component_id': component_id,
+            'component_name': data.get('component_name'),
+            'neo4j_property': data.get('neo4j_property'),
+            'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://localhost:5000')}/api/components/execute/{component_id}",
+            'update_frequency': update_frequency
+        }
+        
+        async def create_schedule():
+            client = await get_temporal_client()
+            
+            await client.create_schedule(
+                schedule_id,
+                Schedule(
+                    action=ScheduleActionStartWorkflow(
+                        "ComponentCalculationWorkflow",
+                        workflow_input,  # Pass the workflow input with execution endpoint
+                        id=f"component-calc-{component_id}",
+                        task_queue="component-calculations",
+                    ),
+                    spec=ScheduleSpec(
+                        intervals=[ScheduleIntervalSpec(every=interval)]
+                    ),
+                    state=ScheduleState(
+                        note=f"Component {component_id} calculation",
+                        paused=False
+                    )
+                )
+            )
+            logger.info(f"Created Temporal schedule {schedule_id} with execution endpoint")
+        
+        asyncio.run(create_schedule())
+        
+        return jsonify({
+            'success': True,
+            'message': f'Temporal schedule created for component {component_id}',
+            'schedule_id': schedule_id,
+            'frequency': update_frequency
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to start component schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+@app.route('/api/risk/components/schedule/pause', methods=['POST'])
+def pause_component_schedule():
+    """Pause a Temporal schedule"""
+    try:
+        data = request.get_json()
+        component_id = data.get('component_id')
+        schedule_id = f"component-schedule-{component_id}"
+        
+        async def pause_schedule():
+            client = await get_temporal_client()
+            handle = client.get_schedule_handle(schedule_id)
+            await handle.pause(note="Paused by user")
+        
+        asyncio.run(pause_schedule())
+        logger.info(f"Paused Temporal schedule {schedule_id}")
+        
+        return jsonify({'success': True, 'message': f'Paused schedule for {component_id}'}), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to pause schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/risk/components/schedule/resume', methods=['POST'])
+def resume_component_schedule():
+    """Resume a paused Temporal schedule"""
+    try:
+        data = request.get_json()
+        component_id = data.get('component_id')
+        schedule_id = f"component-schedule-{component_id}"
+        
+        async def resume_schedule():
+            client = await get_temporal_client()
+            handle = client.get_schedule_handle(schedule_id)
+            await handle.unpause(note="Resumed by user")
+        
+        asyncio.run(resume_schedule())
+        logger.info(f"Resumed Temporal schedule {schedule_id}")
+        
+        return jsonify({'success': True, 'message': f'Resumed schedule for {component_id}'}), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to resume schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/components/schedule/delete/<component_id>', methods=['DELETE'])
+def delete_component_schedule(component_id):
+    """Delete a Temporal schedule"""
+    try:
+        schedule_id = f"component-schedule-{component_id}"
+        
+        async def delete_schedule():
+            client = await get_temporal_client()
+            handle = client.get_schedule_handle(schedule_id)
+            await handle.delete()
+            logger.info(f"Deleted schedule {schedule_id}")
+        
+        asyncio.run(delete_schedule())
+        
+        return jsonify({
+            'success': True,
+            'message': f'Schedule {schedule_id} deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to delete schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+@app.route('/api/components/schedule/update/<component_id>', methods=['PUT'])
+def update_component_schedule(component_id):
+    """Update Temporal schedule frequency for component"""
+    try:
+        data = request.get_json()
+        new_frequency = data.get('update_frequency', 'hourly')
+        schedule_id = f"component-schedule-{component_id}"
+        
+        async def update_schedule():
+            client = await get_temporal_client()
+            
+            try:
+                handle = client.get_schedule_handle(schedule_id)
+                await handle.delete()
+                logger.info(f"Deleted old schedule {schedule_id}")
+            except:
+                logger.info(f"No existing schedule to delete: {schedule_id}")
+            
+            interval_map = {
+                'minute': timedelta(minutes=1),
+                'hourly': timedelta(hours=1),
+                'daily': timedelta(days=1),
+                'weekly': timedelta(weeks=1),
+                'monthly': timedelta(days=30)
+            }
+            
+            interval = interval_map.get(new_frequency, timedelta(hours=1))
+            
+            workflow_input = {
+                'component_id': component_id,
+                'component_name': data.get('component_name'),
+                'neo4j_property': data.get('neo4j_property'),
+                'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://localhost:5000')}/api/components/execute/{component_id}",
+                'update_frequency': new_frequency
+            }
+            
+            await client.create_schedule(
+                schedule_id,
+                Schedule(
+                    action=ScheduleActionStartWorkflow(
+                        "ComponentCalculationWorkflow",
+                        workflow_input,
+                        id=f"component-calc-{component_id}",
+                        task_queue="component-calculations",
+                    ),
+                    spec=ScheduleSpec(
+                        intervals=[ScheduleIntervalSpec(every=interval)]
+                    ),
+                    state=ScheduleState(
+                        note=f"Updated component {component_id}",
+                        paused=False
+                    )
+                )
+            )
+            logger.info(f"Created new schedule {schedule_id} with {new_frequency}")
+        
+        asyncio.run(update_schedule())
+        
+        return jsonify({
+            'success': True,
+            'message': f'Schedule updated for component {component_id}',
+            'frequency': new_frequency
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to update schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/components/schedule/status/<component_id>', methods=['GET'])
+def get_component_schedule_status(component_id):
+    """Get status of component Temporal schedule"""
+    try:
+        schedule_id = f"component-schedule-{component_id}"
+        
+        async def get_status():
+            client = await get_temporal_client()
+            handle = client.get_schedule_handle(schedule_id)
+            description = await handle.describe()
+            
+            is_paused = description.schedule.state.paused
+            
+            # Extract frequency from interval
+            interval = description.schedule.spec.intervals[0].every if description.schedule.spec.intervals else None
+            frequency = 'unknown'
+            if interval:
+                total_seconds = interval.total_seconds()
+                if total_seconds == 60:
+                    frequency = 'minute'
+                elif total_seconds == 3600:
+                    frequency = 'hourly'
+                elif total_seconds == 86400:
+                    frequency = 'daily'
+                elif total_seconds == 604800:
+                    frequency = 'weekly'
+                elif total_seconds >= 2592000:
+                    frequency = 'monthly'
+            
+            return {
+                'success': True,
+                'exists': True,
+                'schedule_id': schedule_id,
+                'paused': is_paused,
+                'running': not is_paused,
+                'frequency': frequency,
+                'next_run': str(description.info.next_action_times[0]) if description.info.next_action_times else None,
+                'note': description.schedule.state.note
+            }
+        
+        result = asyncio.run(get_status())
+        logger.info(f"Schedule status for {component_id}: {result}")
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.warning(f"Schedule not found: {schedule_id} - {str(e)}")
+        return jsonify({
+            'success': True,
+            'exists': False,
+            'running': False,
+            'paused': True
+        }), 200
+           
+@app.route('/api/risk/components/schedule/trigger', methods=['POST'])
+def trigger_component_now():
+    """Trigger immediate execution of a Temporal schedule"""
+    try:
+        data = request.get_json()
+        component_id = data.get('component_id')
+        schedule_id = f"component-schedule-{component_id}"
+        
+        async def trigger_schedule():
+            client = await get_temporal_client()
+            handle = client.get_schedule_handle(schedule_id)
+            await handle.trigger()
+        
+        asyncio.run(trigger_schedule())
+        logger.info(f"Triggered immediate execution for {schedule_id}")
+        
+        return jsonify({'success': True, 'message': f'Triggered execution for {component_id}'}), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to trigger schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/risk/components/schedules/list', methods=['GET'])
+def list_all_component_schedules():
+    """List all Temporal component schedules"""
+    try:
+        async def list_schedules():
+            client = await get_temporal_client()
+            schedules = []
+            
+            async for schedule in client.list_schedules():
+                if schedule.id.startswith('component-schedule-'):
+                    component_id = schedule.id.replace('component-schedule-', '')
+                    schedules.append({
+                        'component_id': component_id,
+                        'schedule_id': schedule.id,
+                        'paused': schedule.info.paused
+                    })
+            
+            return schedules
+        
+        schedules = asyncio.run(list_schedules())
+        return jsonify({'success': True, 'schedules': schedules}), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to list schedules: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+@app.route('/api/components/execute/criticality', methods=['POST'])
+def execute_criticality_calculation():
+    """Execute criticality calculation from isim_calcs"""
+    try:
+        logger.info("Executing criticality calculation")
+        
+        # Run the criticality calculation queries
+        average_criticality_query = """
+        MATCH (n:Node)
+        WHERE n.normalizedBetweenness IS NOT NULL
+          AND n.normalizedDegree IS NOT NULL
+        WITH n, (n.normalizedBetweenness + n.normalizedDegree) / 2.0 AS avgNorm
+        SET n.criticality = avgNorm * 10.0
+        RETURN 
+          count(n) AS nodesUpdated,
+          round(avg(avgNorm * 10.0), 2) AS avgCriticality
+        """
+        
+        with neo4j_driver.session() as session:
+            result = session.run(average_criticality_query)
+            record = result.single()
+            
+            nodes_updated = record['nodesUpdated'] if record else 0
+            avg_criticality = record['avgCriticality'] if record else 0
+        
+        logger.info(f"Criticality calculation complete: {nodes_updated} nodes updated")
+        
+        return jsonify({
+            'success': True,
+            'component': 'criticality',
+            'nodes_updated': nodes_updated,
+            'avg_value': avg_criticality
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Criticality calculation failed: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/components/execute/cvss_score', methods=['POST'])
+def execute_cvss_calculation():
+    """Execute CVSS score calculation from isim_calcs"""
+    try:
+        logger.info("Executing CVSS score calculation")
+        
+        # Run the CVSS calculation query
+        set_cvss_query = """
+        MATCH (n:Node)
+            -[:RUNS]->(sv:SoftwareVersion)
+            <-[:IN]-(v:Vulnerability)
+            -[:REFERS_TO]->(c:CVE)
+        WHERE c.base_score_v3 IS NOT NULL
+        WITH n, avg(c.base_score_v3) AS avgCvss
+        SET n.cvss_score = avgCvss
+        RETURN count(n) AS nodesUpdated,
+               round(avg(avgCvss),2) AS globalAverageCvss
+        """
+        
+        with neo4j_driver.session() as session:
+            result = session.run(set_cvss_query)
+            record = result.single()
+            
+            nodes_updated = record['nodesUpdated'] if record else 0
+            avg_cvss = record['globalAverageCvss'] if record else 0
+        
+        logger.info(f"CVSS calculation complete: {nodes_updated} nodes updated")
+        
+        return jsonify({
+            'success': True,
+            'component': 'cvss_score',
+            'nodes_updated': nodes_updated,
+            'avg_value': avg_cvss
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"CVSS calculation failed: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/components/execute/threatScore', methods=['POST'])
+def execute_threat_calculation():
+    """Execute threat score calculation by calling threat_calcs.py"""
+    try:
+        logger.info("Executing threat score calculation")
+        
+        # Import and run threat calculation
+        import subprocess
+        result = subprocess.run(
+            ['/usr/local/bin/python', '/app/threat_calcs.py'],
+            capture_output=True,
+            text=True,
+            timeout=300  # 5 minute timeout
+        )
+        
+        if result.returncode == 0:
+            logger.info("Threat calculation completed successfully")
+            
+            # Get updated count from Neo4j
+            count_query = """
+            MATCH (n:Node)
+            WHERE n.threatScore IS NOT NULL
+            RETURN count(n) AS nodesUpdated,
+                   round(avg(n.threatScore), 2) AS avgThreatScore
+            """
+            
+            with neo4j_driver.session() as session:
+                record = session.run(count_query).single()
+                nodes_updated = record['nodesUpdated'] if record else 0
+                avg_threat = record['avgThreatScore'] if record else 0
+            
+            return jsonify({
+                'success': True,
+                'component': 'threatScore',
+                'nodes_updated': nodes_updated,
+                'avg_value': avg_threat,
+                'output': result.stdout
+            }), 200
+        else:
+            logger.error(f"Threat calculation failed: {result.stderr}")
+            return jsonify({
+                'success': False,
+                'error': result.stderr
+            }), 500
+            
+    except subprocess.TimeoutExpired:
+        logger.error("Threat calculation timed out")
+        return jsonify({'success': False, 'error': 'Calculation timed out'}), 500
+    except Exception as e:
+        logger.error(f"Threat calculation failed: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/components/execute/<component_id>', methods=['POST'])
+def execute_component_calculation(component_id):
+    """Execute calculation for a specific component"""
+    try:
+        logger.info(f"Executing calculation for component: {component_id}")
+        
+        # Map component IDs to their execution functions
+        execution_map = {
+            'criticality': execute_criticality_calculation,
+            'cvss_score': execute_cvss_calculation,
+            'threatScore': execute_threat_calculation
+        }
+        
+        if component_id in execution_map:
+            # Call the appropriate execution function
+            return execution_map[component_id]()
+        else:
+            # For custom components, just return success
+            logger.info(f"No specific calculation for {component_id}")
+            return jsonify({
+                'success': True,
+                'component': component_id,
+                'message': 'Component has no automatic calculation'
+            }), 200
+            
+    except Exception as e:
+        logger.error(f"Component execution failed: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+#Temporal Risk Formula scheduling
+@app.route('/api/automations/schedule/start', methods=['POST'])
+def start_automation_schedule():
+    """Start a Temporal schedule for a risk formula automation"""
+    try:
+        data = request.get_json()
+        automation_id = data.get('automation_id')
+        update_frequency = data.get('update_frequency', 'hourly')
+        
+        if not automation_id:
+            return jsonify({'success': False, 'error': 'automation_id required'}), 400
+        
+        schedule_id = f"automation-schedule-{automation_id}"
+        
+        interval_map = {
+            'minute': timedelta(minutes=1),
+            'hourly': timedelta(hours=1),
+            'daily': timedelta(days=1),
+            'weekly': timedelta(weeks=1),
+            'monthly': timedelta(days=30)
+        }
+        
+        interval = interval_map.get(update_frequency, timedelta(hours=1))
+        
+        async def create_schedule():
+            client = await get_temporal_client()
+            
+            await client.create_schedule(
+                schedule_id,
+                Schedule(
+                    action=ScheduleActionStartWorkflow(
+                        "RiskFormulaCalculationWorkflow",
+                        data,
+                        id=f"risk-formula-calc-{automation_id}",
+                        task_queue="risk-calculations",
+                    ),
+                    spec=ScheduleSpec(
+                        intervals=[ScheduleIntervalSpec(every=interval)]
+                    ),
+                    state=ScheduleState(
+                        note=f"Risk formula automation {automation_id}",
+                        paused=False
+                    )
+                )
+            )
+            logger.info(f"Created Temporal schedule {schedule_id}")
+        
+        asyncio.run(create_schedule())
+        
+        return jsonify({
+            'success': True,
+            'message': f'Temporal schedule created for automation {automation_id}',
+            'schedule_id': schedule_id,
+            'frequency': update_frequency
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to start automation schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automations/execute/<automation_id>', methods=['POST'])
+def execute_automation_endpoint(automation_id):
+    """Execute a risk formula automation - called by Temporal or manual trigger"""
+    try:
+        config = load_config()
+        if not config:
+            return jsonify({'success': False, 'error': 'Config file not found'}), 500
+            
+        automations = config.get('active_automations', {})
+        
+        if automation_id not in automations:
+            return jsonify({'success': False, 'error': 'Automation not found'}), 404
+        
+        automation = automations[automation_id]
+        
+        if not automation.get('enabled', True):
+            return jsonify({'success': False, 'error': 'Automation is paused'}), 400
+        
+        logger.info(f"Executing automation {automation_id}: {automation.get('formula_name')}")
+        
+        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+        
+        try:
+            with driver.session() as session:
+                components = automation.get('components', [])
+                formula_config = automation.get('formula_config', {})
+                target_type = automation.get('target_type', 'all')
+                target_values = automation.get('target_values', [])
+                target_property = automation.get('target_property', 'Risk Score')
+                
+                calculation_method = automation.get('calculation_method', 'weighted_avg')
+                custom_formula = automation.get('custom_formula', '')
+                
+                logger.info(f"Using calculation method: {calculation_method}")
+                logger.info(f"Target property: '{target_property}'")
+                
+                calculation = build_calculation(components, formula_config, calculation_method, custom_formula)
+                
+                if ' ' in target_property or '-' in target_property:
+                    formatted_property = f"`{target_property}`"
+                else:
+                    formatted_property = target_property
+                
+                if target_type == 'all':
+                    query = f"""
+                    MATCH (n:Node)
+                    SET n.{formatted_property} = {calculation}
+                    RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                    """
+                elif target_type == 'subnet':
+                    subnet_list = "', '".join(target_values)
+                    query = f"""
+                    MATCH (subnet:Subnet)<-[:PART_OF]-(ip:IP)<-[:HAS_ASSIGNED]-(n:Node)
+                    WHERE subnet.range IN ['{subnet_list}']
+                    SET n.{formatted_property} = {calculation}
+                    RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                    """
+                elif target_type == 'ip':
+                    ip_list = "', '".join(target_values)
+                    query = f"""
+                    MATCH (n:Node)-[:HAS_ASSIGNED]->(ip:IP)
+                    WHERE ip.address IN ['{ip_list}']
+                    SET n.{formatted_property} = {calculation}
+                    RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                    """
+                elif target_type == 'network':
+                    conditions = []
+                    for network in target_values:
+                        prefix = '.'.join(network.split('.')[:2])
+                        conditions.append(f"ip.address STARTS WITH '{prefix}.'")
+                    where_clause = ' OR '.join(conditions)
+                    query = f"""
+                    MATCH (n:Node)-[:HAS_ASSIGNED]->(ip:IP)
+                    WHERE {where_clause}
+                    SET n.{formatted_property} = {calculation}
+                    RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                    """
+                else:
+                    query = f"""
+                    MATCH (n:Node)
+                    SET n.{formatted_property} = {calculation}
+                    RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
+                    """
+                
+                logger.info(f"Executing query: {query}")
+                result = session.run(query)
+                record = result.single()
+                
+                if record:
+                    nodes_updated = record['nodes_updated']
+                    avg_risk = record['avg_risk'] if record['avg_risk'] is not None else 0
+                    
+                    automation['last_run'] = datetime.now().isoformat()
+                    automation['nodes_updated'] = nodes_updated
+                    automation['avg_risk_score'] = round(avg_risk, 2)
+                    
+                    if save_config(config):
+                        logger.info(f"Updated {nodes_updated} nodes. Average {target_property}: {avg_risk}")
+                    
+                    return jsonify({
+                        'success': True,
+                        'automation_id': automation_id,
+                        'nodes_updated': nodes_updated,
+                        'avg_risk_score': round(avg_risk, 2),
+                        'target_property': target_property,
+                        'message': f'Successfully updated {nodes_updated} nodes'
+                    }), 200
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': 'No results returned from query'
+                    }), 500
+                    
+        except Exception as e:
+            logger.error(f"Error executing automation query: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Query execution failed: {str(e)}'
+            }), 500
+        finally:
+            driver.close()
+            
+    except Exception as e:
+        logger.error(f"Error executing automation {automation_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/automations/schedule/pause/<automation_id>', methods=['POST'])
+def pause_automation_schedule(automation_id):
+    """Pause a Temporal schedule for risk formula automation"""
+    try:
+        schedule_id = f"automation-schedule-{automation_id}"
+        
+        async def pause_schedule():
+            client = await get_temporal_client()
+            handle = client.get_schedule_handle(schedule_id)
+            await handle.pause()
+            logger.info(f"Paused schedule {schedule_id}")
+        
+        asyncio.run(pause_schedule())
+        
+        return jsonify({
+            'success': True,
+            'message': f'Schedule paused for automation {automation_id}'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to pause schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automations/schedule/resume/<automation_id>', methods=['POST'])
+def resume_automation_schedule(automation_id):
+    """Resume a Temporal schedule for risk formula automation"""
+    try:
+        schedule_id = f"automation-schedule-{automation_id}"
+        
+        async def resume_schedule():
+            client = await get_temporal_client()
+            handle = client.get_schedule_handle(schedule_id)
+            await handle.unpause()
+            logger.info(f"Resumed schedule {schedule_id}")
+        
+        asyncio.run(resume_schedule())
+        
+        return jsonify({
+            'success': True,
+            'message': f'Schedule resumed for automation {automation_id}'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to resume schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automations/schedule/status/<automation_id>', methods=['GET'])
+def get_automation_schedule_status(automation_id):
+    """Get Temporal schedule status for automation"""
+    try:
+        schedule_id = f"automation-schedule-{automation_id}"
+        
+        async def get_status():
+            client = await get_temporal_client()
+            handle = client.get_schedule_handle(schedule_id)
+            description = await handle.describe()
+            
+            is_paused = description.schedule.state.paused
+            
+            # Extract frequency from interval
+            interval = description.schedule.spec.intervals[0].every if description.schedule.spec.intervals else None
+            frequency = 'unknown'
+            if interval:
+                total_seconds = interval.total_seconds()
+                if total_seconds == 60:
+                    frequency = 'minute'
+                elif total_seconds == 3600:
+                    frequency = 'hourly'
+                elif total_seconds == 86400:
+                    frequency = 'daily'
+                elif total_seconds == 604800:
+                    frequency = 'weekly'
+                elif total_seconds >= 2592000:
+                    frequency = 'monthly'
+            
+            return {
+                'success': True,
+                'exists': True,
+                'running': not is_paused,
+                'paused': is_paused,
+                'frequency': frequency,
+                'next_run': str(description.info.next_action_times[0]) if description.info.next_action_times else None
+            }
+        
+        result = asyncio.run(get_status())
+        return jsonify(result), 200
+        
+    except Exception as e:
+        logger.warning(f"Schedule not found: {schedule_id}")
+        return jsonify({
+            'success': True,
+            'exists': False,
+            'running': False
+        }), 200
+
+@app.route('/api/automations/schedule/update/<automation_id>', methods=['PUT'])
+def update_automation_schedule(automation_id):
+    """Update Temporal schedule frequency for automation"""
+    try:
+        data = request.get_json()
+        new_frequency = data.get('update_frequency', 'hourly')
+        schedule_id = f"automation-schedule-{automation_id}"
+        
+        async def update_schedule():
+            client = await get_temporal_client()
+            
+            try:
+                handle = client.get_schedule_handle(schedule_id)
+                await handle.delete()
+                logger.info(f"Deleted old schedule {schedule_id}")
+            except:
+                logger.info(f"No existing schedule to delete: {schedule_id}")
+            
+            interval_map = {
+                'minute': timedelta(minutes=1),
+                'hourly': timedelta(hours=1),
+                'daily': timedelta(days=1),
+                'weekly': timedelta(weeks=1),
+                'monthly': timedelta(days=30)
+            }
+            
+            interval = interval_map.get(new_frequency, timedelta(hours=1))
+            
+            await client.create_schedule(
+                schedule_id,
+                Schedule(
+                    action=ScheduleActionStartWorkflow(
+                        "RiskFormulaCalculationWorkflow",
+                        data,
+                        id=f"risk-formula-calc-{automation_id}",
+                        task_queue="risk-calculations",
+                    ),
+                    spec=ScheduleSpec(
+                        intervals=[ScheduleIntervalSpec(every=interval)]
+                    ),
+                    state=ScheduleState(
+                        note=f"Updated automation {automation_id}",
+                        paused=False
+                    )
+                )
+            )
+            logger.info(f"Created new schedule {schedule_id} with {new_frequency}")
+        
+        asyncio.run(update_schedule())
+        
+        return jsonify({
+            'success': True,
+            'message': f'Schedule updated for automation {automation_id}',
+            'frequency': new_frequency
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to update schedule: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     #Start Flask API
     logger.info("Starting Risk Assessment API on port 5000")
