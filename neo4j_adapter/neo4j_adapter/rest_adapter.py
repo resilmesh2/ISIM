@@ -95,7 +95,8 @@ class RESTAdapter(GeneralAdapter):
     def get_ip_assets(self, limit: int = 50, offset: int = 0) -> list[Any]:
         query = """
         MATCH (ip:IP)
-        OPTIONAL MATCH (ip)-[:PART_OF]-(s:Subnet)-[:PART_OF]-(ou:OrganizationUnit)
+        OPTIONAL MATCH (ip)-[:PART_OF]-(s:Subnet)
+        OPTIONAL MATCH (s)-[:PART_OF]-(ou:OrganizationUnit)
         OPTIONAL MATCH (ip)-[:RESOLVES_TO]-(d:DomainName)
         OPTIONAL MATCH (ip)-[:IDENTIFIES]-(u:URI)
         RETURN ip, s, d, u, ou
