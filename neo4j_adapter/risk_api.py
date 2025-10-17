@@ -1221,7 +1221,6 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
            
 @app.route('/api/risk/apply-configuration', methods=['POST'])
 def apply_risk_configuration():
-    """Apply risk configuration from drag-drop interface"""
     try:
         data = request.get_json()
         
@@ -1296,8 +1295,7 @@ def apply_risk_configuration():
             nodes_updated = record.get('nodesUpdated', 0) if record else 0
             avg_score = record.get('avgRiskScore') if record else None
             
-            # Critical fix: Handle NaN and None values
-            if avg_score is None or (isinstance(avg_score, float) and (avg_score != avg_score)):  # NaN check
+            if avg_score is None or (isinstance(avg_score, float) and (avg_score != avg_score)):
                 avg_score = 0.0
             else:
                 avg_score = float(avg_score)
@@ -1355,7 +1353,6 @@ def apply_risk_configuration():
         else:
             logger.error("Failed to save automation to config")
         
-        # Create Temporal schedule if not manual
         if update_frequency != 'manual':
             schedule_data = {
                 'automation_id': automation_id,
@@ -1364,7 +1361,6 @@ def apply_risk_configuration():
                 'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://localhost:5000')}/api/automations/execute/{automation_id}"
             }
             
-            # Call the schedule creation endpoint
             try:
                 interval_map = {
                     'minute': timedelta(minutes=1),
@@ -1398,14 +1394,13 @@ def apply_risk_configuration():
                             )
                         )
                     )
-                    logger.info(f"Created Temporal schedule {schedule_id}")
+                    logger.info(f"Created Temporal schedule {schedule_id} with note: {formula_name}")
                 
                 asyncio.run(create_automation_schedule())
                 logger.info(f"Temporal schedule created for automation {automation_id}")
                 
             except Exception as e:
                 logger.error(f"Failed to create Temporal schedule: {e}")
-                # Continue anyway - automation is saved, just schedule creation failed
         
         return jsonify({
             'success': True,
@@ -1418,7 +1413,7 @@ def apply_risk_configuration():
     except Exception as e:
         logger.error(f"Error applying configuration: {e}")
         return jsonify({'error': str(e)}), 500
-                      
+                         
 def load_component_config() -> Optional[Dict[str, Any]]:
     """Load component automation configuration"""
     try:
@@ -2440,7 +2435,7 @@ def start_automation_schedule():
                         intervals=[ScheduleIntervalSpec(every=interval)]
                     ),
                     state=ScheduleState(
-                        note=f"Risk formula automation {automation_id}",
+                        note=f"{formula_name} - {update_frequency}",
                         paused=False
                     )
                 )
@@ -2743,6 +2738,49 @@ def update_automation_schedule(automation_id):
     except Exception as e:
         logger.error(f"Failed to update schedule: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/automations/schedule/delete/<automation_id>', methods=['DELETE'])
+def delete_automation_schedule(automation_id):
+    try:
+        schedule_id = f"automation-schedule-{automation_id}"
+        logger.info(f"Attempting to delete Temporal automation schedule: {schedule_id}")
+        
+        async def delete_schedule():
+            try:
+                client = await get_temporal_client()
+                logger.info(f"Connected to Temporal at {TEMPORAL_URL}")
+                
+                handle = client.get_schedule_handle(schedule_id)
+                logger.info(f"Got handle for schedule {schedule_id}")
+                
+                await handle.delete()
+                logger.info(f"Successfully deleted schedule {schedule_id}")
+                return {'deleted': True, 'message': 'Schedule deleted successfully'}
+                
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Error deleting schedule {schedule_id}: {error_msg}")
+                
+                if 'not found' in error_msg.lower() or 'no rows' in error_msg.lower():
+                    return {'deleted': False, 'message': 'Schedule not found', 'warning': error_msg}
+                else:
+                    raise e
+        
+        result = asyncio.run(delete_schedule())
+        
+        return jsonify({
+            'success': True,
+            'schedule_id': schedule_id,
+            **result
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Failed to delete automation schedule {automation_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'schedule_id': f"automation-schedule-{automation_id}"
+        }), 500
 
 if __name__ == '__main__':
     #Start Flask API

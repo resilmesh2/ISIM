@@ -28,18 +28,18 @@ active_component_automations:
     target_property: cvss_score
     enabled: true
     created_at: '2025-10-03T14:08:55.361049'
-    last_modified: '2025-10-13T08:41:51.530452'
+    last_modified: '2025-10-17T08:39:48.598589'
   comp_auto_temporal_test:
     component_name: Temporal Test
     component_id: temporal_test
     neo4j_property: temporal_test
-    update_frequency: monthly
+    update_frequency: hourly
     calculation_method: query_result
     target_property: temporal_test
     enabled: true
     created_at: '2025-10-13T08:54:50.665370'
     last_run: null
-    last_modified: '2025-10-13T09:07:55.112026'
+    last_modified: '2025-10-17T08:20:02.584138'
 component_automation_history: {}
 last_execution:
   timestamp: null
