@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, cast, LiteralString
 
 from neo4j_adapter.general_adapter import GeneralAdapter
 
@@ -22,6 +22,7 @@ class CriticalityAdapter(GeneralAdapter):
                   source,
                   target
                 )"""
+        query = cast("LiteralString", query)
         self._run_query(query)
 
     def _drop_topology_projection(self) -> None:
@@ -32,6 +33,7 @@ class CriticalityAdapter(GeneralAdapter):
         :return:
         """
         query = "CALL gds.graph.drop('topologyGraph') YIELD graphName"
+        query = cast("LiteralString", query)
         self._run_query(query)
 
     def compute_topology_betweenness(self) -> None:
@@ -43,6 +45,7 @@ class CriticalityAdapter(GeneralAdapter):
         self._create_topology_projection()
         query = """CALL gds.betweenness.stream('topologyGraph') YIELD nodeId, score MATCH (n:Node)
                 WHERE id(n) = nodeId SET n.topology_betweenness = score"""
+        query = cast("LiteralString", query)
         self._run_query(query)
         self._drop_topology_projection()
 
@@ -57,6 +60,7 @@ class CriticalityAdapter(GeneralAdapter):
                 YIELD nodeId, score
                 MATCH (n:Node)
                 WHERE id(n) = nodeId SET n.topology_degree = score"""
+        query = cast("LiteralString", query)
         self._run_query(query)
         self._drop_topology_projection()
 
@@ -73,6 +77,7 @@ class CriticalityAdapter(GeneralAdapter):
                  IS_CONNECTED_TO: {properties: {numberOfConnections: {property: '*', aggregation: 'COUNT'}}}})
                 YIELD graphName AS graph, relationshipProjection AS degreeProjection,
                  nodeCount AS nodes, relationshipCount AS rels"""
+        query = cast("LiteralString", query)
         self._run_query(query)
 
     def _drop_graph_projection(self) -> None:
@@ -81,6 +86,7 @@ class CriticalityAdapter(GeneralAdapter):
         :return:
         """
         query = "CALL gds.graph.drop('centralityGraph') YIELD graphName"
+        query = cast("LiteralString", query)
         self._run_query(query)
 
     def compute_ip_flow_degree(self) -> None:
@@ -91,6 +97,7 @@ class CriticalityAdapter(GeneralAdapter):
         self._create_graph_projection()
         query = """CALL gds.degree.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node)
         WHERE id(n) = nodeId SET n.degree_centrality = score"""
+        query = cast("LiteralString", query)
         self._run_query(query)
         self._drop_graph_projection()
 
@@ -102,5 +109,6 @@ class CriticalityAdapter(GeneralAdapter):
         self._create_graph_projection()
         query = """CALL gds.pageRank.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node)
         WHERE id(n) = nodeId SET n.pagerank_centrality = score"""
+        query = cast("LiteralString", query)
         self._run_query(query)
         self._drop_graph_projection()
