@@ -260,9 +260,7 @@ class TestIPSubnetSynchronizer:
             ),
         ],
     )
-    def test_find_closest_parent_scenarios(
-        self, subnet: str, networks: list[str], expected_parent: str | None
-    ) -> None:
+    def test_find_closest_parent_scenarios(self, subnet: str, networks: list[str], expected_parent: str | None) -> None:
         """Test various subnet to parent matching scenarios."""
         subnet_obj = ip_network(subnet)
         net_list = [ip_network(net) for net in networks]

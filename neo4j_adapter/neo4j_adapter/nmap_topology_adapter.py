@@ -17,16 +17,18 @@ class NmapTopologyAdapter(GeneralAdapter):
         :param nmap_result: JSON-like form of nmap results
         :return:
         """
-        query = "WITH apoc.convert.fromJsonMap($nmap_result) as value " \
-                "UNWIND value.data as data " \
-                "UNWIND data.hops as hops " \
-                "MERGE (prev_ip:IP {address:hops.prev_ip}) " \
-                "MERGE (prev_node:Node)-[:HAS_ASSIGNED]->(prev_ip)" \
-                "MERGE (next_ip:IP {address:hops.next_ip}) " \
-                "MERGE (next_node:Node)-[:HAS_ASSIGNED]->(next_ip)" \
-                "MERGE (prev_node)-[rel:IS_CONNECTED_TO {hops:hops.hops}]->(next_node) " \
-                "ON MATCH SET rel.last_detection = datetime(value.time) " \
-                "ON CREATE SET rel.last_detection = datetime(value.time)"
+        query = (
+            "WITH apoc.convert.fromJsonMap($nmap_result) as value "
+            "UNWIND value.data as data "
+            "UNWIND data.hops as hops "
+            "MERGE (prev_ip:IP {address:hops.prev_ip}) "
+            "MERGE (prev_node:Node)-[:HAS_ASSIGNED]->(prev_ip)"
+            "MERGE (next_ip:IP {address:hops.next_ip}) "
+            "MERGE (next_node:Node)-[:HAS_ASSIGNED]->(next_ip)"
+            "MERGE (prev_node)-[rel:IS_CONNECTED_TO {hops:hops.hops}]->(next_node) "
+            "ON MATCH SET rel.last_detection = datetime(value.time) "
+            "ON CREATE SET rel.last_detection = datetime(value.time)"
+        )
 
         params = {"nmap_result": nmap_result}
 

@@ -11,12 +11,14 @@ class CSAAdapter(GeneralAdapter):
         super().__init__(password=password, **kwargs)
 
     def store_criticality(self, json_string: str) -> None:
-        query = "WITH apoc.convert.fromJsonList($json_string) as value " \
-                "UNWIND value as result " \
-                "MATCH (ip:IP {address:result.ip}) " \
-                "MATCH (host:Host {hostname:result.hostname}) " \
-                "MATCH (host)<-[:IS_A]-(node:Node)-[:HAS_ASSIGNED]->(ip)" \
-                "SET node.mission_criticality = result.criticality "
+        query = (
+            "WITH apoc.convert.fromJsonList($json_string) as value "
+            "UNWIND value as result "
+            "MATCH (ip:IP {address:result.ip}) "
+            "MATCH (host:Host {hostname:result.hostname}) "
+            "MATCH (host)<-[:IS_A]-(node:Node)-[:HAS_ASSIGNED]->(ip)"
+            "SET node.mission_criticality = result.criticality "
+        )
 
         query = cast("LiteralString", query)
         params = {"json_string": json_string}

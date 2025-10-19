@@ -164,7 +164,7 @@ class RESTAdapter(GeneralAdapter):
         self, limit: int = 500, offset: int = 0, ip: str | None = None
     ) -> list[IPAssetInformationDTO]:
         query = f"""
-        MATCH (ip:IP{' {address: $ip}' if ip else ''})
+        MATCH (ip:IP{" {address: $ip}" if ip else ""})
         WITH ip, [(ip)-[:PART_OF]-(s:Subnet) | s.range] as subnets
         WITH ip, subnets, [(ip)-[:PART_OF]-(s:Subnet)-[:HAS]-(c:Contact) | c.name] as contacts
         WITH ip, subnets, contacts, [(ip)-[:RESOLVES_TO]-(d:DomainName) | d.domain_name] as domains
