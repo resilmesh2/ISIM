@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, cast, LiteralString
+from typing import Any, LiteralString, cast
 
 from neo4j_adapter.general_adapter import GeneralAdapter
 

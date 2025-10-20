@@ -1,9 +1,10 @@
 from pathlib import Path
-from typing import Any, cast, LiteralString
+from typing import Any, LiteralString, cast
 
 from neo4j_adapter.general_adapter import GeneralAdapter
 
 BASE_DIR = Path(__file__).parent
+
 
 class SLPEnrichmentAdapter(GeneralAdapter):
     def __init__(self, password: str, **kwargs: Any) -> None:
@@ -34,6 +35,6 @@ class SLPEnrichmentAdapter(GeneralAdapter):
                 MERGE (s: Subnet {range: subnet, version: 4}) \
                 MERGE (ip)-[:PART_OF]->(s)"
 
-        query = cast(LiteralString, query)
+        query = cast("LiteralString", query)
         params = {"json_string": domains_ips_for_storing}
         self._run_query(query, **params)

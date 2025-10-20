@@ -29,7 +29,9 @@ class Host:
         ip_interface_object = ip_address(self.ip_address)
         for s in self.subnets:
             if ip_interface_object not in (network_object := ip_network(s)):
-                raise ValueError(f"Declared {ip_interface_object.compressed} is not in subnet {network_object.compressed}")
+                raise ValueError(
+                    f"Declared {ip_interface_object.compressed} is not in subnet {network_object.compressed}"
+                )
         self.version = ip_interface_object.version
 
 
