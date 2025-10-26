@@ -2782,6 +2782,138 @@ def delete_automation_schedule(automation_id):
             'schedule_id': f"automation-schedule-{automation_id}"
         }), 500
 
+@app.route('/api/components/scan-neo4j', methods=['GET'])
+def scan_neo4j_for_components():
+    """Scan Neo4j nodes for custom properties not in config"""
+    driver = None
+    try:
+        driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+        
+        with driver.session() as session:
+            exclude = [
+                'name','id','Risk Score','threatScore','cvss_score','criticality',
+                'betweenness', 'degree', 'normalizedBetweeness', 'normalizedDegree',
+                'topology_betweenness', 'topology_degree'
+            ]
+
+            query = """
+            MATCH (n:Node)
+            WITH keys(n) AS properties
+            UNWIND properties AS prop
+            WITH DISTINCT prop, $exclude AS exclude
+            WHERE NOT (prop IN exclude)
+            RETURN collect(DISTINCT prop) AS customProperties
+            """
+
+            result = session.run(query, exclude=exclude)
+            record = result.single()
+            custom_properties = record["customProperties"] if record else []
+
+            
+            # Load current config
+            config = load_config()
+            if not config:
+                config = {'available_components': {}}
+            
+            existing_components = config.get('available_components', {})
+            existing_neo4j_props = set()
+            
+            # Collect existing neo4j properties
+            for comp_key, comp_data in existing_components.items():
+                if comp_data.get('neo4jProperty'):
+                    existing_neo4j_props.add(comp_data['neo4jProperty'])
+            
+            # Find new properties not in config
+            new_properties = []
+            for prop in custom_properties:
+                if prop not in existing_neo4j_props:
+                    # Get sample value and count
+                    sample_query = f"""
+                    MATCH (n:Node)
+                    WHERE n.`{prop}` IS NOT NULL
+                    RETURN count(n) as nodeCount, 
+                           avg(n.`{prop}`) as avgValue,
+                           min(n.`{prop}`) as minValue,
+                           max(n.`{prop}`) as maxValue
+                    """
+                    
+                    sample_result = session.run(sample_query)
+                    sample_record = sample_result.single()
+                    
+                    if sample_record and sample_record["nodeCount"] > 0:
+                        new_properties.append({
+                            'neo4jProperty': prop,
+                            'name': prop.replace('_', ' ').title(),
+                            'nodeCount': sample_record["nodeCount"],
+                            'avgValue': float(sample_record["avgValue"] or 0),
+                            'minValue': float(sample_record["minValue"] or 0),
+                            'maxValue': float(sample_record["maxValue"] or 100)
+                        })
+            
+            return jsonify({
+                "success": True,
+                "newProperties": new_properties,
+                "existingProperties": list(existing_neo4j_props),
+                "totalCustomProperties": len(custom_properties)
+            })
+            
+    except Exception as e:
+        logger.error(f"Error scanning Neo4j: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if driver:
+            driver.close()
+
+@app.route('/api/components/import-from-neo4j', methods=['POST'])
+def import_components_from_neo4j():
+    """Import discovered Neo4j properties as components"""
+    try:
+        data = request.json
+        properties_to_import = data.get('properties', [])
+        
+        config = load_config()
+        if not config:
+            config = {'available_components': {}}
+        
+        imported_count = 0
+        
+        for prop_data in properties_to_import:
+            neo4j_property = prop_data.get('neo4jProperty')
+            if not neo4j_property:
+                continue
+                
+            # Generate component key
+            component_key = f"custom_{neo4j_property.replace(' ', '_').replace('-', '_').lower()}"
+            
+            # Add to available components
+            config['available_components'][component_key] = {
+                'name': prop_data.get('name', neo4j_property.replace('_', ' ').title()),
+                'neo4jProperty': neo4j_property,
+                'weight': 0,
+                'currentValue': prop_data.get('avgValue', 0),
+                'maxValue': prop_data.get('maxValue', 100),
+                'type': 'custom',
+                'source': 'neo4j_import',
+                'imported_at': datetime.now().isoformat()
+            }
+            
+            imported_count += 1
+            logger.info(f"Imported component: {component_key} with Neo4j property: {neo4j_property}")
+        
+        # Save updated config
+        if save_config(config):
+            return jsonify({
+                "success": True,
+                "message": f"Imported {imported_count} components from Neo4j",
+                "importedCount": imported_count
+            })
+        else:
+            return jsonify({"error": "Failed to save configuration"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error importing components: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     #Start Flask API
     logger.info("Starting Risk Assessment API on port 5000")

@@ -1,74 +1,4 @@
-active_automations:
-  70a7b869:
-    avg_risk_score: 0.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: Asset Criticality
-      neo4jProperty: criticality
-      weight: 0.33
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.33
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.34
-    created_date: '2025-10-17T09:00:27.460645'
-    custom_formula: ''
-    enabled: true
-    formula_config:
-      asset_criticality: 0.33
-      cvss_vulnerability_score: 0.33
-      threat_detection_score: 0.34
-    formula_name: Custom Formula
-    last_run: '2025-10-17T09:01:08.172118'
-    nodes_updated: 30991
-    target_property: Risk Score
-    target_type: network
-    target_values:
-    - '147.251'
-    update_frequency: daily
-  9a2e6bbf:
-    avg_risk_score: 0.0
-    calculation_method: weighted_avg
-    calculation_mode: calculate
-    components:
-    - currentValue: 5
-      maxValue: 10
-      name: Asset Criticality
-      neo4jProperty: criticality
-      weight: 0.33
-    - currentValue: 5
-      maxValue: 10
-      name: CVSS Vulnerability Score
-      neo4jProperty: cvss_score
-      weight: 0.33
-    - currentValue: 5
-      maxValue: 10
-      name: Threat Detection Score
-      neo4jProperty: threatScore
-      weight: 0.34
-    created_date: '2025-10-17T09:44:38.324316'
-    custom_formula: ''
-    enabled: true
-    formula_config:
-      asset_criticality: 0.33
-      cvss_vulnerability_score: 0.33
-      threat_detection_score: 0.34
-    formula_name: Test name
-    last_run: '2025-10-17T09:45:09.832219'
-    nodes_updated: 30991
-    target_property: Risk Score
-    target_type: network
-    target_values:
-    - '147.251'
-    update_frequency: daily
+active_automations: {}
 active_formula:
   name: balanced_security
   type: predefined
@@ -89,15 +19,6 @@ available_components:
     name: CVSS Vulnerability Score
     neo4j_property: cvss_score
     type: vulnerability
-  temporal_test:
-    category: custom
-    description: Custom component for risk assessment
-    icon: "\U0001F527"
-    max_value: 10
-    min_value: 0
-    name: Temporal Test
-    neo4j_property: temporal_test
-    type: custom
   threatScore:
     description: Wazuh-based active threat detection
     icon: "\u26A0\uFE0F"
@@ -127,10 +48,10 @@ last_risk_calculation:
       value: 5
       weight: 0.34
   custom_formula: ''
-  formula_name: Test name
+  formula_name: hhjgjg
   nodes_updated: 30991
   target_property: Risk Score
-  timestamp: '2025-10-17T09:44:38.324543'
+  timestamp: '2025-10-24T13:44:23.930248'
   update_frequency: daily
 predefined_formulas:
   balanced_security:
