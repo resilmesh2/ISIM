@@ -11,7 +11,7 @@ services:
       - ./config/config_docker.yaml:/app/config/config.yaml
     restart: unless-stopped
     networks:
-      - casm_isim_test_network
+      - resilmesh_network
 
   isim_graphql:
     build:
@@ -27,7 +27,7 @@ services:
       - NEO4J_PASSWORD=supertestovaciheslo
     restart: unless-stopped
     networks:
-      - casm_isim_test_network
+      - resilmesh_network
 
   neo4j:
     image: neo4j:5.26.10
@@ -47,7 +47,7 @@ services:
 #      neo4j_load_data:
 #        condition: service_completed_successfully
     networks:
-      - casm_isim_test_network
+      - resilmesh_network
     healthcheck:
       test: ["CMD", "wget", "http://localhost:7474/"]
       interval: 10s
@@ -71,10 +71,6 @@ services:
 # To work together, do not deploy neo4j and neo4j_load_data from this compose and uncomment
 # the external option
 
-networks:
-  casm_isim_test_network:
-    #external: true
-    name: casm_isim_test_network
 
 volumes:
   neo4j_isim_data:
