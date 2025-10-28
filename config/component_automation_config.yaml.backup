@@ -1,44 +1,4 @@
-active_component_automations:
-  comp_auto_threatScore_1759486315:
-    component_id: threatScore
-    component_name: Threat Detection Score
-    neo4j_property: threatScore
-    update_frequency: hourly
-    calculation_method: query_result
-    target_property: threatScore
-    enabled: true
-    created_at: '2025-10-03T10:11:55.481945'
-    last_modified: '2025-10-10T14:40:03.587200'
-  comp_auto_criticality_1759499988:
-    component_id: criticality
-    component_name: Asset Criticality
-    neo4j_property: criticality
-    update_frequency: minute
-    calculation_method: query_result
-    target_property: criticality
-    enabled: true
-    created_at: '2025-10-03T13:59:48.726026'
-    last_modified: '2025-10-20T13:54:05.553596'
-  comp_auto_cvss_score_1759500535:
-    component_id: cvss_score
-    component_name: CVSS Vulnerability Score
-    neo4j_property: cvss_score
-    update_frequency: hourly
-    calculation_method: query_result
-    target_property: cvss_score
-    enabled: true
-    created_at: '2025-10-03T14:08:55.361049'
-    last_modified: '2025-10-24T09:21:18.390571'
-  comp_auto_hfghf:
-    component_name: hfghf
-    component_id: hfghf
-    neo4j_property: hfghf
-    update_frequency: manual
-    calculation_method: query_result
-    target_property: hfghf
-    enabled: false
-    created_at: '2025-10-24T13:41:40.832384'
-    last_run: null
+active_component_automations: {}
 component_automation_history: {}
 last_execution:
   timestamp: null

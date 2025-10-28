@@ -27,6 +27,8 @@ NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://neo4j:7687")
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
 
+neo4j_driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -2237,38 +2239,58 @@ def list_all_component_schedules():
     
 @app.route('/api/components/execute/criticality', methods=['POST'])
 def execute_criticality_calculation():
-    """Execute criticality calculation from isim_calcs"""
+    """Execute full ISIM calculations (betweenness, degree, normalize, criticality, cvss, risk score)"""
     try:
-        logger.info("Executing criticality calculation")
+        logger.info("Executing full ISIM calculation pipeline")
         
-        # Run the criticality calculation queries
-        average_criticality_query = """
-        MATCH (n:Node)
-        WHERE n.normalizedBetweenness IS NOT NULL
-          AND n.normalizedDegree IS NOT NULL
-        WITH n, (n.normalizedBetweenness + n.normalizedDegree) / 2.0 AS avgNorm
-        SET n.criticality = avgNorm * 10.0
-        RETURN 
-          count(n) AS nodesUpdated,
-          round(avg(avgNorm * 10.0), 2) AS avgCriticality
-        """
+        import subprocess
+        import sys
+        
+        result = subprocess.run(
+            [sys.executable, '/app/isim_calcs.py'],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        
+        if result.returncode != 0:
+            logger.error(f"ISIM calculations failed: {result.stderr}")
+            return jsonify({
+                'success': False,
+                'error': f'ISIM calculations failed: {result.stderr}'
+            }), 500
+        
+        logger.info("ISIM calculations completed successfully")
         
         with neo4j_driver.session() as session:
-            result = session.run(average_criticality_query)
+            stats_query = """
+            MATCH (n:Node)
+            WHERE n.criticality IS NOT NULL
+            RETURN 
+                count(n) AS nodesUpdated,
+                round(avg(n.criticality), 2) AS avgCriticality,
+                round(max(n.criticality), 2) AS maxCriticality,
+                round(min(n.criticality), 2) AS minCriticality
+            """
+            
+            result = session.run(stats_query)
             record = result.single()
             
             nodes_updated = record['nodesUpdated'] if record else 0
             avg_criticality = record['avgCriticality'] if record else 0
         
-        logger.info(f"Criticality calculation complete: {nodes_updated} nodes updated")
+        logger.info(f"Criticality calculation complete: {nodes_updated} nodes updated, avg: {avg_criticality}")
         
         return jsonify({
             'success': True,
             'component': 'criticality',
             'nodes_updated': nodes_updated,
-            'avg_value': avg_criticality
+            'avg_value': float(avg_criticality) if avg_criticality else 0
         }), 200
         
+    except subprocess.TimeoutExpired:
+        logger.error("ISIM calculations timed out after 5 minutes")
+        return jsonify({'success': False, 'error': 'Calculation timeout'}), 500
     except Exception as e:
         logger.error(f"Criticality calculation failed: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2276,16 +2298,15 @@ def execute_criticality_calculation():
 
 @app.route('/api/components/execute/cvss_score', methods=['POST'])
 def execute_cvss_calculation():
-    """Execute CVSS score calculation from isim_calcs"""
+    """Execute CVSS score calculation - queries existing CVE data"""
     try:
         logger.info("Executing CVSS score calculation")
         
-        # Run the CVSS calculation query
         set_cvss_query = """
-        MATCH (n:Node)
-            -[:RUNS]->(sv:SoftwareVersion)
-            <-[:IN]-(v:Vulnerability)
-            -[:REFERS_TO]->(c:CVE)
+        MATCH (n:Node)-[:IS_A]->(h:Host)
+              <-[:ON]-(sv:SoftwareVersion)
+              <-[:IN]-(v:Vulnerability)
+              -[:REFERS_TO]->(c:CVE)
         WHERE c.base_score_v3 IS NOT NULL
         WITH n, avg(c.base_score_v3) AS avgCvss
         SET n.cvss_score = avgCvss
@@ -2306,7 +2327,7 @@ def execute_cvss_calculation():
             'success': True,
             'component': 'cvss_score',
             'nodes_updated': nodes_updated,
-            'avg_value': avg_cvss
+            'avg_value': float(avg_cvss) if avg_cvss else 0
         }), 200
         
     except Exception as e:
@@ -2316,23 +2337,23 @@ def execute_cvss_calculation():
 
 @app.route('/api/components/execute/threatScore', methods=['POST'])
 def execute_threat_calculation():
-    """Execute threat score calculation by calling threat_calcs.py"""
+    """Execute threat score calculation by running threat_calcs.py"""
     try:
         logger.info("Executing threat score calculation")
         
-        # Import and run threat calculation
         import subprocess
+        import sys
+        
         result = subprocess.run(
-            ['/usr/local/bin/python', '/app/threat_calcs.py'],
+            [sys.executable, '/app/threat_calcs.py'],
             capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=300
         )
         
         if result.returncode == 0:
             logger.info("Threat calculation completed successfully")
             
-            # Get updated count from Neo4j
             count_query = """
             MATCH (n:Node)
             WHERE n.threatScore IS NOT NULL
@@ -2349,8 +2370,7 @@ def execute_threat_calculation():
                 'success': True,
                 'component': 'threatScore',
                 'nodes_updated': nodes_updated,
-                'avg_value': avg_threat,
-                'output': result.stdout
+                'avg_value': float(avg_threat) if avg_threat else 0
             }), 200
         else:
             logger.error(f"Threat calculation failed: {result.stderr}")
@@ -2365,7 +2385,7 @@ def execute_threat_calculation():
     except Exception as e:
         logger.error(f"Threat calculation failed: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
+    
 @app.route('/api/components/execute/<component_id>', methods=['POST'])
 def execute_component_calculation(component_id):
     """Execute calculation for a specific component"""
@@ -2583,6 +2603,51 @@ def execute_automation_endpoint(automation_id):
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/automations/execute/base-risk', methods=['POST'])
+def execute_base_risk_automation():
+    """Execute base risk calculation - hardcoded 3-component formula"""
+    try:
+        logger.info("Executing base-risk automation")
+        
+        target_property = "Risk Score"
+        
+        calculation = """
+        (
+            (COALESCE(n.criticality, 0.0) * 0.333) +
+            (COALESCE(n.cvss_score, 0.0) * 0.333) +
+            (COALESCE(n.threatScore, 0.0) * 0.333)
+        ) / 1.0
+        """
+        
+        query = f"""
+        MATCH (n:Node)
+        SET n.`{target_property}` = {calculation}
+        RETURN count(n) as nodes_updated, 
+               avg(n.`{target_property}`) as avg_risk
+        """
+        
+        with neo4j_driver.session() as session:
+            result = session.run(query)
+            record = result.single()
+            
+            nodes_updated = record['nodes_updated'] if record else 0
+            avg_risk = record['avg_risk'] if record and record['avg_risk'] is not None else 0
+        
+        logger.info(f"Base-risk calculation complete: {nodes_updated} nodes updated, avg: {avg_risk}")
+        
+        return jsonify({
+            'success': True,
+            'automation_id': 'base-risk',
+            'nodes_updated': nodes_updated,
+            'avg_risk_score': round(avg_risk, 2),
+            'target_property': target_property,
+            'message': f'Successfully updated {nodes_updated} nodes'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Base-risk calculation failed: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/automations/schedule/pause/<automation_id>', methods=['POST'])
 def pause_automation_schedule(automation_id):
@@ -2875,32 +2940,43 @@ def import_components_from_neo4j():
         if not config:
             config = {'available_components': {}}
         
+        if 'available_components' not in config:
+            config['available_components'] = {}
+        
         imported_count = 0
         
         for prop_data in properties_to_import:
             neo4j_property = prop_data.get('neo4jProperty')
             if not neo4j_property:
                 continue
-                
-            # Generate component key
+            
             component_key = f"custom_{neo4j_property.replace(' ', '_').replace('-', '_').lower()}"
             
-            # Add to available components
             config['available_components'][component_key] = {
+                'id': component_key,
                 'name': prop_data.get('name', neo4j_property.replace('_', ' ').title()),
                 'neo4jProperty': neo4j_property,
+                'neo4j_property': neo4j_property,
                 'weight': 0,
-                'currentValue': prop_data.get('avgValue', 0),
-                'maxValue': prop_data.get('maxValue', 100),
+                'currentValue': float(prop_data.get('avgValue', 0)),
+                'maxValue': float(prop_data.get('maxValue', 10)),
                 'type': 'custom',
+                'icon': '🔧',
+                'description': f'Imported from ISIM: {neo4j_property}',
+                'isComposite': False,
                 'source': 'neo4j_import',
-                'imported_at': datetime.now().isoformat()
+                'imported_at': datetime.now().isoformat(),
+                'statistics': {
+                    'avg': float(prop_data.get('avgValue', 0)),
+                    'max': float(prop_data.get('maxValue', 0)),
+                    'min': float(prop_data.get('minValue', 0)),
+                    'nodeCount': int(prop_data.get('nodeCount', 0))
+                }
             }
             
             imported_count += 1
             logger.info(f"Imported component: {component_key} with Neo4j property: {neo4j_property}")
         
-        # Save updated config
         if save_config(config):
             return jsonify({
                 "success": True,
@@ -2913,7 +2989,7 @@ def import_components_from_neo4j():
     except Exception as e:
         logger.error(f"Error importing components: {e}")
         return jsonify({"error": str(e)}), 500
-
+    
 if __name__ == '__main__':
     #Start Flask API
     logger.info("Starting Risk Assessment API on port 5000")

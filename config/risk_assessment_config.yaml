@@ -33,7 +33,7 @@ execution_settings:
   retry_delay_minutes: 10
   timeout_minutes: 60
 last_risk_calculation:
-  applied_to: 'network: 147.251'
+  applied_to: 'network: 127.0'
   average_risk_score: 0.0
   calculation_method: weighted_avg
   calculation_mode: calculate
@@ -48,11 +48,11 @@ last_risk_calculation:
       value: 5
       weight: 0.34
   custom_formula: ''
-  formula_name: hhjgjg
-  nodes_updated: 30991
+  formula_name: Custom Formula
+  nodes_updated: 1
   target_property: Risk Score
-  timestamp: '2025-10-24T13:44:23.930248'
-  update_frequency: daily
+  timestamp: '2025-10-26T16:33:48.249547'
+  update_frequency: hourly
 predefined_formulas:
   balanced_security:
     components:
