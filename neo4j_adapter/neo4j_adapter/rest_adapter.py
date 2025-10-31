@@ -21,6 +21,9 @@ class RESTAdapter(GeneralAdapter):
         return self._run_query(
             "MATCH (m:Mission) RETURN {name: m.name, description: m.description, \
                                 criticality: m.criticality, \
+                                confidentiality_requirement: m.confidentiality_requirement, \
+                                integrity_requirement: m.integrity_requirement, \
+                                availability_requirement: m.availability_requirement, \
                                 structure: m.structure} AS mission LIMIT $limit",
             limit=limit,
         )

@@ -3,6 +3,9 @@ UNWIND value.nodes as nodes
 UNWIND nodes.missions as missions
 MERGE (mission:Mission {name: missions.name})
 SET mission.criticality = missions.criticality
+SET mission.confidentiality_requirement = missions.confidentiality_requirement
+SET mission.integrity_requirement = missions.integrity_requirement
+SET mission.availability_requirement = missions.availability_requirement
 SET mission.description = missions.description
 SET mission.structure = apoc.convert.toJson(value)
 WITH nodes, value

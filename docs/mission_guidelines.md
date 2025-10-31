@@ -91,8 +91,8 @@ between them,</li>
 there can be some AND/OR nodes between them.</li>
 </ul>
 
-Values used in relationships are names (in "dependencies", "supports", and "has_identity") 
-or IDs (in "one_way", and "two_way"). "Two_way" relationships use keys "from" and "to" as "one_way" relationships.
+Values used in relationships are names (in "supports", and "has_identity") 
+or IDs (in "dependencies", "one_way", and "two_way"). "Two_way" relationships use keys "from" and "to" as "one_way" relationships.
 
 # Identification of Entities
 

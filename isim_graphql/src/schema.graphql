@@ -340,7 +340,10 @@ type Mission {
     """,
     columnName: "_id"
   )
-  criticality: Int!
+  criticality: Int
+  confidentiality_requirement: Int
+  integrity_requirement: Int
+  availability_requirement: Int
   description: String!
   name: String!
   structure: String!

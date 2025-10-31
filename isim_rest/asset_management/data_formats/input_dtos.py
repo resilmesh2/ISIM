@@ -131,8 +131,11 @@ class AssetListInputDTO(msgspec.Struct):
 class MissionDTO(msgspec.Struct):
     id: int
     name: str
-    criticality: int
+    criticality: int | None = None
     description: str | None = None
+    confidentiality_requirement: int | None = None
+    integrity_requirement: int | None = None
+    availability_requirement: int | None = None
 
 
 class ServiceDTO(msgspec.Struct):
@@ -179,7 +182,7 @@ class UndirectedRelationshipDTO[T](msgspec.Struct):
 class RelationshipDTO(msgspec.Struct):
     one_way: list[DirectedRelationshipDTO[int]] = field(default_factory=list)
     two_way: list[UndirectedRelationshipDTO[int]] = field(default_factory=list)
-    dependencies: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
+    dependencies: list[DirectedRelationshipDTO[int]] = field(default_factory=list)
     supports: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
     has_identity: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
 
