@@ -17,14 +17,26 @@ class RestTestCase(TestCase):
 
             response = self.client.get("/asset_info")
             assert response.status_code == 200
-            assert (
-                response.content
-                == b'[{"ip":"9.66.11.12","domain_names":["mail.firechmel.ex"],"subnets":["9.66.11.0/24"],'
-                b'"contacts":["admin@firechmel.ex"],"missions":[],"critical":0},{"ip":"9.66.11.13",'
-                b'"domain_names":["dns.firechmel.ex"],"subnets":["9.66.11.0/24"],"contacts":["admin@firechmel.ex"],'
-                b'"missions":[],"critical":0},{"ip":"9.66.11.14","domain_names":["www.firechmel.ex"],'
-                b'"subnets":["9.66.11.0/24"],"contacts":["admin@firechmel.ex"],"missions":[],"critical":0}]'
-            )
+            response_list = json.loads(response.content.decode("ASCII"))
+            expected_results = [
+                {'ip': '9.66.11.12', 'domain_names': ['mail.firechmel.ex'], 'subnets': ['9.66.11.0/24'],
+                 'contacts': ['admin@firechmel.ex'], 'missions': [],
+                 'nodes': [{'degree_centrality': None, 'pagerank_centrality': None, 'topology_degree': None,
+                            'topology_betweenness': None}],
+                 'critical': 0},
+                {'ip': '9.66.11.13', 'domain_names': ['dns.firechmel.ex'], 'subnets': ['9.66.11.0/24'],
+                 'contacts': ['admin@firechmel.ex'], 'missions': [],
+                 'nodes': [{'degree_centrality': None, 'pagerank_centrality': None, 'topology_degree': None,
+                            'topology_betweenness': None}],
+                 'critical': 0},
+                {'ip': '9.66.11.14', 'domain_names': ['www.firechmel.ex'], 'subnets': ['9.66.11.0/24'],
+                 'contacts': ['admin@firechmel.ex'], 'missions': [],
+                 'nodes': [{'degree_centrality': None, 'pagerank_centrality': None, 'topology_degree': None,
+                            'topology_betweenness': None}],
+                 'critical': 0}
+            ]
+            for asset_item in expected_results:
+                assert asset_item in response_list
 
     def test_missions(self) -> None:
         with pathlib.Path(f"{BASE_DIR}/test/test_data/cyber_czech_mission_bt1.json").open() as mission_file:

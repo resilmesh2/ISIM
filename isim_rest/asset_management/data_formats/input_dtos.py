@@ -128,7 +128,7 @@ class AssetListInputDTO(msgspec.Struct):
         self.subnets += [SubnetDTO(ip_range=s) for s in related_undeclared_subnets if s]
 
 
-class MissionDTO(msgspec.Struct):
+class MissionDTO(msgspec.Struct, forbid_unknown_fields=True, omit_defaults=True):
     id: int
     name: str
     criticality: int | None = None
