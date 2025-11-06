@@ -14,7 +14,7 @@ class CriticalityAdapter(GeneralAdapter):
         """
         This procedure creates a graph projection used to compute centrality values.
         Centrality values must be computed for results from Nmap traceroute scanning.
-        :return:
+        :return: None
         """
         query = """MATCH (source:Node)-[r:IS_CONNECTED_TO]->(target:Node) WHERE r.hops = 1
                 RETURN gds.graph.project(
@@ -30,7 +30,7 @@ class CriticalityAdapter(GeneralAdapter):
         This procedure drops the graph projection formed from Nmap traceroute results
          used to compute centrality values.
 
-        :return:
+        :return: None
         """
         query = "CALL gds.graph.drop('topologyGraph') YIELD graphName"
         query = cast("LiteralString", query)
@@ -40,7 +40,7 @@ class CriticalityAdapter(GeneralAdapter):
         """
         Compute betweenness centrality on topology edges with hops count equal to 1.
 
-        :return: information about computation
+        :return: None
         """
         self._create_topology_projection()
         query = """CALL gds.betweenness.stream('topologyGraph') YIELD nodeId, score MATCH (n:Node)
@@ -53,7 +53,7 @@ class CriticalityAdapter(GeneralAdapter):
         """
         Compute degree centrality on topology edges.
 
-        :return: information about computation
+        :return: None
         """
         self._create_topology_projection()
         query = """CALL gds.degree.stream('topologyGraph')
@@ -71,7 +71,7 @@ class CriticalityAdapter(GeneralAdapter):
         IP flow data consist of five-minute-long time windows, it is complicated to
         distinguish when a session starts and ends.
         From the perspective of criticality, the most important is how many hosts communicate to an important host.
-        :return:
+        :return: None
         """
         query = """CALL gds.graph.project('centralityGraph', ['Node'], {
                  IS_CONNECTED_TO: {properties: {numberOfConnections: {property: '*', aggregation: 'COUNT'}}}})
@@ -83,7 +83,7 @@ class CriticalityAdapter(GeneralAdapter):
     def _drop_graph_projection(self) -> None:
         """
         This procedure drops a graph projection used to compute centrality values.
-        :return:
+        :return: None
         """
         query = "CALL gds.graph.drop('centralityGraph') YIELD graphName"
         query = cast("LiteralString", query)
@@ -92,7 +92,7 @@ class CriticalityAdapter(GeneralAdapter):
     def compute_ip_flow_degree(self) -> None:
         """
         Compute degree centrality on graph projection created from IP flow edges.
-        :return:
+        :return: None
         """
         self._create_graph_projection()
         query = """CALL gds.degree.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node)
@@ -104,7 +104,7 @@ class CriticalityAdapter(GeneralAdapter):
     def compute_ip_flow_pagerank(self) -> None:
         """
         Compute PageRank centrality on graph projection created from IP flow edges.
-        :return:
+        :return: None
         """
         self._create_graph_projection()
         query = """CALL gds.pageRank.stream('centralityGraph') YIELD nodeId, score MATCH (n:Node)

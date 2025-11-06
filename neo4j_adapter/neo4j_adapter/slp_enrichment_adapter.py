@@ -11,6 +11,11 @@ class SLPEnrichmentAdapter(GeneralAdapter):
         super().__init__(password=password, **kwargs)
 
     def store_slp_data(self, domains_ips_for_storing: str) -> None:
+        """
+        This method stores enrichment data obtained from SLP API.
+        :param domains_ips_for_storing: string containing representation for storing
+        :return: None
+        """
         query = "WITH apoc.convert.fromJsonList($json_string) as value \
                 UNWIND value as result \
                 UNWIND result.domain AS domain \
