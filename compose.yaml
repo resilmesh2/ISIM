@@ -74,10 +74,3 @@ services:
 
 volumes:
   resilmesh_sap_neo4j_isim_data:
-
-
-networks:
-  resilmesh_network:
-    external: true
-    name: resilmesh_network
-
