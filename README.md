@@ -52,6 +52,18 @@ neo4j:
 - user: user in the Neo4j database
 - password: password to Neo4j database
 
+Another configuration file (`config_organization.yml`) in the same folder defines constituency of users.
+Its default version contains a name of organization, and hosts described by their IP addresses, domain names, 
+and subnets: 
+
+```yaml
+name: "test"
+hosts:
+  - ip_address: "127.0.0.1"
+    domain_names: ["test.cz"]
+    subnets: ["127.0.0.0/24"]
+```
+
 # How to work with the application
 
 ## ISIM REST

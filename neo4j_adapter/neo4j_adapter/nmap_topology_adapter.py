@@ -15,7 +15,7 @@ class NmapTopologyAdapter(GeneralAdapter):
         Create topology from nmap_result.
 
         :param nmap_result: JSON-like form of nmap results
-        :return:
+        :return: None
         """
         query = (
             "WITH apoc.convert.fromJsonMap($nmap_result) as value "
