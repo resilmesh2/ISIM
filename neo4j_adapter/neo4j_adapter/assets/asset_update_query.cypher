@@ -119,14 +119,12 @@ UNWIND input_.software_versions AS sw_versions
     '
     MERGE (sw:SoftwareVersion {version: sw_versions.version})
     MERGE (ns:NetworkService {port: sw_versions.port, protocol: sw_versions.protocol, service: sw_versions.service})
-    SET sw.tag = sw_versions.tag
     SET ns.tag = sw_versions.tag
     MERGE (sw)-[:PROVIDES]-(ns)
     FOREACH (ip_address in sw_versions.ip_addresses |
         MERGE (ip:IP {address: ip_address})
         MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
         MERGE (sw)-[sw_h:ON]->(h)
-          ON CREATE SET sw_h.tag = ["known"]
         MERGE (ns)-[ns_h:ON]->(h)
           ON CREATE SET ns_h.tag = ["known"]
     )
@@ -134,12 +132,10 @@ UNWIND input_.software_versions AS sw_versions
     sw_versions.version is not null,
     '
     MERGE (sw:SoftwareVersion {version: sw_versions.version})
-    SET sw.tag = sw_versions.tag
     FOREACH (ip_address in sw_versions.ip_addresses |
         MERGE (ip:IP {address: ip_address})
         MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
         MERGE (sw)-[sw_h:ON]->(h)
-          ON CREATE SET sw_h.tag = ["known"]
     )
     ',
     sw_versions.port is not null and sw_versions.protocol is not null and sw_versions.service is not null,

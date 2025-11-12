@@ -310,7 +310,6 @@ type SoftwareVersion {
     """,
     columnName: "_id"
   )
-  tag: [String]
   version: String!
   hosts: [Host!]! @relationship(type: "ON", properties: "SoftwareOn", direction: OUT)
   network_services: [NetworkService!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
@@ -395,7 +394,6 @@ type ResolvesTo @relationshipProperties {
 type SoftwareOn @relationshipProperties {
   end: String
   start: String
-  tag: [String]
 }
 
 type NetworkServiceOn @relationshipProperties {
