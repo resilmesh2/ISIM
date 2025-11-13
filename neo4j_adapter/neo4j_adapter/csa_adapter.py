@@ -11,6 +11,11 @@ class CSAAdapter(GeneralAdapter):
         super().__init__(password=password, **kwargs)
 
     def store_criticality(self, json_string: str) -> None:
+        """
+        This method stores criticality of nodes computed from their missions.
+        :param json_string: contains list with items - IP, hostname, and criticality
+        :return: None
+        """
         query = (
             "WITH apoc.convert.fromJsonList($json_string) as value "
             "UNWIND value as result "
@@ -26,6 +31,11 @@ class CSAAdapter(GeneralAdapter):
         self._run_query(query, **params)
 
     def combine_criticality(self) -> None:
+        """
+        This method combines mission criticality, normalized degree centrality,
+        and normalized betweenness centrality into one value stored for nodes.
+        :return: None
+        """
         query = """
         MATCH (n:Node)
         WITH max(n.topology_betweenness) AS max_betweenness, min(n.topology_betweenness) AS min_betweenness,

@@ -14,6 +14,13 @@ from typing import Any
 
 
 def dec_hook_ip(type_: type[Any], obj: Any) -> Any:
+    """
+    This function processes IP types during decoding.
+    :param type_: IP type from IPv4Network, IPv6Network, IPv4Address, IPv6Address, IPv4Interface, IPv6Interface,
+    IPInterface, IPNetwork
+    :param obj: object to be decoded
+    :return: the decoded object
+    """
     if type_ in {IPv4Network, IPv6Network, IPv4Address, IPv6Address, IPv4Interface, IPv6Interface}:
         return type_(obj)
     if type_ is IPInterface:
@@ -24,6 +31,11 @@ def dec_hook_ip(type_: type[Any], obj: Any) -> Any:
 
 
 def enc_hook_ip(obj: Any) -> Any:
+    """
+    This function processes IP types during encoding.
+    :param obj: an object to be encoded
+    :return: the encoded object
+    """
     if isinstance(obj, IPv4Interface | IPv6Interface):
         return obj.ip.compressed
     if isinstance(obj, IPv4Address | IPv6Address):
