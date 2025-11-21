@@ -114,6 +114,25 @@ def easm(request: HttpRequest) -> Response:
         status=status.HTTP_201_CREATED,
     )
 
+@api_view(["POST"])
+def nmap_assets(request: HttpRequest) -> Response:
+    request_body = request.body
+    try:
+        data = msgspec.json.decode(request_body, type=AssetListInputDTO, dec_hook=dec_hook_ip)
+        data.flatten_related_relationships()
+        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        client.store_nmap_assets(json_string)
+    except ValidationError as e:
+        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    return Response(
+        "Processed successfully. If some assets support missions, use /missions endpoint to add descriptions of missions.",
+        status=status.HTTP_201_CREATED,
+    )
+
 
 @api_view(["GET"])
 def asset_info(request: HttpRequest) -> Response:
