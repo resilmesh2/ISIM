@@ -134,9 +134,9 @@ UNWIND input_.software_versions AS sw_versions
     MERGE (ip:IP {address: ip_address})
     MERGE (n:Node)-[:HAS_ASSIGNED]->(ip)
     MERGE (h:Host)<-[:IS_A]-(n)
-    WITH sw, ns, h
+    WITH DISTINCT sw, ns, h
     MERGE (sw)-[r3:ON]->(h)
-    WITH sw, ns, h
+    WITH DISTINCT sw, ns, h
     OPTIONAL MATCH (sw)-[r3:ON]->(h) WHERE r3.start IS NULL
     FOREACH(r in CASE WHEN r3 IS NULL THEN [r3] ELSE [] END |
       CREATE (sw)-[sw_h:ON]->(h)
@@ -144,7 +144,7 @@ UNWIND input_.software_versions AS sw_versions
     // set known status to all relationships including timestamped ones
     MERGE (ns)-[ns_h:ON]->(h)
       SET ns_h.status = "known"
-    WITH ns, h
+    WITH DISTINCT ns, h
     OPTIONAL MATCH (ns)-[r4:ON]->(h) WHERE r4.start IS NULL
     FOREACH(r in CASE WHEN r4 IS NULL THEN [r4] ELSE [] END |
       CREATE (ns)-[ns_h:ON {status: "known"}]->(h)
@@ -158,7 +158,7 @@ UNWIND input_.software_versions AS sw_versions
     MERGE (ip:IP {address: ip_address})
     MERGE (n:Node)-[:HAS_ASSIGNED]->(ip)
     MERGE (h:Host)<-[:IS_A]-(n)
-    WITH sw, h
+    WITH DISTINCT sw, h
     OPTIONAL MATCH (sw)-[r3:ON]->(h) WHERE r3.start IS NULL
     FOREACH(r in CASE WHEN r3 IS NULL THEN [r3] ELSE [] END |
       CREATE (sw)-[sw_h:ON]->(h)
@@ -173,6 +173,7 @@ UNWIND input_.software_versions AS sw_versions
     MERGE (ip:IP {address: ip_address})
     MERGE (n:Node)-[:HAS_ASSIGNED]->(ip)
     MERGE (h:Host)<-[:IS_A]-(n)
+    WITH DISTINCT ns, h
     // set known status to all relationships including timestamped ones
     MERGE (ns)-[ns_h:ON]->(h)
       SET ns_h.status = "known"

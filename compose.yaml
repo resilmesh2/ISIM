@@ -1,5 +1,6 @@
 services:
   resilmesh_sap_isim:
+    container_name: isim
     build:
       context: .
     ports:
@@ -14,6 +15,7 @@ services:
       - resilmesh_network
 
   resilmesh_sap_isim_graphql:
+    container_name: resilmesh_sap_isim_graphql
     build:
       context: isim_graphql
     ports:
@@ -30,6 +32,7 @@ services:
       - resilmesh_network
 
   resilmesh_sap_neo4j:
+    container_name: resilmesh_sap_neo4j
     image: neo4j:5.26.10
     environment:
       - NEO4J_AUTH=neo4j/supertestovaciheslo

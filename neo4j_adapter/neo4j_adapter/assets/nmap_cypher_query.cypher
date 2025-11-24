@@ -3,7 +3,7 @@ WITH apoc.convert.fromJsonMap($json_string) AS input_, datetime.truncate('second
 CALL (input_, scan_dt) {
   UNWIND input_.hosts AS hosts
   MERGE (ip:IP {address: hosts.ip_address})
-    ON CREATE SET ip.tag = hosts.tag
+    ON CREATE SET ip.tag = ["CASM"] + hosts.tag
     ON CREATE SET ip.status = "unknown"
     ON MATCH SET ip.tag = apoc.coll.toSet(ip.tag + hosts.tag)
     SET ip.version = hosts.version
@@ -32,7 +32,7 @@ CALL (input_, scan_dt) {
   UNWIND hosts.domain_names AS d // UPSERT DOMAINS RELATED TO IP, UPSERT RELATIONSHIPS
   MERGE (domain:DomainName {domain_name: d})
     ON CREATE SET domain.status = "unknown"
-    ON CREATE SET domain.tag = hosts.tag
+    ON CREATE SET domain.tag = ["CASM"] + hosts.tag
     ON MATCH SET domain.tag = apoc.coll.toSet(domain.tag + hosts.tag)
   WITH ip, domain
   OPTIONAL MATCH (ip)-[r2:RESOLVES_TO]-(domain) WHERE r2.start IS NOT NULL
@@ -134,13 +134,14 @@ UNWIND input_.software_versions AS sw_versions
     '
     MERGE (sw:SoftwareVersion {version: sw_versions.version})
     MERGE (ns:NetworkService {port: sw_versions.port, protocol: sw_versions.protocol, service: sw_versions.service})
-    SET ns.tag = sw_versions.tag
+    SET ns.tag = ["CASM"] + sw_versions.tag
     MERGE (sw)-[:PROVIDES]-(ns)
     WITH sw, ns, sw_versions, scan_dt
     UNWIND sw_versions.ip_addresses AS ip_address
     MERGE (ip:IP {address: ip_address})
-    MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
-    WITH sw, ns, h, scan_dt
+    MERGE (n:Node)-[:HAS_ASSIGNED]->(ip)
+    MERGE (h:Host)<-[:IS_A]-(n)
+    WITH DISTINCT sw, ns, h, scan_dt
     OPTIONAL MATCH (sw)-[r3:ON]->(h) WHERE r3.start IS NOT NULL
     FOREACH(r in CASE WHEN r3 IS NULL THEN [r3] ELSE [] END |
       MERGE (sw)-[sw_h:ON {start: scan_dt, end:scan_dt}]->(h)
@@ -148,7 +149,7 @@ UNWIND input_.software_versions AS sw_versions
     FOREACH(r IN CASE WHEN r3 IS NOT NULL THEN [r3] ELSE [] END |
       SET r.end = scan_dt
     )
-    WITH ns, h, scan_dt
+    WITH DISTINCT ns, h, scan_dt
     OPTIONAL MATCH (ns)-[r4:ON]->(h) WHERE r4.start IS NOT NULL
     FOREACH(r in CASE WHEN r4 IS NULL THEN [r4] ELSE [] END |
       MERGE (ns)-[ns_h:ON {start: scan_dt, end:scan_dt}]->(h)
@@ -157,7 +158,7 @@ UNWIND input_.software_versions AS sw_versions
     FOREACH(r IN CASE WHEN r4 IS NOT NULL THEN [r4] ELSE [] END |
       SET r.end = scan_dt
     )
-    WITH ns, h
+    WITH DISTINCT ns, h
     OPTIONAL MATCH (ns)-[r4:ON]->(h) WHERE r4.status = "known"
     FOREACH(r IN CASE WHEN r4 IS NOT NULL THEN [r4] ELSE [] END |
       MERGE (ns)-[r4:ON]->(h)
@@ -170,8 +171,9 @@ UNWIND input_.software_versions AS sw_versions
     WITH sw_versions, sw, scan_dt
     UNWIND sw_versions.ip_addresses AS ip_address
     MERGE (ip:IP {address: ip_address})
-    MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
-    WITH sw, h, scan_dt
+    MERGE (n:Node)-[:HAS_ASSIGNED]->(ip)
+    MERGE (h:Host)<-[:IS_A]-(n)
+    WITH DISTINCT sw, h, scan_dt
     OPTIONAL MATCH (sw)-[r3:ON]->(h) WHERE r3.start IS NOT NULL
     FOREACH(r in CASE WHEN r3 IS NULL THEN [r3] ELSE [] END |
       MERGE (sw)-[sw_h:ON {start: scan_dt, end:scan_dt}]->(h)
@@ -183,12 +185,13 @@ UNWIND input_.software_versions AS sw_versions
     sw_versions.port is not null and sw_versions.protocol is not null and sw_versions.service is not null,
     '
     MERGE (ns:NetworkService {port: sw_versions.port, protocol: sw_versions.protocol, service: sw_versions.service})
-    SET ns.tag = sw_versions.tag
+    SET ns.tag = ["CASM"] + sw_versions.tag
     WITH ns, sw_versions, scan_dt
     UNWIND sw_versions.ip_addresses AS ip_address
     MERGE (ip:IP {address: ip_address})
-    MERGE (h:Host)<-[:IS_A]-(n:Node)-[:HAS_ASSIGNED]->(ip)
-    WITH ns, h, scan_dt
+    MERGE (n:Node)-[:HAS_ASSIGNED]->(ip)
+    MERGE (h:Host)<-[:IS_A]-(n)
+    WITH DISTINCT ns, h, scan_dt
     OPTIONAL MATCH (ns)-[r4:ON]->(h) WHERE r4.start IS NOT NULL
     FOREACH(r in CASE WHEN r4 IS NULL THEN [r4] ELSE [] END |
       MERGE (ns)-[ns_h:ON {start: scan_dt, end:scan_dt}]->(h)
@@ -197,7 +200,7 @@ UNWIND input_.software_versions AS sw_versions
     FOREACH(r IN CASE WHEN r4 IS NOT NULL THEN [r4] ELSE [] END |
       SET r.end = scan_dt
     )
-    WITH ns, h
+    WITH DISTINCT ns, h
     OPTIONAL MATCH (ns)-[r4:ON]->(h) WHERE r4.status = "known"
     FOREACH(r IN CASE WHEN r4 IS NOT NULL THEN [r4] ELSE [] END |
       MERGE (ns)-[r4:ON]->(h)
