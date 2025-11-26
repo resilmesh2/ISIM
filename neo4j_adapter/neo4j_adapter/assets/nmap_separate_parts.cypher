@@ -17,7 +17,10 @@ CALL (input_, scan_dt) {
       MERGE (node)-[:HAS_ASSIGNED {start: scan_dt, end: scan_dt}]->(ip)
   )
   FOREACH(r IN CASE WHEN tmp_r1 IS NOT NULL THEN [tmp_r1] ELSE [] END |
-        SET r.end = scan_dt
+      FOREACH (inner_r IN CASE WHEN scan_dt - duration($rediscovery_time) > r.end AND ip.status = "known" THEN [r] ELSE [] END |
+        SET ip.status = "rediscovered"
+      )
+      SET r.end = scan_dt
   )
   MERGE (host:Host)<-[:IS_A]-(node) // MATCH NEW HOST BY IP ADDRESS
   FOREACH (s IN hosts.subnets |     // UPSERT SUBNETS THE IP IS PART OF, UPSERT RELATIONSHIPS
@@ -40,6 +43,9 @@ CALL (input_, scan_dt) {
     MERGE (ip)-[:RESOLVES_TO {start: scan_dt, end: scan_dt}]-(domain)
   )
   FOREACH(r IN CASE WHEN r2 IS NOT NULL THEN [r2] ELSE [] END |
+    FOREACH (inner_r IN CASE WHEN scan_dt - duration($rediscovery_time) > r.end AND domain.status = "known" THEN [r] ELSE [] END |
+        SET domain.status = "rediscovered"
+      )
     SET r.end = scan_dt
   )
 }
@@ -75,13 +81,11 @@ UNWIND input_.software_versions AS sw_versions
         ON CREATE SET ns_h.status = "unknown"
     )
     FOREACH(r IN CASE WHEN r4 IS NOT NULL THEN [r4] ELSE [] END |
+      FOREACH (inner_r IN CASE WHEN scan_dt - duration($rediscovery_time) > r.end AND r.status = "known" THEN [r] ELSE [] END |
+        MERGE (ns)-[inner_r4:ON]->(h)
+          SET inner_r4.status = "rediscovered"
+      )
       SET r.end = scan_dt
-    )
-    WITH DISTINCT ns, h
-    OPTIONAL MATCH (ns)-[r4:ON]->(h) WHERE r4.status = "known"
-    FOREACH(r IN CASE WHEN r4 IS NOT NULL THEN [r4] ELSE [] END |
-      MERGE (ns)-[r4:ON]->(h)
-        SET r4.status = "known"
     )
     ',
     sw_versions.version is not null,
@@ -119,13 +123,11 @@ UNWIND input_.software_versions AS sw_versions
         ON CREATE SET ns_h.status = "unknown"
     )
     FOREACH(r IN CASE WHEN r4 IS NOT NULL THEN [r4] ELSE [] END |
+      FOREACH (inner_r IN CASE WHEN scan_dt - duration($rediscovery_time) > r.end AND r.status = "known" THEN [r] ELSE [] END |
+        MERGE (ns)-[inner_r4:ON]->(h)
+          SET inner_r4.status = "rediscovered"
+      )
       SET r.end = scan_dt
-    )
-    WITH DISTINCT ns, h
-    OPTIONAL MATCH (ns)-[r4:ON]->(h) WHERE r4.status = "known"
-    FOREACH(r IN CASE WHEN r4 IS NOT NULL THEN [r4] ELSE [] END |
-      MERGE (ns)-[r4:ON]->(h)
-        SET r4.status = "known"
     )
     '
     ],

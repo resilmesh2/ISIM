@@ -4,6 +4,7 @@ from typing import Any, LiteralString, cast
 
 from neo4j_adapter.dtos import IPAssetInformationDTO
 from neo4j_adapter.general_adapter import GeneralAdapter
+from isim_rest.neo4j_rest.config import AppConfig as ISIMConfig
 
 BASE_DIR = Path(__file__).parent
 
@@ -203,8 +204,11 @@ class RESTAdapter(GeneralAdapter):
         self._default_subnet_parent_subnets_constraint()
 
     def store_nmap_assets(self, json_string: str) -> None:
+        config = ISIMConfig.get()
+        rediscovery_time = f"P{config.organization.rediscovery_time}D"
         query = Path(BASE_DIR / "assets/nmap_separate_parts.cypher").read_text()
-        params = {"json_string": json_string}
+        params = {"json_string": json_string,
+                  "rediscovery_time": rediscovery_time}
         query = cast("LiteralString", query)
         self._run_query(query, **params)
         self._store_common_assets(json_string)
@@ -218,8 +222,11 @@ class RESTAdapter(GeneralAdapter):
         self._run_query(query, **params)
 
     def store_easm(self, json_string: str) -> None:
+        config = ISIMConfig.get()
+        rediscovery_time = f"P{config.organization.rediscovery_time}D"
         query = Path(BASE_DIR / "assets/easm_cypher_query.cypher").read_text()
-        params = {"json_string": json_string}
+        params = {"json_string": json_string,
+                  "rediscovery_time": rediscovery_time}
         query = cast("LiteralString", query)
         self._run_query(query, **params)
 

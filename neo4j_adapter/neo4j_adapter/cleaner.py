@@ -1,12 +1,14 @@
 from typing import Any
 
 from neo4j_adapter.general_adapter import GeneralAdapter
+from isim_rest.neo4j_rest.config import AppConfig as ISIMConfig
 
 
 class Cleaner(GeneralAdapter):
     def __init__(self, password: str, **kwargs: Any) -> None:
         super().__init__(password=password, **kwargs)
-        self.duration = "P21D"
+        config = ISIMConfig.get()
+        self.duration = f"P{config.organization.rediscovery_time}D"
 
     def clean_old_vulnerabilities(self) -> None:
         query = """CALL apoc.periodic.commit('

@@ -3,6 +3,5 @@ hosts:
   - ip_address: "127.0.0.1"
     domain_names: ["test.cz"]
     subnets: ["127.0.0.0/24"]
-asset_lifecycle:
-  - cleaning_time: 90
-    rediscovery_time: 30
+cleaning_time: 90
+rediscovery_time: 30
