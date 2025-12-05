@@ -36,7 +36,7 @@ docker compose up -d --build
 
 # Configuration
 Configuration files are located in the [config](config) folder. Currently, the project provides configuration file
-for local (`config.ini`) and dockerized (`config_docker.ini`) deployment. 
+for local (`config.yaml`) and dockerized (`config_docker.yaml`) deployment. 
 
 The configuration is rather simple, the ini files contain a single section
 

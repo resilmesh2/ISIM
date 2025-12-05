@@ -1,4 +1,4 @@
-from configparser import ConfigParser
+import yaml
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,7 +10,7 @@ CONF_DIR = BASE_DIR.parent / "config"
 @dataclass
 class Neo4jConfig:
     password: str
-    bolt: str = "bolt://localhost:7687"
+    bolt: str = "bolt://resilmesh_sap_neo4j:7687"
     user: str = "neo4j"
 
 
@@ -24,10 +24,12 @@ class AppConfig:
 
     @classmethod
     def get(cls, config_path: Path | None = None) -> Config:
-        config_parser = ConfigParser()
         if cls._config is None:
-            if config_path is None:  # pragma: no cover
-                config_path = CONF_DIR / "conf.ini"
-            config_parser.read(config_path)
-            cls._config = Config(neo4j_config=Neo4jConfig(**dict(config_parser["neo4j_config"])))
+            if config_path is None:
+                config_path = CONF_DIR / "conf.yaml"
+            
+            with open(config_path, 'r') as file:
+                config_data = yaml.safe_load(file)
+            
+            cls._config = Config(neo4j_config=Neo4jConfig(**config_data["neo4j_config"]))
         return cls._config
