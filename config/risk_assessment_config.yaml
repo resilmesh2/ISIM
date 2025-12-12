@@ -1,0 +1,65 @@
+active_automations: {}
+active_formula:
+  name: balanced_security
+  type: predefined
+available_components:
+  criticality:
+    description: Network centrality-based asset importance
+    icon: "\U0001F3AF"
+    max_value: 10
+    min_value: 0
+    name: Asset Criticality
+    neo4j_property: criticality
+    type: centrality
+  cvss_score:
+    description: National Vulnerability Database vulnerability severity scores
+    icon: "\U0001F513"
+    max_value: 10
+    min_value: 0
+    name: CVSS Vulnerability Score
+    neo4j_property: cvss_score
+    type: vulnerability
+  threatScore:
+    description: Wazuh-based active threat detection
+    icon: "\u26A0\uFE0F"
+    max_value: 10
+    min_value: 0
+    name: Threat Detection Score
+    neo4j_property: threatScore
+    type: threat
+custom_formulas: {}
+execution_settings:
+  max_retries: 3
+  retry_delay_minutes: 10
+  timeout_minutes: 60
+last_risk_calculation:
+  applied_to: 'network: 127.0'
+  average_risk_score: 0.0
+  calculation_method: weighted_avg
+  calculation_mode: calculate
+  components:
+    Asset Criticality:
+      value: 5
+      weight: 0.33
+    CVSS Vulnerability Score:
+      value: 5
+      weight: 0.33
+    Threat Detection Score:
+      value: 5
+      weight: 0.34
+  custom_formula: ''
+  formula_name: Custom Formula
+  nodes_updated: 1
+  target_property: Risk Score
+  timestamp: '2025-10-26T16:33:48.249547'
+  update_frequency: hourly
+predefined_formulas:
+  balanced_security:
+    components:
+      criticality: 0.33
+      cvss_score: 0.33
+      threatScore: 0.34
+    created_by: system
+    created_date: '2025-07-30'
+    description: Equal weight across core security factors
+    name: Balanced Security Assessment

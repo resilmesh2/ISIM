@@ -2,7 +2,7 @@ import neo4j from "neo4j-driver";
 import { toGraphQLTypeDefs } from "@neo4j/introspector";
 import {writeFile} from 'fs';
 
-const uri = "bolt://localhost:7687";
+const uri = "bolt://resilmesh_sap_neo4j:7687";
 const user = "neo4j";
 const password = "supertestovaciheslo";
 
