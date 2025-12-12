@@ -37,6 +37,107 @@ type Contact {
   subnets: [Subnet!]! @relationship(type: "HAS", direction: IN)
 }
 
+type CVSSv2 {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
+
+  vector_string: String
+  access_vector: String
+  access_complexity: String
+  authentication: String
+  confidentiality_impact: String
+  integrity_impact: String
+  availability_impact: String
+  base_score: Float
+  base_severity: String
+  exploitability_score: Float
+  impact_score: Float
+  ac_insuf_info: Boolean
+  obtain_all_privilege: Boolean
+  obtain_user_privilege: Boolean
+  obtain_other_privilege: Boolean
+  user_interaction_required: Boolean
+}
+
+type CVSSv30 {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
+
+  vector_string: String
+  attack_vector: String
+  attack_complexity: String
+  privileges_required: String
+  user_interaction: String
+  scope: String
+  confidentiality_impact: String
+  integrity_impact: String
+  availability_impact: String
+  base_score: Float
+  base_severity: String
+  exploitability_score: Float
+  impact_score: Float
+}
+
+type CVSSv31 {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
+
+  vector_string: String
+  attack_vector: String
+  attack_complexity: String
+  privileges_required: String
+  user_interaction: String
+  scope: String
+  confidentiality_impact: String
+  integrity_impact: String
+  availability_impact: String
+  base_score: Float
+  base_severity: String
+  exploitability_score: Float
+  impact_score: Float
+}
+
+type CVSSv40 {
+  _id: ID! @cypher(
+    statement: """
+        MATCH (this)
+        RETURN toString(ID(this)) AS _id
+    """,
+    columnName: "_id"
+  )
+
+  vector_string: String
+  attack_vector: String
+  attack_complexity: String
+  attack_requirements: String
+  privileges_required: String
+  user_interaction: String
+  vulnerable_system_confidentiality: String
+  vulnerable_system_integrity: String
+  vulnerable_system_availability: String
+  subsequent_system_confidentiality: String
+  subsequent_system_integrity: String
+  subsequent_system_availability: String
+  base_score: Float
+  base_severity: String
+  exploit_maturity: String
+}
+
 type CVE {
   _id: ID! @cypher(
     statement: """
@@ -45,78 +146,22 @@ type CVE {
     """,
     columnName: "_id"
   )
+
   cve_id: String!
-  cwe: [String]!
   description: String!
-  impact: [String]!
+  cwe: [String]
+  cpe_type: [String]!
+  ref_tags: [String]
   published: String!
-  # patched: String
-  ref_tags: [String]!
-  # Properties from CVSS v2
-  access_complexity_v2: String
-  access_vector_v2: String
-  authentication_v2: String
-  availability_impact_v2: String
-  confidentiality_impact_v2: String
-  integrity_impact_v2: String
-  base_score_v2: Float
-  obtain_all_privilege_v2: Boolean
-  obtain_other_privilege_v2: Boolean
-  obtain_user_privilege_v2: Boolean
-  # Properties from CVSS v3.0
-  attack_complexity_v30: String
-  attack_vector_v30: String
-  availability_impact_v30: String
-  base_score_v30: Float
-  confidentiality_impact_v30: String
-  integrity_impact_v30: String
-  privileges_required_v30: String
-  scope_v30: String
-  user_interaction_v30: String
-  # Properties from CVSS v3.1
-  attack_vector_v31: String
-  attack_complexity_v31: String
-  privileges_required_v31: String
-  user_interaction_v31: String
-  scope_v31: String
-  confidentiality_impact_v31: String
-  integrity_impact_v31: String
-  availability_impact_v31: String
-  base_score_v31: Float
-  # Properties from CVSS v4.0
-  attack_vector_v40: String
-  attack_complexity_v40: String
-  attack_requirements_v40: String
-  privileges_required_v40: String
-  user_interaction_v40: String
-  vulnerable_system_confidentiality_v40: String
-  vulnerable_system_integrity_v40: String
-  vulnerable_system_availability_v40: String
-  subsequent_system_confidentiality_v40: String
-  subsequent_system_integrity_v40: String
-  subsequent_system_availability_v40: String
-  base_score_v40: Float
-  # vendor_description: String
+  last_modified: String!
+  result_impacts: [String]
+
+
   vulnerability: Vulnerability! @relationship(type:  "REFERS_TO", direction: IN)
-  # Other possible properties:
-  #  vector_string_v2
-  #  base_severity_v2
-  #  exploitability_score_v2
-  #  impact_score_v2
-  #  ac_insuf_info_v2
-  #  user_interaction_required_v2
-  #  vector_string_v30
-  #  base_severity_v30
-  #  exploitability_score_v30
-  #  impact_score_v30
-  #  vector_string_v31
-  #  base_severity_v31
-  #  exploitability_score_v31
-  #  impact_score_v31
-  #  vector_string_v40
-  #  base_severity_v40
-  #  cpe_type
-  #  last_modified
+  cvss_v2: CVSSv2 @relationship(type: "HAS_CVSS_v2", direction: OUT)
+  cvss_v30: CVSSv30 @relationship(type: "HAS_CVSS_v30", direction: OUT)
+  cvss_v31: CVSSv31 @relationship(type: "HAS_CVSS_v31", direction: OUT)
+  cvss_v40: CVSSv40 @relationship(type: "HAS_CVSS_v40", direction: OUT)
 }
 
 type Device {
@@ -188,7 +233,7 @@ type IP {
   tag: [String]
   domain_names: [DomainName!]! @relationship(type:  "RESOLVES_TO", properties: "ResolvesTo", direction: OUT)
   uris: [URI!]! @relationship(type: "IDENTIFIES", direction: OUT)
-  nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", direction: IN)
+  nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", properties: "HasAssigned", direction: IN)
   subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: OUT)
 }
 
@@ -216,7 +261,15 @@ type NodeObject @node(labels: "Node") {
     """,
     columnName: "_id"
   )
-  ips: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT)
+  degree_centrality: Float
+  pagerank_centrality: Float
+  topology_betweenness: Float
+  topology_degree: Float
+  topology_degree_norm: Float
+  topology_betweenness_norm: Float
+  mission_criticality: Float
+  final_criticality: Float
+  ips: [IP!]! @relationship(type:  "HAS_ASSIGNED", direction: OUT, properties: "HasAssigned")
   host: Host @relationship(type:  "IS_A", direction: OUT)
   is_dependent_on_nodes: [NodeObject!]! @relationship(type:  "IS_DEPENDENT_ON", direction: OUT)
   is_connected_to_nodes: [NodeObject!]! @relationship(type:  "IS_CONNECTED_TO", direction: OUT)
@@ -232,7 +285,9 @@ type OrganizationUnit {
   )
   name: String!
   subnets: [Subnet!]! @relationship(type:  "PART_OF", direction: IN)
-  physical_environments: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT)
+  physical_environments: [PhysicalEnvironment!]! @relationship(type: "TENANTS", direction: OUT),
+  parent_org_unit: [OrganizationUnit!]! @relationship(type: "PART_OF", direction: OUT)
+  contacts: [Contact!]! @relationship(type: "HAS", direction: OUT)
 }
 
 type PhysicalEnvironment {
@@ -255,7 +310,7 @@ type SoftwareVersion {
     """,
     columnName: "_id"
   )
-  tag: [String]!
+  tag: [String]
   version: String!
   hosts: [Host!]! @relationship(type: "ON", properties: "SoftwareOn", direction: OUT)
   network_services: [NetworkService!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
@@ -273,6 +328,7 @@ type Subnet {
   note: String
   range: String!
   org_units: [OrganizationUnit!]! @relationship(type:  "PART_OF", direction: OUT)
+  parent_subnet: [Subnet!]! @relationship(type:  "PART_OF", direction: OUT)
   contacts: [Contact!]! @relationship(type: "HAS", direction: OUT)
 }
 
@@ -284,7 +340,10 @@ type Mission {
     """,
     columnName: "_id"
   )
-  criticality: Int!
+  criticality: Int
+  confidentiality_requirement: Int
+  integrity_requirement: Int
+  availability_requirement: Int
   description: String!
   name: String!
   structure: String!
@@ -343,4 +402,127 @@ type NetworkServiceOn @relationshipProperties {
   end: String
   start: String
   tag: [String]
+}
+
+type HasAssigned @relationshipProperties {
+    start: String,
+    end: String
+}
+
+type Mutation {
+    linkSubnetToParent(subnetRange: String!, parentSubnetRange: String!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange}), (p:Subnet {range: $parentSubnetRange})
+          CREATE (s)-[:PART_OF]->(p)
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    linkSubnetToOrgUnit(subnetRange: String!, orgUnitName: String!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange}), (o:OrganizationUnit {name: $orgUnitName})
+          CREATE (s)-[:PART_OF]->(o)
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    mergeSubnetWithContacts(subnetRange: String!, contactNames: [String!]!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange})
+          UNWIND $contactNames AS contact_name
+          MERGE (c:Contact {name: contact_name})
+          MERGE (s)-[:HAS]->(c)
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    unlinkSubnetFromParent(subnetRange: String!, parentRange: String!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange})-[r:PART_OF]->(oldParent:Subnet)
+          DELETE r
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    unlinkSubnetFromOrgUnit(subnetRange: String!, orgUnitName: String!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange})-[r:PART_OF]->(oldOrgUnit:OrganizationUnit)
+          DELETE r
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    unlinkSubnetFromContacts(subnetRange: String!, contactNames: [String!]!): Subnet
+      @cypher(
+        statement: """
+          MATCH (s:Subnet {range: $subnetRange})
+          UNWIND $contactNames AS contact_name
+          MATCH (c:Contact {name: contact_name})
+          MATCH (s)-[r:HAS]->(c)
+          DELETE r
+          RETURN s
+        """,
+        columnName: "s"
+    )
+
+    linkOrgUnitToParentOrg(orgUnitName: String!, parentOrgUnitName: String!): OrganizationUnit
+      @cypher(
+        statement: """
+          MATCH (org:OrganizationUnit {name: $orgUnitName}), (parent:OrganizationUnit {name: $parentOrgUnitName})
+          CREATE (org)-[:PART_OF]->(parent)
+          RETURN org
+        """,
+        columnName: "org"
+    )
+
+    mergeOrgUnitWithContacts(orgUnitName: String!, contactNames: [String!]!): OrganizationUnit
+      @cypher(
+        statement: """
+          MATCH (org:OrganizationUnit {name: $orgUnitName})
+          UNWIND $contactNames AS contact_name
+          MERGE (c:Contact {name: contact_name})
+          MERGE (org)-[:HAS]->(c)
+          RETURN org
+        """,
+        columnName: "org"
+    )
+
+    unlinkOrgUnitFromParents(orgUnitName: String!): OrganizationUnit
+      @cypher(
+        statement: """
+          MATCH (org:OrganizationUnit {name: $orgUnitName})-[r:PART_OF]->(oldParent:OrganizationUnit)
+          DELETE r
+          RETURN org
+        """,
+        columnName: "org"
+    )
+
+    unlinkOrgUnitFromContacts(orgUnitName: String!, contactNames: [String!]!): OrganizationUnit
+      @cypher(
+        statement: """
+          MATCH (org:OrganizationUnit {name: $orgUnitName})
+          UNWIND $contactNames AS contact_name
+          MATCH (c:Contact {name: contact_name})
+          MATCH (org)-[r:HAS]->(c)
+          DELETE r
+          RETURN org
+        """,
+        columnName: "org"
+    )
+
+    updateIPTag(address: String!, tag: [String]!): IP
+      @cypher(
+        statement: "MATCH (ip:IP {address: $address}) SET ip.tag = $tag RETURN ip",
+        columnName: "ip"
+      )
 }

@@ -1,5 +1,5 @@
 from ipaddress import IPv4Interface, IPv4Network, IPv6Interface, IPv6Network
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import msgspec
 from msgspec import field
@@ -78,6 +78,19 @@ class OrgUnitDTO(msgspec.Struct):
     parents: list[str] = field(default_factory=list)
 
 
+class EasmDTO(msgspec.Struct):
+    port: str
+    protocol: str
+    service: str
+    ip: IP_TYPE | None = None
+    domain_name: str | None = None
+    software_versions: list[dict[str, str]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.ip is None and self.domain_name is None:
+            raise ValueError("Either IP or domain is necessary!")
+
+
 class AssetListInputDTO(msgspec.Struct):
     hosts: list[HostDTO] = field(default_factory=list)
     subnets: list[SubnetDTO] = field(default_factory=list)
@@ -115,11 +128,14 @@ class AssetListInputDTO(msgspec.Struct):
         self.subnets += [SubnetDTO(ip_range=s) for s in related_undeclared_subnets if s]
 
 
-class MissionDTO(msgspec.Struct):
+class MissionDTO(msgspec.Struct, forbid_unknown_fields=True, omit_defaults=True):
     id: int
     name: str
-    criticality: int
+    criticality: int | None = None
     description: str | None = None
+    confidentiality_requirement: int | None = None
+    integrity_requirement: int | None = None
+    availability_requirement: int | None = None
 
 
 class ServiceDTO(msgspec.Struct):
@@ -166,7 +182,7 @@ class UndirectedRelationshipDTO[T](msgspec.Struct):
 class RelationshipDTO(msgspec.Struct):
     one_way: list[DirectedRelationshipDTO[int]] = field(default_factory=list)
     two_way: list[UndirectedRelationshipDTO[int]] = field(default_factory=list)
-    dependencies: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
+    dependencies: list[DirectedRelationshipDTO[int]] = field(default_factory=list)
     supports: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
     has_identity: list[DirectedRelationshipDTO[str]] = field(default_factory=list)
 
@@ -174,3 +190,23 @@ class RelationshipDTO(msgspec.Struct):
 class MissionListInputDTO(msgspec.Struct):
     nodes: NodeMissionDTO
     relationships: RelationshipDTO
+
+
+class NmapTopologyDTO(msgspec.Struct):
+    data: list[dict[str, Any]]
+    time: str
+
+
+class MissionCriticalityDTO(msgspec.Struct):
+    ip: IP_TYPE = field(name="ip")
+    hostname: str = field(name="hostname")
+    criticality: float = field(name="criticality")
+
+
+class SLPEnrichmentDTO(msgspec.Struct):
+    domain: str = field(name="domain")
+    ip: IP_TYPE = field(name="ip")
+    # str for sp_risk_score is used for "null" value that must be passed to Neo4j as string
+    sp_risk_score: int | str = field(name="sp_risk_score")
+    subnet: IP_NET_TYPE = field(name="subnet")
+    tag: str = field(name="tag")

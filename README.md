@@ -6,6 +6,7 @@ This repository consists of three subcomponents:
 * GraphQL subcomponent in the folder `isim_graphql`.
 
 Database adapter is intended to be an installable package, hence it contains poetry files.
+It contains a cleaner that can be executed according to instructions in the adapter's README.md.
 
 For more details, please, see README.md files in subcomponents.
 
@@ -40,16 +41,28 @@ for local (`config.yaml`) and dockerized (`config_docker.yaml`) deployment.
 
 The configuration is rather simple, the ini files contain a single section
 
-```ini
-[neo4j_config]
-bolt = bolt://localhost:7687
-user = neo4j
-password = supertestovaciheslo
+```yaml
+neo4j:
+  password: supertestovaciheslo
+  bolt: bolt://neo4j:7687
+  user: neo4j
 ```
 
 - bolt: URI of the Neo4j database
 - user: user in the Neo4j database
 - password: password to Neo4j database
+
+Another configuration file (`config_organization.yml`) in the same folder defines constituency of users.
+Its default version contains a name of organization, and hosts described by their IP addresses, domain names, 
+and subnets: 
+
+```yaml
+name: "test"
+hosts:
+  - ip_address: "127.0.0.1"
+    domain_names: ["test.cz"]
+    subnets: ["127.0.0.0/24"]
+```
 
 # How to work with the application
 
@@ -182,23 +195,29 @@ are also other endpoints allowing to query returning information directly from N
 
 Example of the `/asset_info` output (corresponding to the input above):
 ```json
-[
-	{
-		"ip": "10.0.0.1",
-		"domain_names": [
-			"test.com"
-		],
-		"subnets": [
-			"10.0.0.0/16"
-		],
-		"contacts": [
-			"test@test.test"
-		],
-		"missions": [
-			"Public-Facing Services"
-		],
-		"critical": 1
-	}
+[ 
+    {
+        "ip": "10.0.0.1", 
+        "domain_names": [
+            "test.com"
+        ], 
+        "subnets": [
+            "10.0.0.0/16"
+        ], 
+        "contacts": [
+            "test@test.test"
+        ], 
+        "missions": [
+            "Public-Facing Services"
+        ], 
+        "nodes": [{
+            "degree_centrality": null, 
+            "pagerank_centrality": null, 
+            "topology_degree": null, 
+            "topology_betweenness": null
+        }], 
+        "critical": 1
+    }
 ]
 ```
 
@@ -308,3 +327,18 @@ Tests are available in `isim_rest/test` folder.
 Test data contain example inputs for `/assets` and `/missions` endpoints.
 Tests were executed using `python manage.py test` inside `isim` container
 after connecting to it using `sudo docker exec -it <container_id> bash`.
+
+# Versions Used During Testing
+ISIM was successfully tested with the following OS configurations and docker versions. 
+Versions of software packages can be found in `poetry.lock` and `pyproject.toml` files.
+These versions of software packages are automatically deployed when docker is used according to 
+instructions from this README.md file.
+
+|Operating System|Docker Version|Docker Compose Version| Memory   |CPU Architecture|Number of Cores|
+|----------------|--------------|----------------------|----------|----------------|---------------|
+|Ubuntu 24.04.2 LTS|28.0.4|v2.34.0| 32.0 GiB |x86_64|16 cores|
+|Ubuntu 24.04.1 LTS|26.1.3|v2.14.0| 32.0 GiB |x86_64|6 cores|
+|Ubuntu 22.04.5 LTS|28.0.4|v2.34.0| 64.0 GiB |x86_64|16 cores|
+
+# Guidelines for Defining Missions
+Guidelines on how to define missions are listed in [mission guidelines](docs/mission_guidelines.md).

@@ -1,0 +1,5 @@
+name: "test"
+hosts:
+  - ip_address: "127.0.0.1"
+    domain_names: ["test.cz"]
+    subnets: ["127.0.0.0/24"]

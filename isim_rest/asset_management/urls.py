@@ -29,6 +29,15 @@ urlpatterns = [
     path("org-units", views.org_units, name="org-units"),
     path("applications", views.applications, name="applications"),
     path("cves", views.cves, name="cves"),
+    path("ip-hierarchy-sync", views.ip_hierarchy_sync, name="ip-hierarchy-sync"),
     re_path(r"^cve/(?P<cve_id>CVE-\d{4}-\d{4,7})$", views.cve, name="cve"),
     re_path(r"^ip/(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/cve", views.ip_cves, name="ip_cves"),
+    # endpoints for temporal workflows from CASM
+    path("easm", views.easm, name="easm"),
+    path("traceroute", views.traceroute, name="traceroute"),
+    path("nodes/betweenness_centrality", views.betweenness_centrality, name="betweenness_centrality"),
+    path("nodes/degree_centrality", views.degree_centrality, name="degree_centrality"),
+    path("nodes/store_criticality", views.store_criticality, name="store_criticality"),
+    path("nodes/combine_criticality", views.combine_criticality, name="combine_criticality"),
+    path("slp_enrichment", views.slp_enrichment, name="slp_enrichment"),
 ]
