@@ -2301,16 +2301,23 @@ def execute_cvss_calculation():
     """Execute CVSS score calculation - queries existing CVE data"""
     try:
         logger.info("Executing CVSS score calculation")
-        
+
         set_cvss_query = """
         MATCH (n:Node)-[:IS_A]->(h:Host)
-              <-[:ON]-(sv:SoftwareVersion)
-              <-[:IN]-(v:Vulnerability)
-              -[:REFERS_TO]->(c:CVE)
-        WHERE c.base_score_v3 IS NOT NULL
-        WITH n, avg(c.base_score_v3) AS avgCvss
+            <-[:ON]-(sv:SoftwareVersion)
+            <-[:IN]-(v:Vulnerability)
+            -[:REFERS_TO]->(c:CVE)
+        WITH n, COLLECT {
+        MATCH (c)-[:HAS_CVSS_v31]->(cvss_v31:CVSSv31)
+        RETURN cvss_v31.base_score as base_score
+        UNION
+        MATCH (c)-[:HAS_CVSS_v30]->(cvss_v30:CVSSv30)
+        RETURN cvss_v30.base_score as base_score
+        } AS base_score
+        UNWIND base_score as bs
+        WITH n, avg(bs) AS avgCvss
         SET n.cvss_score = avgCvss
-        RETURN count(n) AS nodesUpdated,
+        RETURN count(n)            AS nodesUpdated,
                round(avg(avgCvss),2) AS globalAverageCvss
         """
         

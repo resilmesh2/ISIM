@@ -5,9 +5,9 @@ services:
       context: .
     ports:
       - 8000:8000
-    depends_on:
-      resilmesh_sap_isim_neo4j:
-        condition: service_healthy
+#    depends_on:
+#      resilmesh_sap_neo4j:
+#        condition: service_healthy
     volumes:
       - ./config/config_docker.yaml:/app/config/conf.yaml
     restart: unless-stopped
@@ -20,11 +20,11 @@ services:
       context: isim_graphql
     ports:
       - 4001:4001
-    depends_on:
-      resilmesh_sap_isim_neo4j:
-        condition: service_healthy
+#    depends_on:
+#      resilmesh_sap_neo4j:
+#        condition: service_healthy
     environment:
-      - NEO4J_URI=bolt://resilmesh_sap_isim_neo4j:7687
+      - NEO4J_URI=bolt://resilmesh_sap_neo4j:7687
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=supertestovaciheslo
     restart: unless-stopped
@@ -38,12 +38,12 @@ services:
       dockerfile: Dockerfile.automation
     ports:
       - "5000:5000"
-    depends_on:
-      resilmesh_sap_isim_neo4j:
-        condition: service_healthy
+#    depends_on:
+#      resilmesh_sap_neo4j:
+#        condition: service_healthy
     environment:
       - TEMPORAL_URL=resilmesh_sap_wo_temporal:7233
-      - NEO4J_URI=bolt://resilmesh_sap_isim_neo4j:7687
+      - NEO4J_URI=bolt://resilmesh_sap_neo4j:7687
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=supertestovaciheslo
     volumes:
@@ -54,8 +54,8 @@ services:
       - resilmesh_network
     restart: unless-stopped
     
-  resilmesh_sap_isim_neo4j:
-    container_name: resilmesh_sap_isim_neo4j
+  resilmesh_sap_neo4j:
+    container_name: resilmesh_sap_neo4j
     image: neo4j:5.26.1
     environment:
       - NEO4J_AUTH=neo4j/supertestovaciheslo
@@ -84,7 +84,7 @@ services:
     restart: unless-stopped
 
 #  neo4j_load_data:
-#    image: neo4j:5.21.0
+#    image: neo4j:5.26.1
 #    environment:
 #      - NEO4J_AUTH=neo4j/supertestovaciheslo
 #    volumes:
@@ -99,10 +99,10 @@ services:
 # To work together, do not deploy neo4j and neo4j_load_data from this compose and uncomment
 # the external option
 
-networks:
-  resilmesh_network:
-    name: resilmesh_network
-    external: false
-
-volumes:
-  resilmesh_sap_isim_neo4j_data:
+#volumes:
+#  resilmesh_sap_isim_neo4j_data:
+#
+#networks:
+#  resilmesh_network:
+#    external: true
+#    name: resilmesh_network
