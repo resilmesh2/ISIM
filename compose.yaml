@@ -36,8 +36,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.automation
-    ports:
-      - "5000:5000"
+    expose:
+      - 5000
     depends_on:
       resilmesh_sap_neo4j:
         condition: service_healthy
@@ -100,8 +100,8 @@ services:
 # To work together, do not deploy neo4j and neo4j_load_data from this compose and uncomment
 # the external option
 
-#volumes:
-#  resilmesh_sap_isim_neo4j_data:
+volumes:
+  resilmesh_sap_isim_neo4j_data:
 #
 #networks:
 #  resilmesh_network:
