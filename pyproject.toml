@@ -20,6 +20,7 @@ django-stubs = "^5.0.4"
 structlog = "^24.4.0"
 django-cors-headers = "^4.8.0"
 pytest = "^8.4.1"
+whitenoise = "^6.7.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = ">=0.0.261"
