@@ -36,8 +36,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.automation
-    expose:
-      - 5000
+    ports:
+      - 5000:5000
     depends_on:
       resilmesh_sap_neo4j:
         condition: service_healthy

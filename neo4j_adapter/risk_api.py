@@ -18,7 +18,7 @@ import asyncio
 
 app = Flask(__name__)
 CORS(app, 
-     origins=['http://localhost:4201', 'http://localhost:3000','http://localhost:5000' '*'],  # Angular dev server + Node.js
+     origins=['http://localhost:4201', 'http://localhost:3000','http://resilmesh_sap_isim_automation:5000' '*'],  # Angular dev server + Node.js
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
      allow_headers=['Content-Type', 'Authorization'],
      supports_credentials=True)
@@ -1360,7 +1360,7 @@ def apply_risk_configuration():
                 'automation_id': automation_id,
                 'formula_name': formula_name,
                 'update_frequency': update_frequency,
-                'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://localhost:5000')}/api/automations/execute/{automation_id}"
+                'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://resilmesh_sap_isim_automation:5000')}/api/automations/execute/{automation_id}"
             }
             
             try:
@@ -1961,7 +1961,7 @@ def start_component_schedule():
             'component_id': component_id,
             'component_name': data.get('component_name'),
             'neo4j_property': data.get('neo4j_property'),
-            'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://localhost:5000')}/api/components/execute/{component_id}",
+            'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://resilmesh_sap_isim_automation:5000')}/api/components/execute/{component_id}",
             'update_frequency': update_frequency
         }
         
@@ -2100,7 +2100,7 @@ def update_component_schedule(component_id):
                 'component_id': component_id,
                 'component_name': data.get('component_name'),
                 'neo4j_property': data.get('neo4j_property'),
-                'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://localhost:5000')}/api/components/execute/{component_id}",
+                'execution_endpoint': f"{os.getenv('RISK_API_URL', 'http://resilmesh_sap_isim_automation:5000')}/api/components/execute/{component_id}",
                 'update_frequency': new_frequency
             }
             
