@@ -36,7 +36,7 @@ NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "supertestovaciheslo")
 
 # OpenSearch connection from .env
-OS_HOST = os.getenv("OS_HOST", "https://resilmesh_tap_wazuh_indexer:9200")
+OS_HOST = os.getenv("OS_HOST", "https://resilmesh-tap-wazuh-indexer:9200")
 OS_USER = os.getenv("OS_USER", "admin")
 OS_PASSWORD = os.getenv("OS_PASSWORD", "SecretPassword")
 OS_INDEX = os.getenv("OS_INDEX", "wazuh-alerts-*")
