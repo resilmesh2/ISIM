@@ -1,6 +1,7 @@
 services:
   resilmesh_sap_isim:
     container_name: resilmesh_sap_isim
+    hostname: resilmesh-sap-isim
     build:
       context: .
     ports:
@@ -16,6 +17,7 @@ services:
 
   resilmesh_sap_isim_graphql:
     container_name: resilmesh_sap_isim_graphql
+    hostname: resilmesh-sap-isim-graphql
     build:
       context: isim_graphql
     ports:
