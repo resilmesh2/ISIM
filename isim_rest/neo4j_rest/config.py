@@ -13,7 +13,7 @@ CONF_DIR = BASE_DIR.parent / "config"
 @dataclass
 class Neo4jConfig:
     password: str
-    bolt: str = "bolt://resilmesh_sap_neo4j:7687"
+    bolt: str = "bolt://resilmesh-sap-neo4j:7687"
     user: str = "neo4j"
 
 

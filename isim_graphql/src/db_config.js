@@ -1,5 +1,5 @@
 export const databaseConfig = {
-  uri: "bolt://resilmesh_sap_neo4j:7687",
+  uri: "bolt://resilmesh-sap-neo4j:7687",
   user: "neo4j",
   password: "supertestovaciheslo",
 };

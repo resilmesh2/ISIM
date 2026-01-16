@@ -240,7 +240,7 @@ components:
           type: array
           items:
             type: string
-          example: ["resilmesh_sap_neo4j", "mandatory"]
+          example: ["resilmesh-sap-neo4j", "mandatory"]
       required:
         - ip_address
     Subnet:

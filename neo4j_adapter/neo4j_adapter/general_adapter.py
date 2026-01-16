@@ -10,7 +10,7 @@ class GeneralAdapter:
     def __init__(
         self,
         password: str,
-        bolt: str = "bolt://resilmesh_sap_neo4j:7687",
+        bolt: str = "bolt://resilmesh-sap-neo4j:7687",
         user: str = "neo4j",
         driver: Driver | None = None,
         lifetime: int = 200,
