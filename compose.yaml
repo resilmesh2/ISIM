@@ -37,7 +37,7 @@ services:
     container_name: resilmesh-sap-isim-automation
     build:
       context: .
-      dockerfile: Dockerfile.automation
+      dockerfile: automation.Dockerfile
     ports:
       - 5000:5000
     depends_on:
