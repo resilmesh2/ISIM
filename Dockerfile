@@ -11,8 +11,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 - && \
 
 COPY . .
 COPY pyproject.toml poetry.lock ./
-RUN . /venv/bin/activate && ~/.local/bin/poetry install --no-root --only main
-
+RUN . /venv/bin/activate && ~/.local/bin/poetry install --no-root --only main && \
+    /venv/bin/python /app/isim_rest/manage.py collectstatic --noinput
 FROM python:3.12-slim-bookworm AS runtime
 ENV VIRTUAL_ENV=/venv \
 	PATH=/venv/bin:$PATH \

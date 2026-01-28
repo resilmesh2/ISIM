@@ -13,4 +13,4 @@ crontab -l
 service cron start
 
 # Start Flask API
-exec /usr/local/bin/python /app/risk_api.py
+exec /venv/bin/python /app/risk_api.py
