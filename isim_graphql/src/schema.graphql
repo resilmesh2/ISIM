@@ -385,6 +385,7 @@ type Vulnerability {
   description: String!
   software_versions: [SoftwareVersion!]! @relationship(type:  "IN", direction: OUT)
   cve: CVE @relationship(type:  "REFERS_TO", direction: OUT)
+  status: String
 }
 
 type ResolvesTo @relationshipProperties {
