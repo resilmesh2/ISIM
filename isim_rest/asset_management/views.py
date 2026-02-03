@@ -58,7 +58,7 @@ def get_offset(request: HttpRequest) -> int:
 
 # RED and BLUE LAYERS
 @api_view(["GET", "POST"])
-def mission(request: HttpRequest) -> Response:
+def missions(request: HttpRequest) -> Response:
     """
     GET/POST information about missions view.
     :param request: GET/POST request
@@ -79,6 +79,39 @@ def mission(request: HttpRequest) -> Response:
             "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     return Response("Processed successfully", status=status.HTTP_201_CREATED)
+
+
+@api_view(["PUT", "DELETE"])
+def mission(request: HttpRequest, mission_name: str) -> Response:
+    """
+    UPDATE or DELETE a mission.
+    :param request: PUT / DELETE request
+    :param mission_name: name of the mission
+    :return: HTTP response
+    """
+    if request.method == "PUT":
+        request_body = request.body
+        try:
+            data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
+            json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+            client.update_mission(mission_name, json_string)
+        except ValidationError as e:
+            return Response(f"Validation of mission representation did not pass: {e!s}",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        except (ClientError, TransientError, DatabaseError) as e:
+            return Response(
+                "Exception on neo4j side, update operation failed. Mission is never deleted during the update, "
+                "only its connected vertices. Its update can be tried again in the future." + str(e),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        return Response("Mission was updated successfully", status=status.HTTP_200_OK)
+
+    try:
+        client.delete_mission(mission_name)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response("Exception on neo4j side, delete operation failed. " + str(e),
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response("Mission was deleted successfully.", status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["POST"])

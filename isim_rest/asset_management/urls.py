@@ -20,7 +20,8 @@ from django.urls import path, re_path
 from . import views
 
 urlpatterns = [
-    path("missions", views.mission, name="missions"),
+    path("missions", views.missions, name="missions"),
+    path("mission/<str:mission_name>", views.mission, name="mission"),
     path("assets", views.assets, name="assets"),
     path("asset_info", views.asset_info, name="asset_info"),
     path("ips", views.ip_assets, name="ips"),
