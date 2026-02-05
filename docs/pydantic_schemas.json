@@ -1,0 +1,879 @@
+{
+  "components": {
+    "schemas": {
+      "AggregationsDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "and": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "or": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ApplicationDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "device": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "device",
+          "name"
+        ],
+        "type": "object"
+      },
+      "ApplicationsResponseDTO": {
+        "items": {
+          "description": "Order: Application, Device.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "type": "array"
+      },
+      "AssetInfoResponseDTO": {
+        "items": {
+          "$ref": "#/components/schemas/IPAssetInformationDTO"
+        },
+        "type": "array"
+      },
+      "AssetListInputDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "applications": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationDTO"
+            },
+            "type": "array"
+          },
+          "devices": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceDTO"
+            },
+            "type": "array"
+          },
+          "hosts": {
+            "items": {
+              "$ref": "#/components/schemas/HostDTO"
+            },
+            "type": "array"
+          },
+          "org_units": {
+            "items": {
+              "$ref": "#/components/schemas/OrgUnitDTO"
+            },
+            "type": "array"
+          },
+          "software_versions": {
+            "items": {
+              "$ref": "#/components/schemas/SoftwareVersionDTO"
+            },
+            "type": "array"
+          },
+          "subnets": {
+            "items": {
+              "$ref": "#/components/schemas/SubnetDTO"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "AssetsPostDTO": {
+        "$ref": "#/components/schemas/AssetListInputDTO"
+      },
+      "CveNodeResponseDTO": {
+        "items": {
+          "description": "Order: CVE node properties.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        },
+        "type": "array"
+      },
+      "CveSummaryDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "CVE_id": {
+            "nullable": true,
+            "type": "string"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CveSummaryResponseDTO": {
+        "items": {
+          "description": "Order: CVE summary map.",
+          "items": {
+            "$ref": "#/components/schemas/CveSummaryDTO"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        },
+        "type": "array"
+      },
+      "DeviceDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "ip_address": {
+            "format": "ip",
+            "nullable": true,
+            "type": "string"
+          },
+          "manufacturer": {
+            "nullable": true,
+            "type": "string"
+          },
+          "model": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "org_units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "power": {
+            "nullable": true,
+            "type": "string"
+          },
+          "state": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "DevicesResponseDTO": {
+        "items": {
+          "description": "Order: Device, OrganizationUnit, HardwareVersion, Host, Node, IP.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 6,
+          "minItems": 6,
+          "type": "array"
+        },
+        "type": "array"
+      },
+      "EasmDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "domain_name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "ip": {
+            "format": "ip",
+            "nullable": true,
+            "type": "string"
+          },
+          "port": {
+            "type": "string"
+          },
+          "protocol": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "software_versions": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "port",
+          "protocol",
+          "service"
+        ],
+        "type": "object"
+      },
+      "EasmPostDTO": {
+        "items": {
+          "$ref": "#/components/schemas/EasmDTO"
+        },
+        "type": "array"
+      },
+      "HostDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "domain_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ip_address": {
+            "format": "ip",
+            "type": "string"
+          },
+          "subnets": {
+            "items": {
+              "format": "ip",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "tag": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "uris": {
+            "items": {
+              "format": "uri",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ip_address"
+        ],
+        "type": "object"
+      },
+      "HostMissionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "hostname": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "ip": {
+            "format": "ip",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "hostname",
+          "ip"
+        ],
+        "type": "object"
+      },
+      "IPAssetInformationDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "contacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "critical": {
+            "type": "integer"
+          },
+          "domain_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ip": {
+            "format": "ip",
+            "type": "string"
+          },
+          "missions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/NodeCentralityDTO"
+            },
+            "type": "array"
+          },
+          "subnets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ip",
+          "critical"
+        ],
+        "type": "object"
+      },
+      "IpAssetsResponseDTO": {
+        "items": {
+          "description": "Order: IP, Subnet, DomainName, URI, OrganizationUnit.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "type": "array"
+        },
+        "type": "array"
+      },
+      "MessageResponseDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "MissionCriticalityDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "criticality": {
+            "type": "number"
+          },
+          "hostname": {
+            "type": "string"
+          },
+          "ip": {
+            "format": "ip",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ip",
+          "hostname",
+          "criticality"
+        ],
+        "type": "object"
+      },
+      "MissionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "availability_requirement": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "confidentiality_requirement": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "criticality": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "integrity_requirement": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "MissionInfoDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "availability_requirement": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "confidentiality_requirement": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "criticality": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "integrity_requirement": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "structure": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "MissionInfoResponseDTO": {
+        "items": {
+          "$ref": "#/components/schemas/MissionInfoDTO"
+        },
+        "type": "array"
+      },
+      "MissionListInputDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "nodes": {
+            "$ref": "#/components/schemas/NodeMissionDTO"
+          },
+          "relationships": {
+            "$ref": "#/components/schemas/RelationshipDTO"
+          }
+        },
+        "required": [
+          "nodes",
+          "relationships"
+        ],
+        "type": "object"
+      },
+      "MissionPostDTO": {
+        "$ref": "#/components/schemas/MissionListInputDTO"
+      },
+      "NmapTopologyDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "time": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "time"
+        ],
+        "type": "object"
+      },
+      "NodeCentralityDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "degree_centrality": {
+            "nullable": true,
+            "type": "number"
+          },
+          "pagerank_centrality": {
+            "nullable": true,
+            "type": "number"
+          },
+          "topology_betweenness": {
+            "nullable": true,
+            "type": "number"
+          },
+          "topology_degree": {
+            "nullable": true,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "NodeMissionDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "aggregations": {
+            "$ref": "#/components/schemas/AggregationsDTO"
+          },
+          "hosts": {
+            "items": {
+              "$ref": "#/components/schemas/HostMissionDTO"
+            },
+            "type": "array"
+          },
+          "missions": {
+            "items": {
+              "$ref": "#/components/schemas/MissionDTO"
+            },
+            "type": "array"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceDTO"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "aggregations",
+          "missions",
+          "services",
+          "hosts"
+        ],
+        "type": "object"
+      },
+      "OrgUnitDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "OrganizationUnitsResponseDTO": {
+        "items": {
+          "description": "Order: OrganizationUnit, Subnet, PhysicalEnvironment.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "type": "array"
+      },
+      "PlainTextResponseDTO": {
+        "type": "string"
+      },
+      "RelationshipDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "dependencies": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "integer"
+                },
+                "to": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "from",
+                "to"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "has_identity": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "from",
+                "to"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "one_way": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "integer"
+                },
+                "to": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "from",
+                "to"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "supports": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "from",
+                "to"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "two_way": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "first": {
+                  "type": "integer"
+                },
+                "second": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "first",
+                "second"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "SLPEnrichmentDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "ip": {
+            "format": "ip",
+            "type": "string"
+          },
+          "sp_risk_score": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "subnet": {
+            "format": "ip",
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain",
+          "ip",
+          "sp_risk_score",
+          "subnet",
+          "tag"
+        ],
+        "type": "object"
+      },
+      "ServiceDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "SlpEnrichmentPostDTO": {
+        "items": {
+          "$ref": "#/components/schemas/SLPEnrichmentDTO"
+        },
+        "type": "array"
+      },
+      "SoftwareVersionDTO": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "version"
+            ]
+          },
+          {
+            "required": [
+              "service",
+              "protocol",
+              "port"
+            ]
+          }
+        ],
+        "properties": {
+          "ip_addresses": {
+            "items": {
+              "format": "ip",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "port": {
+            "nullable": true,
+            "type": "integer"
+          },
+          "protocol": {
+            "nullable": true,
+            "type": "string"
+          },
+          "service": {
+            "nullable": true,
+            "type": "string"
+          },
+          "tag": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "version": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "ip_addresses"
+        ],
+        "type": "object"
+      },
+      "StoreCriticalityPostDTO": {
+        "items": {
+          "$ref": "#/components/schemas/MissionCriticalityDTO"
+        },
+        "type": "array"
+      },
+      "SubnetDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "contacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ip_range": {
+            "format": "ip",
+            "type": "string"
+          },
+          "note": {
+            "nullable": true,
+            "type": "string"
+          },
+          "org_units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "parents": {
+            "items": {
+              "format": "ip",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "version": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ip_range"
+        ],
+        "type": "object"
+      },
+      "SubnetsResponseDTO": {
+        "items": {
+          "description": "Order: Subnet, parent Subnet, OrganizationUnit, Contact, IP.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "type": "array"
+        },
+        "type": "array"
+      },
+      "TraceroutePostDTO": {
+        "$ref": "#/components/schemas/NmapTopologyDTO"
+      }
+    }
+  }
+}

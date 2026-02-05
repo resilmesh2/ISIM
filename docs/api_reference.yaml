@@ -13,29 +13,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssetInformationInput'
+              $ref: './pydantic_schemas.json#/components/schemas/AssetsPostDTO'
       responses:
         "201":
           description: OK
           content:
             application/json:
               schema:
-                type: string
-                example: 'Processed successfully. If some assets support missions, use /missions endpoint to add descriptions of missions.'
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
         "422":
           description: Bad input
           content:
             application/json:
               schema:
-                type: string
-                example: 'Bad input: <error message>'
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
         "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                type: string
-                example: 'Exception on neo4j side, set operation failed. <error message>'
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
   /asset_info:
     get:
       tags:
@@ -64,13 +61,92 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IPAssetInformation'
+                $ref: './pydantic_schemas.json#/components/schemas/AssetInfoResponseDTO'
+  /easm:
+    post:
+      tags:
+        - Assets
+      description: Upload external attack surface management data to ISIM
+      operationId: store_easm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: './pydantic_schemas.json#/components/schemas/EasmPostDTO'
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+        "422":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
   /missions:
     get:
       tags:
         - Missions
       description: Return information about stored missions
       operationId: get_missions
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/MissionInfoResponseDTO'
+
+    post:
+      tags:
+        - Missions
+      description: Upload mission information to ISIM
+      operationId: store_missions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: './pydantic_schemas.json#/components/schemas/MissionPostDTO'
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+        "422":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+  /ip_assets:
+    get:
+      tags:
+        - Assets
+      description: Return IP assets and related entities
+      operationId: get_ip_assets
       parameters:
         - name: limit
           in: query
@@ -88,402 +164,355 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/MissionsInformation'
-
+                $ref: './pydantic_schemas.json#/components/schemas/IpAssetsResponseDTO'
+  /subnets:
+    get:
+      tags:
+        - Assets
+      description: Return subnets and related entities
+      operationId: get_subnets
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/SubnetsResponseDTO'
+  /devices:
+    get:
+      tags:
+        - Assets
+      description: Return devices and related entities
+      operationId: get_devices
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/DevicesResponseDTO'
+  /org_units:
+    get:
+      tags:
+        - Assets
+      description: Return organization units and related entities
+      operationId: get_org_units
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/OrganizationUnitsResponseDTO'
+  /applications:
+    get:
+      tags:
+        - Assets
+      description: Return applications and related entities
+      operationId: get_applications
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/ApplicationsResponseDTO'
+  /cves:
+    get:
+      tags:
+        - CVEs
+      description: Return all CVEs
+      operationId: get_cves
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/CveSummaryResponseDTO'
+  /cve/{cve_id}:
+    get:
+      tags:
+        - CVEs
+      description: Return a CVE by ID
+      operationId: get_cve
+      parameters:
+        - name: cve_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/CveNodeResponseDTO'
+        "422":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+  /ip_cves/{ip}:
+    get:
+      tags:
+        - CVEs
+      description: Return CVEs for a given IP
+      operationId: get_ip_cves
+      parameters:
+        - name: ip
+          in: path
+          required: true
+          schema:
+            type: string
+            format: ip
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/CveNodeResponseDTO'
+        "422":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+  /traceroute:
     post:
       tags:
-        - Missions
-      description: Upload mission information to ISIM
-      operationId: store_missions
+        - Topology
+      description: Upload traceroute data to build topology
+      operationId: traceroute
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                nodes:
-                  type: object
-                  properties:
-                    missions:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/MissionInput'
-                    services:
-                      type: array
-                      items:
-                        $ref: "#/components/schemas/ServiceInput"
-                    aggregations:
-                      type: object
-                      properties:
-                        or:
-                          type: array
-                          items:
-                            type: integer
-                        and:
-                          type: array
-                          items:
-                            type: integer
-                    hosts:
-                      type: array
-                      items:
-                        $ref: "#/components/schemas/NamedHostInput"
-                relationships:
-                  type: object
-                  properties:
-                    one_way:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          from:
-                            type: integer
-                          to:
-                            type: integer
-                    two_way:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          first:
-                            type: integer
-                          second:
-                            type: integer
-                    dependencies:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          from:
-                            type: integer
-                          to:
-                            type: integer
-                    supports:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          from:
-                            type: string
-                            example: "Public-Facing Services - BT1"
-                            description: "Name of a mission"
-                          to:
-                            type: string
-                            example: "Mail - BT1"
-                            description: "Name of a service"
-                    has_identity:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          from:
-                            type: string
-                            example: "Mail - BT1"
-                            description: "Name of a service"
-                          to:
-                            type: string
-                            example: "mail"
-                            description: "Hostname of a host"
+              $ref: './pydantic_schemas.json#/components/schemas/TraceroutePostDTO'
       responses:
         "201":
           description: OK
           content:
             application/json:
               schema:
-                type: string
-                example: 'Processed successfully'
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
         "422":
           description: Bad input
           content:
             application/json:
               schema:
-                type: string
-                example: 'Bad input: <error message>'
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
         "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                type: string
-                example: 'Exception on neo4j side, set operation failed. <error message>'
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+  /betweenness_centrality:
+    post:
+      tags:
+        - Topology
+      description: Compute betweenness centrality for topology
+      operationId: betweenness_centrality
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+  /degree_centrality:
+    post:
+      tags:
+        - Topology
+      description: Compute degree centrality for topology
+      operationId: degree_centrality
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+  /store_criticality:
+    post:
+      tags:
+        - Criticality
+      description: Store mission criticality data
+      operationId: store_criticality
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: './pydantic_schemas.json#/components/schemas/StoreCriticalityPostDTO'
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+        "422":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+  /combine_criticality:
+    post:
+      tags:
+        - Criticality
+      description: Combine criticality values
+      operationId: combine_criticality
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+  /ip_hierarchy_sync:
+    post:
+      tags:
+        - Assets
+      description: Synchronize IP hierarchy and subnets
+      operationId: ip_hierarchy_sync
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/MessageResponseDTO'
+  /slp_enrichment:
+    post:
+      tags:
+        - Assets
+      description: Store SLP enrichment data
+      operationId: slp_enrichment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: './pydantic_schemas.json#/components/schemas/SlpEnrichmentPostDTO'
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+        "422":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './pydantic_schemas.json#/components/schemas/PlainTextResponseDTO'
 components:
-  schemas:
-    Host:
-      type: object
-      properties:
-        ip_address:
-          type: string
-          format: ip
-          example: 127.0.0.1
-        domain_names:
-          type: array
-          items:
-            type: string
-            format: domain
-          example: ["test1.com", "test2.com"]
-        subnets:
-          type: array
-          items:
-            type: string
-            format: ip
-          example: ["127.0.0.0/16"]
-        uris:
-          type: array
-          items:
-            type: string
-            format: uri
-          example: ["https://test1.com/api"]
-        tag:
-          type: array
-          items:
-            type: string
-          example: ["resilmesh-sap-neo4j", "mandatory"]
-      required:
-        - ip_address
-    Subnet:
-      type: object
-      properties:
-        ip_range:
-          type: string
-          format: ip
-          example: 10.0.0.0/8
-        note:
-          type: string
-          example: "private network"
-        contacts:
-          type: array
-          items:
-            type: string
-            format: e-mail
-          example: ["admin@test.com"]
-        parents:
-          type: array
-          items:
-            type: string
-            format: ip
-          example: ["0.0.0.0/0"]
-        org_units:
-          type: array
-          items:
-            type: string
-          example: ["OrgA", "SubOrgD"]
-      required:
-        - ip_range
-    SoftwareVersion:
-      type: object
-      properties:
-        service:
-          type: string
-          example: "ssh"
-        version:
-          type: string
-          format: cpe
-          example: "cpe:/a:openbsd:openssh:7.4"
-        protocol:
-          type: string
-          example: "tcp"
-        port:
-          type: integer
-          example: 22
-        ip_addresses:
-          type: array
-          items:
-            type: string
-            format: ip
-          example: ["127.0.0.1", "10.0.0.35"]
-        tag:
-          type: array
-          items:
-            type: string
-          example: ["core"]
-      anyOf:
-        - required:
-          - service
-          - port
-          - protocol
-        - required:
-          - version
-    Device:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "DevA"
-    Application:
-      type: object
-      properties:
-        name:
-          type: string
-          example: SSH
-        device:
-          type: string
-          description: "Represents name of the Device entity, there will be relationship between Application and Device"
-          example: "DevA"
-      required:
-        - name
-        - device
-    OrgUnit:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "OrgA"
-        locations:
-          type: array
-          items:
-            type: string
-          example: ["Brno"]
-        parents:
-          type: array
-          description: List of OrgUnits that are parents of this OrgUnit
-          items:
-            type: string
-          example: ["OrgPrime"]
-      required:
-        - name
-    AssetInformationInput:
-      type: object
-      properties:
-        hosts:
-          type: array
-          items:
-            $ref: '#/components/schemas/Host'
-        subnets:
-          type: array
-          items:
-            $ref: '#/components/schemas/Subnet'
-        software_versions:
-          type: array
-          items:
-            $ref: '#/components/schemas/SoftwareVersion'
-        devices:
-          type: array
-          items:
-            $ref: '#/components/schemas/Device'
-        applications:
-          type: array
-          items:
-            $ref: '#/components/schemas/Application'
-        org_units:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrgUnit'
-
-    IPAssetInformation:
-      type: object
-      properties:
-        ip:
-          type: string
-          format: ip
-          example: 10.1.2.3
-        domain_names:
-          type: array
-          items:
-            type: string
-            format: domain
-          example: ["test.com"]
-        subnets:
-          type: array
-          items:
-            type: string
-            format: ip
-          example: ["0.0.0.0/0", "10.0.0.0/8"]
-        contacts:
-          type: array
-          items:
-            type: string
-            format: e-mail
-          example: ["admin@test.com"]
-        nodes:
-          type: array
-          items:
-            type: object
-          example: [{
-                "degree_centrality": 1.0,
-                "pagerank_centrality": 0.15,
-                "topology_degree": null,
-                "topology_betweenness": null
-                }]
-        critical:
-          type: integer
-          minimum: 0
-          maximum: 1
-          description: 1 if IP is assigned to any mission, 0 otherwise
-        missions:
-          type: array
-          items:
-            type: string
-          example: ["Public-Facing Services - BT1"]
-
-    MissionInput:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        name:
-          type: string
-          example: Public-Facing Services - BT1
-        criticality:
-          type: integer
-          example: 5
-        description:
-          type: string
-          example: This mission represents services that must be available for public.
-      required:
-        - id
-        - name
-        - criticality
-    ServiceInput:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        name:
-          type: string
-          example: "Mail - BT1"
-      required:
-        - id
-        - name
-    NamedHostInput:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        hostname:
-          type: string
-          example: "mail"
-        ip:
-          type: string
-          format: ip
-          example: 10.0.0.2
-      required:
-        - id
-        - hostname
-        - ip
-
-    MissionsInformation:
-      type: object
-      properties:
-        name:
-          type: string
-          example: "Public-Facing Services - BT1"
-        description:
-          type: string
-          example: "This mission represents services that must be available for public."
-        criticality:
-          type: integer
-          example: 5
-        structure:
-          type: string
-          format: json string
-          example: "{\"relationships\":{\"two_way\":[{\"first\":0,\"second\":0}],\"one_way\":[{\"from\":0,\"to\":0}],\"supports\":[{\"from\":\"Public-Facing Services - BT1\",\"to\":\"Mail - BT1\"}],\"has_identity\":[{\"from\":\"Mail - BT1\",\"to\":\"mail\"}],\"dependencies\":[{\"from\":0,\"to\":0}]},\"nodes\":{\"missions\":[{\"name\":\"Public-Facing Services - BT1\",\"criticality\":5,\"description\":\"This mission represents services that must be available for public.\",\"id\":1}],\"hosts\":[{\"hostname\":\"mail\",\"ip\":\"10.0.0.2\",\"id\":1}],\"services\":[{\"name\":\"Mail - BT1\",\"id\":1}],\"aggregations\":{\"or\":[0],\"and\":[0]}}}"
+  schemas: {}
 tags:
   - name: Assets
     description: |-
       Assets API allows users to store and query asset information in ISIM component
+  - name: Missions
+    description: |-
+      Missions API allows users to store and query mission data.
+  - name: CVEs
+    description: |-
+      CVEs API allows users to query vulnerability and CVE information.
+  - name: Topology
+    description: |-
+      Topology API allows users to upload and compute topology metrics.
+  - name: Criticality
+    description: |-
+      Criticality API allows users to store and compute criticality metrics.
