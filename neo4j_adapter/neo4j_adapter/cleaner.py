@@ -8,7 +8,7 @@ class Cleaner(GeneralAdapter):
     def __init__(self, password: str, **kwargs: Any) -> None:
         super().__init__(password=password, **kwargs)
         config = ISIMConfig.get()
-        self.duration = f"P{config.organization.rediscovery_time}D"
+        self.duration = f"P{config.organization.cleaning_time}D"
 
     def clean_old_vulnerabilities(self) -> None:
         query = """CALL apoc.periodic.commit('
