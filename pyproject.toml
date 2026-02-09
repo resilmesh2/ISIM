@@ -7,13 +7,14 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-neo4j = "^5.21.0"
+neo4j = "^6.0.0"
+neomodel = "^6.0.0"
 django = "^5.0.6"
 pyyaml = "^6.0.2"
 dacite = "^1.8.1"
 djangorestframework = "^3.15.1"
-neo4j-adapter = {path = "neo4j_adapter", develop = true}
 msgspec = "^0.19.0"
+pydantic = "^2.8.2"
 gunicorn = "^22.0.0"
 pyright = "^1.1.378"
 django-stubs = "^5.0.4"

@@ -6,9 +6,7 @@ response creation.
 
 import json
 
-import msgspec.json
 from django.http import HttpRequest
-from msgspec import ValidationError
 from neo4j.exceptions import ClientError, DatabaseError, TransientError
 from neo4j_adapter.criticality_adapter import CriticalityAdapter
 from neo4j_adapter.csa_adapter import CSAAdapter
@@ -16,6 +14,7 @@ from neo4j_adapter.ip_subnet_sync import IpSubnetSynchronizer
 from neo4j_adapter.nmap_topology_adapter import NmapTopologyAdapter
 from neo4j_adapter.rest_adapter import RESTAdapter
 from neo4j_adapter.slp_enrichment_adapter import SLPEnrichmentAdapter
+from pydantic import TypeAdapter, ValidationError
 from rest_framework import status
 from rest_framework.decorators import api_view  # type: ignore
 from rest_framework.response import Response
@@ -28,7 +27,6 @@ from isim_rest.asset_management.data_formats.input_dtos import (
     NmapTopologyDTO,
     SLPEnrichmentDTO,
 )
-from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig
 
 DEFAULT_LIMIT = 50
@@ -69,8 +67,8 @@ def mission(request: HttpRequest) -> Response:
         return Response(client.get_all_mission(limit))
     request_body = request.body
     try:
-        data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        data = MissionListInputDTO.model_validate_json(request_body)
+        json_string = json.dumps(data.model_dump(mode="json", by_alias=True, exclude_none=True))
         client.create_missions_and_components_string(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -85,9 +83,9 @@ def mission(request: HttpRequest) -> Response:
 def assets(request: HttpRequest) -> Response:
     request_body = request.body
     try:
-        data = msgspec.json.decode(request_body, type=AssetListInputDTO, dec_hook=dec_hook_ip)
+        data = AssetListInputDTO.model_validate_json(request_body)
         data.flatten_related_relationships()
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        json_string = json.dumps(data.model_dump(mode="json", by_alias=True, exclude_none=True))
         client.store_assets(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -105,8 +103,9 @@ def assets(request: HttpRequest) -> Response:
 def easm(request: HttpRequest) -> Response:
     request_body = request.body
     try:
-        data = msgspec.json.decode(request_body, type=list[EasmDTO], dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        adapter = TypeAdapter(list[EasmDTO])
+        data = adapter.validate_json(request_body)
+        json_string = json.dumps(adapter.dump_python(data, mode="json", by_alias=True, exclude_none=True))
         client.store_easm(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -158,42 +157,13 @@ def org_units(request: HttpRequest) -> Response:
     return Response(client.get_organization_units(limit=limit, offset=offset), status=status.HTTP_200_OK)
 
 
-@api_view(["GET"])
-def applications(request: HttpRequest) -> Response:
-    limit = get_limit(request)
-    offset = get_offset(request)
-    return Response(client.get_applications(limit=limit, offset=offset), status=status.HTTP_200_OK)
-
-
-@api_view(["GET"])
-def cves(request: HttpRequest) -> Response:
-    limit = get_limit(request)
-    offset = get_offset(request)
-    return Response(client.get_all_cve(limit=limit, offset=offset), status=status.HTTP_200_OK)
-
-
-@api_view(["GET"])
-def cve(request: HttpRequest, cve_id: str) -> Response:
-    limit = get_limit(request)
-    offset = get_offset(request)
-    return Response(client.get_cve(cve_id=cve_id, limit=limit, offset=offset), status=status.HTTP_200_OK)
-
-
-@api_view(["GET"])
-def ip_cves(request: HttpRequest, ip: str) -> Response:
-    limit = get_limit(request)
-    offset = get_offset(request)
-    return Response(client.get_ip_cve(ip=ip, limit=limit, offset=offset), status=status.HTTP_200_OK)
-
-
 @api_view(["POST"])
-def traceroute(request: HttpRequest) -> Response:
-    nmap_adapter = NmapTopologyAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
-
+def nmap_topology(request: HttpRequest) -> Response:
     request_body = request.body
     try:
-        data = msgspec.json.decode(request_body, type=NmapTopologyDTO)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data)))
+        data = NmapTopologyDTO.model_validate_json(request_body)
+        json_string = json.dumps(data.model_dump(mode="json", by_alias=True, exclude_none=True))
+        nmap_adapter = NmapTopologyAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
         nmap_adapter.create_topology(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -201,76 +171,75 @@ def traceroute(request: HttpRequest) -> Response:
         return Response(
             "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    return Response("Processed successfully.", status=status.HTTP_201_CREATED)
+    return Response("Processed successfully", status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])
-def betweenness_centrality(request: HttpRequest) -> Response:
-    criticality_adapter = CriticalityAdapter(
-        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
-    )
-    criticality_adapter.compute_topology_betweenness()
-    return Response("Processed successfully.", status=status.HTTP_200_OK)
+def criticality(request: HttpRequest) -> Response:
+    data = request.body
+    criticality_adapter = CriticalityAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
+    try:
+        criticality_adapter.apply_ip_criticality_data(data)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    return Response("Processed successfully", status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])
-def degree_centrality(request: HttpRequest) -> Response:
-    criticality_adapter = CriticalityAdapter(
-        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
-    )
-    criticality_adapter.compute_topology_degree()
-    return Response("Processed successfully.", status=status.HTTP_200_OK)
-
-
-@api_view(["POST"])
-def store_criticality(request: HttpRequest) -> Response:
-    csa_adapter = CSAAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
+def csa(request: HttpRequest) -> Response:
     request_body = request.body
     try:
-        data = msgspec.json.decode(request_body, type=list[MissionCriticalityDTO], dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
-        csa_adapter.store_criticality(json_string)
+        adapter = TypeAdapter(list[MissionCriticalityDTO])
+        data = adapter.validate_json(request_body)
+        json_string = json.dumps(adapter.dump_python(data, mode="json", by_alias=True, exclude_none=True))
+        csa_adapter = CSAAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
+        csa_adapter.create_mission_criticality(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     except (ClientError, TransientError, DatabaseError) as e:
         return Response(
             "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    return Response("Processed successfully.", status=status.HTTP_201_CREATED)
+    return Response("Processed successfully", status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])
-def combine_criticality(request: HttpRequest) -> Response:
-    csa_adapter = CSAAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
-    csa_adapter.combine_criticality()
-    return Response("Processed successfully.", status=status.HTTP_200_OK)
-
-
-@api_view(["POST"])
-def ip_hierarchy_sync(request: HttpRequest) -> Response:
-    synchronizer = IpSubnetSynchronizer(
-        user=config.neo4j.user,
-        password=config.neo4j.password,
-        bolt=config.neo4j.bolt,
-    )
-    synchronizer.run()
-    return Response({"message": "Processed successfully"}, status=status.HTTP_201_CREATED)
+def ip_subnet_sync(request: HttpRequest) -> Response:
+    request_body = request.body
+    try:
+        adapter = TypeAdapter(list[MissionCriticalityDTO])
+        data = adapter.validate_json(request_body)
+        json_string = json.dumps(adapter.dump_python(data, mode="json", by_alias=True, exclude_none=True))
+        syncer = IpSubnetSynchronizer(
+            user=config.neo4j.user,
+            password=config.neo4j.password,
+            bolt=config.neo4j.bolt,
+        )
+        syncer.sync_ip_subnet_relation(json_string)
+    except ValidationError as e:
+        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    except (ClientError, TransientError, DatabaseError) as e:
+        return Response(
+            "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    return Response("Processed successfully", status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])
 def slp_enrichment(request: HttpRequest) -> Response:
-    slp_enrichment_adapter = SLPEnrichmentAdapter(
-        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
-    )
     request_body = request.body
     try:
-        data = msgspec.json.decode(request_body, type=list[SLPEnrichmentDTO], dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
-        slp_enrichment_adapter.store_slp_data(json_string)
+        adapter = TypeAdapter(list[SLPEnrichmentDTO])
+        data = adapter.validate_json(request_body)
+        json_string = json.dumps(adapter.dump_python(data, mode="json", by_alias=True, exclude_none=True))
+        slp_adapter = SLPEnrichmentAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
+        slp_adapter.enrich(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
     except (ClientError, TransientError, DatabaseError) as e:
         return Response(
             "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
-    return Response("Processed successfully.", status=status.HTTP_201_CREATED)
+    return Response("Processed successfully", status=status.HTTP_201_CREATED)

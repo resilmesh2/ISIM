@@ -1,13 +1,11 @@
 import json
 
-import msgspec
 from django.apps.config import AppConfig
 from neo4j.exceptions import ClientError
 from neo4j_adapter.rest_adapter import RESTAdapter
 from structlog import getLogger
 
 from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO
-from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from isim_rest.neo4j_rest.config import AppConfig as ISIMConfig
 
 logger = getLogger()
@@ -47,6 +45,6 @@ class AssetManagementConfig(AppConfig):
         except ClientError as e:
             if e.message and "An equivalent constraint already exists" not in e.message:
                 logger.exception(e)
-        data = msgspec.convert(initial_data, type=AssetListInputDTO, dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        data = AssetListInputDTO.model_validate(initial_data)
+        json_string = json.dumps(data.model_dump(mode="json", by_alias=True, exclude_none=True))
         client.store_assets(json_string)
