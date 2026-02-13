@@ -7,7 +7,7 @@ import { initializeDatabase } from "../src/initialize.js";
 import { Neo4jGraphQL } from "@neo4j/graphql";
 import { databaseConfig } from "../src/db_config.js";
 import {GraphQLJSON, GraphQLJSONObject} from "graphql-type-json";
- import { ApolloServerPluginLandingPageGraphQLPlayground } from 'apollo-server-core';
+import { ApolloServerPluginLandingPageLocalDefault } from "apollo-server-core";
 // set environment variables from .env
 dotenv.config();
 
@@ -112,10 +112,9 @@ async function main() {
     const server = new ApolloServer({
         schema: schema,
         introspection: true,
-        playground: true,
         debug: true,
         context: ({ req }) => ({req}),
-        plugins: [ ApolloServerPluginLandingPageGraphQLPlayground() ]
+        plugins: [ ApolloServerPluginLandingPageLocalDefault() ]
 
     });
     await server.start()
