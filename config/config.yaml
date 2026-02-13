@@ -1,4 +1,5 @@
 neo4j:
   password: supertestovaciheslo
-  bolt: bolt://resilmesh-sap-neo4j:7687
+  bolt: bolt://localhost:7687
   user: neo4j
+  url: localhost:7687
