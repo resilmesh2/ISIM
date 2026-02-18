@@ -1,132 +1,29 @@
-from __future__ import annotations
+import os
 
-from typing import Any
+from neomodel import config as neomodel_config
 
-from neomodel import (
-    ArrayProperty,
-    BooleanProperty,
-    IntegerProperty,
-    RelationshipFrom,
-    RelationshipTo,
-    StringProperty,
-    StructuredNode,
-    StructuredRel,
-    UniqueIdProperty,
-)
+from neo4j_adapter.models import Device, Host, Node
 
+if __name__ == "__main__":
+    neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    neo4j_user = os.getenv("NEO4J_USER", "neo4j")
+    neo4j_password = os.getenv("NEO4J_PASSWORD", "supertestovaciheslo")
 
-class TaggedRel(StructuredRel):
-    tag = ArrayProperty(StringProperty(), default=list)
+    if neo4j_uri.startswith("bolt://"):
+        neomodel_config.DATABASE_URL = (
+            f"bolt://{neo4j_user}:{neo4j_password}@{neo4j_uri.removeprefix('bolt://')}"
+        )
+    else:
+        neomodel_config.DATABASE_URL = f"bolt://{neo4j_user}:{neo4j_password}@{neo4j_uri}"
 
+    host = Host().save()
+    node = Node().save()
+    device = Device(name="device-test").save()
 
-class IP(StructuredNode):
-    uid = UniqueIdProperty()
-    address = StringProperty(unique_index=True, required=True)
-    version = IntegerProperty(required=False)
-    tag = ArrayProperty(StringProperty(), default=list)
+    node.is_a_host.connect(host)
+    host.has_identity_device.connect(device)
 
-    part_of_subnet = RelationshipTo("Subnet", "PART_OF")
-    identifies_uri = RelationshipTo("URI", "IDENTIFIES")
-    resolves_to_domain = RelationshipTo("DomainName", "RESOLVES_TO")
-
-
-class Host(StructuredNode):
-    uid = UniqueIdProperty()
-
-    is_a = RelationshipFrom("Node", "IS_A")
-    has_identity_device = RelationshipTo("Device", "HAS_IDENTITY")
-
-
-class Node(StructuredNode):
-    uid = UniqueIdProperty()
-
-    is_a_host = RelationshipTo("Host", "IS_A")
-    has_assigned_ip = RelationshipTo("IP", "HAS_ASSIGNED")
-
-
-class Subnet(StructuredNode):
-    uid = UniqueIdProperty()
-    range = StringProperty(unique_index=True, required=True)
-    note = StringProperty(required=False)
-    version = IntegerProperty(required=False)
-
-    part_of_subnet = RelationshipTo("Subnet", "PART_OF")
-    has_contact = RelationshipTo("Contact", "HAS")
-    part_of_ou = RelationshipTo("OrganizationUnit", "PART_OF")
-
-
-class URI(StructuredNode):
-    uid = UniqueIdProperty()
-    identifier = StringProperty(unique_index=True, required=True)
-
-
-class DomainName(StructuredNode):
-    uid = UniqueIdProperty()
-    domain_name = StringProperty(unique_index=True, required=True)
-    tag = ArrayProperty(StringProperty(), default=list)
-
-
-class Contact(StructuredNode):
-    uid = UniqueIdProperty()
-    name = StringProperty(unique_index=True, required=True)
-
-
-class OrganizationUnit(StructuredNode):
-    uid = UniqueIdProperty()
-    name = StringProperty(unique_index=True, required=True)
-
-    part_of_ou = RelationshipTo("OrganizationUnit", "PART_OF")
-    tenants_location = RelationshipTo("PhysicalEnvironment", "TENANTS")
-    has_devices = RelationshipFrom("Device", "PART_OF")
-
-
-class PhysicalEnvironment(StructuredNode):
-    uid = UniqueIdProperty()
-    location = StringProperty(unique_index=True, required=True)
-
-
-class Device(StructuredNode):
-    uid = UniqueIdProperty()
-    name = StringProperty(unique_index=True, required=True)
-    power = StringProperty(required=False)
-    state = StringProperty(required=False)
-
-    part_of_ou = RelationshipTo("OrganizationUnit", "PART_OF")
-    has_hardware = RelationshipTo("HardwareVersion", "HAS")
-
-
-class HardwareVersion(StructuredNode):
-    uid = UniqueIdProperty()
-    manufacturer = StringProperty(required=True)
-    model = StringProperty(required=True)
-
-
-class Application(StructuredNode):
-    uid = UniqueIdProperty()
-    name = StringProperty(unique_index=True, required=True)
-
-    running_on = RelationshipTo("Device", "RUNNING_ON")
-
-
-class SoftwareVersion(StructuredNode):
-    uid = UniqueIdProperty()
-    version = StringProperty(unique_index=True, required=True)
-    tag = ArrayProperty(StringProperty(), default=list)
-
-    provides_ns = RelationshipTo("NetworkService", "PROVIDES")
-    on_host = RelationshipTo("Host", "ON", model=TaggedRel)
-
-
-class NetworkService(StructuredNode):
-    uid = UniqueIdProperty()
-    port = IntegerProperty(required=True)
-    protocol = StringProperty(required=True)
-    service = StringProperty(required=True)
-    tag = ArrayProperty(StringProperty(), default=list)
-
-    on_host = RelationshipTo("Host", "ON", model=TaggedRel)
-
-
-host = Host()
-ksd = NetworkService(port=80, protocol="tcp", service="http", on_host=host)
-print(ksd.__properties__)
+    _ = Host.nodes.get(uid=host.uid)
+    device.name = "device-test-updated"
+    device.save()
+    node.delete()
