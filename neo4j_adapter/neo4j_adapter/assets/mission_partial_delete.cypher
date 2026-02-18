@@ -1,4 +1,7 @@
-MATCH (mission:Mission {name: $mission_name})
+WITH apoc.convert.fromJsonMap($json_string) as value
+UNWIND value.nodes as nodes
+UNWIND nodes.missions as missions
+MATCH (mission:Mission {name: missions.name})
 SET mission.delete = true
 WITH mission
 OPTIONAL MATCH (mission)<-[r_supports:SUPPORTS]-(component:Component)
@@ -22,7 +25,7 @@ OPTIONAL MATCH (dependency:MissionDependency {delete: true})
 OPTIONAL MATCH (component:Component)<-[:TO]-(dependency)
 WHERE NOT EXISTS {
     MATCH (component)-[:SUPPORTS]->(m:Mission)
-    WHERE m.name <> $mission_name AND m.delete IS NULL
+    WHERE m.name <> mission.name AND m.delete IS NULL
 }
 SET component.delete = true
 DETACH DELETE dependency
