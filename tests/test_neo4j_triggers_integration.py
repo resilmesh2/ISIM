@@ -12,20 +12,15 @@ TEST_ID_PREFIX = "it-trigger-"
 
 @pytest.fixture(scope="module")
 def neo4j_driver() -> Generator[Driver]:
-    cfg = AppConfig.get().neo4j
-    raw_url = cfg.url
-    if raw_url.startswith(("bolt://", "neo4j://")):
-        neo4j_uri = raw_url
-    else:
-        neo4j_uri = f"bolt://{raw_url}"
+    neo4j_config = AppConfig.get().neo4j
 
-    driver = GraphDatabase.driver(neo4j_uri, auth=(cfg.user, cfg.password))
+    driver = GraphDatabase.driver(neo4j_config.bolt, auth=(neo4j_config.user, neo4j_config.password))
 
     try:
         driver.verify_connectivity()
     except ServiceUnavailable as exc:
         driver.close()
-        pytest.fail(f"Neo4j is not reachable at {neo4j_uri}: {exc}")
+        pytest.fail(f"Neo4j is not reachable at {neo4j_config.bolt}: {exc}")
 
     yield driver
     driver.close()
