@@ -43,6 +43,28 @@ def cleanup_data(neo4j_driver: Driver) -> Generator[None]:
         ).consume()
 
 
+@pytest.fixture(scope="module", autouse=True)
+def reload_triggers(neo4j_driver: Driver) -> None:
+    trigger_names = [
+        "setInRelationshipEndOnClose",
+        "setInRelationshipStartOnCreate",
+        "updateSoftwareVersionCveTimestampOnVulnStatusChange",
+    ]
+    with neo4j_driver.session(database="neo4j") as session:
+        existing = {
+            row["name"]
+            for row in session.run(
+                "CALL apoc.trigger.list() YIELD name RETURN name",
+            )
+        }
+        for trigger_name in trigger_names:
+            if trigger_name in existing:
+                session.run("CALL apoc.trigger.remove($name)", name=trigger_name).consume()
+        session.run(
+            "CALL apoc.cypher.runFile('file:///triggers.cypher',{reportError:true,statistics:true})",
+        ).consume()
+
+
 def _single_record_value(driver: Driver, query: str, value_key: str, **params: Any) -> Any:
     with driver.session(database="neo4j") as session:
         record = session.run(query, **params).single()
@@ -100,7 +122,8 @@ def test_in_relationship_gets_start_timestamp_when_created(neo4j_driver: Driver)
     assert start_value is not None
 
 
-def test_status_change_sets_end_and_cve_timestamp(neo4j_driver: Driver) -> None:
+@pytest.mark.parametrize("new_status", ["closed", ["closed"]])
+def test_status_change_sets_end_and_cve_timestamp(neo4j_driver: Driver, new_status: str | list[str]) -> None:
     vulnerability_id = f"{TEST_ID_PREFIX}v-close"
     software_version_id = f"{TEST_ID_PREFIX}s-close"
 
@@ -116,8 +139,9 @@ def test_status_change_sets_end_and_cve_timestamp(neo4j_driver: Driver) -> None:
         ).consume()
 
         session.run(
-            "MATCH (v:Vulnerability {id: $vulnerability_id}) SET v.status = 'closed'",
+            "MATCH (v:Vulnerability {id: $vulnerability_id}) SET v.status = $new_status",
             vulnerability_id=vulnerability_id,
+            new_status=new_status,
         ).consume()
 
     result = _single_record_value(
