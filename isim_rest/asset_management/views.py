@@ -29,7 +29,7 @@ from isim_rest.asset_management.data_formats.input_dtos import (
     SLPEnrichmentDTO,
 )
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
-from isim_rest.neo4j_rest.config import AppConfig
+from config import AppConfig
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
