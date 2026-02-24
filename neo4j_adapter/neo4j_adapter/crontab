@@ -1,0 +1,2 @@
+# Run execute_automations.py every minute
+* * * * * /usr/local/bin/python /app/execute_automations.py >> /app/logs/automation.log 2>&1

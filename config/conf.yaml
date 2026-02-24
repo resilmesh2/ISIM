@@ -1,4 +1,4 @@
-neo4j:
+neo4j_config:
   password: supertestovaciheslo
   bolt: bolt://resilmesh-sap-neo4j:7687
   user: neo4j

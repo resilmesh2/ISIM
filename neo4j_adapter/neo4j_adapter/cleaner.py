@@ -5,12 +5,22 @@ from isim_rest.neo4j_rest.config import AppConfig as ISIMConfig
 
 
 class Cleaner(GeneralAdapter):
+    """
+    Cleaner class responsible for cleaning up old entities from the database.
+    Its methods are responsible only for selected entities.
+    """
+
     def __init__(self, password: str, **kwargs: Any) -> None:
         super().__init__(password=password, **kwargs)
         config = ISIMConfig.get()
         self.duration = f"P{config.organization.cleaning_time}D"
 
     def clean_old_vulnerabilities(self) -> None:
+        """
+        This method deletes relationships between vulnerabilities and
+        software versions.
+        :return: None
+        """
         query = """CALL apoc.periodic.commit('
                 WITH datetime() - duration($duration) AS popTime
                 MATCH (vul:Vulnerability)-[r:IN]->(s:SoftwareVersion)
@@ -24,6 +34,11 @@ class Cleaner(GeneralAdapter):
         self._run_query(query, **params)
 
     def clean_host_layer(self) -> None:
+        """
+        This method deletes old relationships between hosts and network
+        services and hosts and software versions.
+        :return: None
+        """
         query = (
             "CALL apoc.periodic.commit('"
             "WITH datetime() - duration($duration) AS popTime "
@@ -42,6 +57,11 @@ class Cleaner(GeneralAdapter):
         self._run_query(query, **params)
 
     def clean_network_layer(self) -> None:
+        """
+        This method deletes old relationships between IP addresses and
+        domain names, nodes and IP addresses, and two nodes.
+        :return: None
+        """
         query = (
             "CALL apoc.periodic.commit('"
             "WITH datetime() - duration($duration) AS popTime "
@@ -63,6 +83,10 @@ class Cleaner(GeneralAdapter):
         self._run_query(query, **params)
 
     def clean_security_events(self) -> None:
+        """
+        This method deletes old security events.
+        :return: None
+        """
         query = (
             "CALL apoc.periodic.commit('"
             "WITH datetime() - duration($duration) AS popTime "

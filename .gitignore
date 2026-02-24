@@ -1,5 +1,44 @@
+# Existing entries
 .idea
 node_modules
 build
 __pycache__
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Python additional
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Docker
+.dockerignore
+
+# IDE additional
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Neo4j
+plugins/
+dumps/
+
+# Other
 db.sqlite3

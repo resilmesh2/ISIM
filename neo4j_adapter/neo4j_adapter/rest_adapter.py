@@ -1,10 +1,16 @@
+"""
+This module contains RESTAdapter with its methods that work on the backend
+of the REST API. These methods are called from views in views.py linked to
+URLs in urls.py.
+"""
+
 import json
 from pathlib import Path
 from typing import Any, LiteralString, cast
 
 from neo4j_adapter.dtos import IPAssetInformationDTO
 from neo4j_adapter.general_adapter import GeneralAdapter
-from isim_rest.neo4j_rest.config import AppConfig as ISIMConfig
+from config import AppConfig as ISIMConfig
 
 BASE_DIR = Path(__file__).parent
 
@@ -71,6 +77,12 @@ class RESTAdapter(GeneralAdapter):
     # generic GETs
 
     def get_organization_units(self, limit: int = 50, offset: int = 0) -> list[Any]:
+        """
+        Returns organization units, their subnets, and physical environments.
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :return: list containing organization units, subnets, and physical environments
+        """
         query = """
         MATCH (ou: OrganizationUnit)
         OPTIONAL MATCH (ou)-[:TENANTS]-(pe:PhysicalEnvironment)
@@ -83,6 +95,12 @@ class RESTAdapter(GeneralAdapter):
         return self._run_query(query, limit=limit, offset=offset)
 
     def get_subnets(self, limit: int = 50, offset: int = 0) -> list[Any]:
+        """
+        Returns subnets, their organization units, contacts, and IP addresses.
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :return: list containing subnets, organization units, contacts, and IP addresses
+        """
         query = """
         MATCH (s:Subnet)
         OPTIONAL MATCH (s)-[:PART_OF]-(p_s: Subnet)
@@ -97,6 +115,13 @@ class RESTAdapter(GeneralAdapter):
         return self._run_query(query, limit=limit, offset=offset)
 
     def get_ip_assets(self, limit: int = 50, offset: int = 0) -> list[Any]:
+        """
+        Returns IP addresses, their subnets, organization units, domain
+        names, and URIs.
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :return: list containing IP addresses and their related entities
+        """
         query = """
         MATCH (ip:IP)
         OPTIONAL MATCH (ip)-[:PART_OF]-(s:Subnet)
@@ -111,6 +136,13 @@ class RESTAdapter(GeneralAdapter):
         return self._run_query(query, limit=limit, offset=offset)
 
     def get_devices(self, limit: int = 50, offset: int = 0) -> list[Any]:
+        """
+        Returns devices, their organization units, hardware versions, hosts, and
+        IP addresses.
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :return: list of devices and their related entities
+        """
         query = """
         MATCH (dev:Device)
         OPTIONAL MATCH (dev)-[:PART_OF]-(ou:OrganizationUnit)
@@ -124,6 +156,12 @@ class RESTAdapter(GeneralAdapter):
         return self._run_query(query, limit=limit, offset=offset)
 
     def get_applications(self, limit: int = 50, offset: int = 0) -> list[Any]:
+        """
+        Returns applications and their devices.
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :return: list of applications and their related entities
+        """
         query = """
         MATCH (app:Application)
         OPTIONAL MATCH (app)-[:RUNNING_ON]-(dev:Device)
@@ -135,6 +173,12 @@ class RESTAdapter(GeneralAdapter):
         return self._run_query(query, limit=limit, offset=offset)
 
     def get_all_cve(self, limit: int = 50, offset: int = 0) -> list[Any]:
+        """
+        Returns all CVEs - their descriptions and CVE IDs.
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :return: list of CVEs
+        """
         query = """
         MATCH (cve:CVE)
         RETURN {description: cve.description, CVE_id: cve.CVE_id} AS cve
@@ -144,6 +188,13 @@ class RESTAdapter(GeneralAdapter):
         return self._run_query(query, limit=limit, offset=offset)
 
     def get_cve(self, cve_id: str, limit: int = 50, offset: int = 0) -> list[Any]:
+        """
+        Returns CVE from the database with specified CVE ID.
+        :param cve_id: ID of CVE
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :return: found CVE or no CVE
+        """
         query = """
         MATCH (cve:CVE {CVE_id: $cve_id})
         RETURN cve
@@ -153,6 +204,13 @@ class RESTAdapter(GeneralAdapter):
         return self._run_query(query, cve_id=cve_id, limit=limit, offset=offset)
 
     def get_ip_cve(self, ip: str, limit: int = 50, offset: int = 0) -> list[Any]:
+        """
+        Returns CVEs present on a host with IP address.
+        :param ip: ip address
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :return: list of CVEs
+        """
         query = """
         MATCH (ip:IP {address: $ip})<-[:HAS_ASSIGNED]-(nod:Node)-[:IS_A]-(host:Host)
         WITH host
@@ -167,6 +225,14 @@ class RESTAdapter(GeneralAdapter):
     def get_ip_asset_info(
         self, limit: int = 500, offset: int = 0, ip: str | None = None
     ) -> list[IPAssetInformationDTO]:
+        """
+        Return relevant entities for an IP address - subnets, contact,
+        domains, network nodes, and missions.
+        :param limit: limits the count of returned items
+        :param offset: specifies the index of the first item to return
+        :param ip: ip address
+        :return: list of IP addresses and related entities
+        """
         query = f"""
         MATCH (ip:IP{" {address: $ip}" if ip else ""})
         WITH ip, [(ip)-[:PART_OF]-(s:Subnet) | s.range] as subnets
@@ -195,6 +261,11 @@ class RESTAdapter(GeneralAdapter):
     # inserting data
 
     def store_assets(self, json_string: str) -> None:
+        """
+        Stores asset information described in README.
+        :param json_string: string containing the JSON representation of asset information
+        :return: None
+        """
         query = Path(BASE_DIR / "assets/asset_separate_parts.cypher").read_text()
         params = {"json_string": json_string}
         query = cast("LiteralString", query)
@@ -204,6 +275,11 @@ class RESTAdapter(GeneralAdapter):
         self._default_subnet_parent_subnets_constraint()
 
     def store_nmap_assets(self, json_string: str) -> None:
+        """
+        Stores nmap asset information passed from Nmap workflow from CASM.
+        :param json_string: string containing the JSON representation of asset information
+        :return:
+        """
         config = ISIMConfig.get()
         rediscovery_time = f"P{config.organization.rediscovery_time}D"
         query = Path(BASE_DIR / "assets/nmap_separate_parts.cypher").read_text()
@@ -222,6 +298,11 @@ class RESTAdapter(GeneralAdapter):
         self._run_query(query, **params)
 
     def store_easm(self, json_string: str) -> None:
+        """
+        Stores results obtained from EasyEASM.
+        :param json_string: string containing the JSON representation of EasyEASM scan
+        :return: None
+        """
         config = ISIMConfig.get()
         rediscovery_time = f"P{config.organization.rediscovery_time}D"
         query = Path(BASE_DIR / "assets/easm_cypher_query.cypher").read_text()

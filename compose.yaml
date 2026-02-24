@@ -1,12 +1,13 @@
 services:
-  resilmesh_sap_isim:
-    container_name: isim
+  resilmesh-sap-isim:
+    container_name: resilmesh-sap-isim
+    hostname: resilmesh-sap-isim
     build:
       context: .
     ports:
       - 8000:8000
     depends_on:
-      resilmesh_sap_neo4j:
+      resilmesh-sap-neo4j:
         condition: service_healthy
     volumes:
       - ./config/config_docker.yaml:/app/config/config.yaml
@@ -14,34 +15,64 @@ services:
     networks:
       - resilmesh_network
 
-  resilmesh_sap_isim_graphql:
-    container_name: resilmesh_sap_isim_graphql
+  resilmesh-sap-isim-graphql:
+    container_name: resilmesh-sap-isim-graphql
+    hostname: resilmesh-sap-isim-graphql
     build:
       context: isim_graphql
     ports:
       - 4001:4001
     depends_on:
-      resilmesh_sap_neo4j:
+      resilmesh-sap-neo4j:
         condition: service_healthy
     environment:
-      - NEO4J_URI=bolt://resilmesh_sap_neo4j:7687
+      - NEO4J_URI=bolt://resilmesh-sap-neo4j:7687
       - NEO4J_USER=neo4j
       - NEO4J_PASSWORD=supertestovaciheslo
     restart: unless-stopped
     networks:
       - resilmesh_network
 
-  resilmesh_sap_neo4j:
-    container_name: resilmesh_sap_neo4j
+  resilmesh-sap-isim-automation:
+    container_name: resilmesh-sap-isim-automation
+    build:
+      context: .
+      dockerfile: automation.Dockerfile
+    ports:
+      - 5000:5000
+    depends_on:
+      resilmesh-sap-neo4j:
+        condition: service_healthy
+    environment:
+      - TEMPORAL_URL=resilmesh-sop-wo-temporal:7233
+      - NEO4J_URI=bolt://resilmesh-sap-neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=supertestovaciheslo
+    volumes:
+      - ./logs:/app/logs
+      - ./config:/config
+      - ./.env:/app/.env:ro
+    networks:
+      - resilmesh_network
+    restart: unless-stopped
+    
+  resilmesh-sap-neo4j:
+    container_name: resilmesh-sap-neo4j
     image: neo4j:5.26.10
     environment:
       - NEO4J_AUTH=neo4j/supertestovaciheslo
-      - NEO4J_PLUGINS=["apoc", "graph-data-science"]
+      - NEO4J_PLUGINS=["apoc", "apoc-extended", "graph-data-science"]
       - NEO4J_apoc_export_file_enabled=true
       - NEO4J_apoc_import_file_enabled=true
       - NEO4J_apoc_import_file_use__neo4j__config=true
+      - NEO4J_apoc_trigger_enabled=true
+      - NEO4J_apoc_conf_apoc_trigger_enabled=true
+      - NEO4J_apoc_initializer_neo4j_cypher_0=CALL apoc.cypher.runFile("file:///triggers.cypher",{reportError:true,statistics:true})
+      - NEO4J_dbms_security_procedures_unrestricted=gds.*,apoc.*
+      - NEO4J_dbms_security_procedures_allowlist=gds.*,apoc.*
     volumes:
-      - resilmesh_sap_neo4j_isim_data:/data
+      - resilmesh-sap-isim-neo4j-data:/data
+      - ./neo4j_database/triggers.cypher:/var/lib/neo4j/import/triggers.cypher
 #      - ${DATA_PATH}:/tmp/dumps/neo4j.dump
     ports:
       - 7474:7474
@@ -59,21 +90,25 @@ services:
     restart: unless-stopped
 
 #  neo4j_load_data:
-#    image: neo4j:5.21.0
+#    image: neo4j:5.26.1
 #    environment:
 #      - NEO4J_AUTH=neo4j/supertestovaciheslo
 #    volumes:
-#      - resilmesh_sap_neo4j_isim_data:/data
+#      - resilmesh-sap-isim-neo4j-data:/data
 #      - ${DATA_PATH}:/tmp/dumps/neo4j.dump
 #    entrypoint:
 #      - sh
 #      - -c
 #      - neo4j-admin database load --from-path=/tmp/dumps --overwrite-destination=true neo4j && neo4j-admin database migrate neo4j --force-btree-indexes-to-range
 
-## this network is ready to be connected to CASM demo.
+# This network is ready to be connected to CASM demo.
 # To work together, do not deploy neo4j and neo4j_load_data from this compose and uncomment
 # the external option
 
-
 volumes:
-  resilmesh_sap_neo4j_isim_data:
+  resilmesh-sap-isim-neo4j-data:
+#
+#networks:
+#  resilmesh_network:
+#    external: true
+#    name: resilmesh_network

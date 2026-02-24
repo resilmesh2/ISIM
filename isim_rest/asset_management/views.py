@@ -1,7 +1,12 @@
+"""
+This module contains API views for individual URLs from the REST API.
+They typically contain encoding and decoding of data, error handling and
+response creation.
+"""
+
 import json
 
 import msgspec.json
-import structlog
 from django.http import HttpRequest
 from msgspec import ValidationError
 from neo4j.exceptions import ClientError, DatabaseError, TransientError
@@ -24,7 +29,7 @@ from isim_rest.asset_management.data_formats.input_dtos import (
     SLPEnrichmentDTO,
 )
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
-from isim_rest.neo4j_rest.config import AppConfig
+from config import AppConfig
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
@@ -201,16 +206,13 @@ def ip_cves(request: HttpRequest, ip: str) -> Response:
 
 
 @api_view(["POST"])
-def traceroute(request: HttpRequest, logger=structlog.get_logger()) -> Response:
+def traceroute(request: HttpRequest) -> Response:
     nmap_adapter = NmapTopologyAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
 
     request_body = request.body
-    logger.info(f"Request body: {request_body}")
     try:
         data = msgspec.json.decode(request_body, type=NmapTopologyDTO)
-        logger.info(f"Data: {data}")
         json_string = json.dumps(json.loads(msgspec.json.encode(data)))
-        logger.info(f"JSON string: {json_string}")
         nmap_adapter.create_topology(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -240,15 +242,12 @@ def degree_centrality(request: HttpRequest) -> Response:
 
 
 @api_view(["POST"])
-def store_criticality(request: HttpRequest, logger=structlog.get_logger()) -> Response:
+def store_criticality(request: HttpRequest) -> Response:
     csa_adapter = CSAAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
     request_body = request.body
-    logger.info(f"Request body: {request_body}")
     try:
         data = msgspec.json.decode(request_body, type=list[MissionCriticalityDTO], dec_hook=dec_hook_ip)
-        logger.info(f"Data: {data}")
         json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
-        logger.info(f"JSON string: {json_string}")
         csa_adapter.store_criticality(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
