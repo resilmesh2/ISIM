@@ -17,6 +17,15 @@ class Neo4jConfig:
     user: str = "neo4j"
 
 
+@dataclass
+class OpenAIConfig:
+    query_model: str
+    response_model: str
+    query_builder_temperature: float
+    human_transformer_temperature: float
+    base_url: str
+    api_token: str | None = None
+
 
 @dataclass
 class Host:
@@ -45,6 +54,7 @@ class OrganizationConfig:
 @dataclass
 class Config:
     neo4j: Neo4jConfig
+    openai: OpenAIConfig
     organization: OrganizationConfig
 
 

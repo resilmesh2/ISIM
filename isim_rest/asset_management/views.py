@@ -5,9 +5,13 @@ response creation.
 """
 
 import json
+import logging
+import mimetypes
+from pathlib import Path
 
 import msgspec.json
-from django.http import HttpRequest
+from django.conf import settings
+from django.http import FileResponse, Http404, HttpRequest, HttpResponse
 from msgspec import ValidationError
 from neo4j.exceptions import ClientError, DatabaseError, TransientError
 from neo4j_adapter.criticality_adapter import CriticalityAdapter
@@ -30,12 +34,18 @@ from isim_rest.asset_management.data_formats.input_dtos import (
 )
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
 from config import AppConfig
+from vulnllama.service import get_vulnllama_service
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
 
+logger = logging.getLogger(__name__)
+
 config = AppConfig.get()
 client = RESTAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
+VULNLLAMA_BUILD_DIR = Path(settings.BASE_DIR).parent / "vulnllama/monaco_react/frontend/build"
+VULNLLAMA_STATIC_DIR = VULNLLAMA_BUILD_DIR / "static"
+VULNLLAMA_INDEX = VULNLLAMA_BUILD_DIR / "index.html"
 
 
 def get_limit(request: HttpRequest) -> int:
@@ -274,3 +284,54 @@ def slp_enrichment(request: HttpRequest) -> Response:
             "Exception on neo4j side, post operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     return Response("Processed successfully.", status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "POST"])
+def vulnllama(request: HttpRequest) -> Response:
+    if request.method == "GET":  # type: ignore[comparison-overlap]
+        if not VULNLLAMA_INDEX.is_file():
+            return Response(
+                "VulnLlama frontend build not found. Run `npm --prefix vulnllama/monaco_react/frontend run build`.",
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return FileResponse(VULNLLAMA_INDEX.open("rb"), content_type="text/html")
+
+    payload = request.data if hasattr(request, "data") else None
+    question = payload.get("question") if hasattr(payload, "get") else None
+    if not question or not isinstance(question, str):
+        return Response("Missing 'question' string.", status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        service = get_vulnllama_service()
+        payload = service.answer(question)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("VulnLlama request failed.")
+        return Response(f"VulnLlama failed: {exc}", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def vulnllama_static(request: HttpRequest, path: str) -> HttpResponse:
+    if not VULNLLAMA_STATIC_DIR.is_dir():
+        raise Http404("VulnLlama static build not found.")
+
+    candidate = (VULNLLAMA_STATIC_DIR / path).resolve()
+    if not candidate.is_file() or VULNLLAMA_STATIC_DIR.resolve() not in candidate.parents:
+        raise Http404("Asset not found.")
+
+    content_type, _ = mimetypes.guess_type(str(candidate))
+    return FileResponse(candidate.open("rb"), content_type=content_type or "application/octet-stream")
+
+
+@api_view(["GET"])
+def vulnllama_asset(request: HttpRequest, path: str) -> HttpResponse:
+    if not VULNLLAMA_BUILD_DIR.is_dir():
+        raise Http404("VulnLlama build not found.")
+
+    candidate = (VULNLLAMA_BUILD_DIR / path).resolve()
+    if not candidate.is_file() or VULNLLAMA_BUILD_DIR.resolve() not in candidate.parents:
+        raise Http404("Asset not found.")
+
+    content_type, _ = mimetypes.guess_type(str(candidate))
+    return FileResponse(candidate.open("rb"), content_type=content_type or "application/octet-stream")
