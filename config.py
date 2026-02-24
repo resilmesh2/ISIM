@@ -17,6 +17,7 @@ class Neo4jConfig:
     user: str = "neo4j"
 
 
+
 @dataclass
 class Host:
     ip_address: str
