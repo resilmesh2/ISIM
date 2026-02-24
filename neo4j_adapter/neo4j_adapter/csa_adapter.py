@@ -36,6 +36,8 @@ class CSAAdapter(GeneralAdapter):
         and normalized betweenness centrality into one value stored for nodes.
         :return: None
         """
+        # The lowest values for normalized metrics are 1 not 0
+        # because the interval is pushed to positive integers.
         query = """
         MATCH (n:Node)
         WITH max(n.topology_betweenness) AS max_betweenness, min(n.topology_betweenness) AS min_betweenness,
@@ -48,6 +50,7 @@ class CSAAdapter(GeneralAdapter):
         END AS topology_degree_norm,
         CASE
           WHEN n.topology_betweenness IS NULL THEN 1
+          WHEN max_betweenness - min_betweenness = 0 THEN 1
           ELSE 9*((n.topology_betweenness - min_betweenness) / (max_betweenness - min_betweenness)) + 1
         END AS topology_betweenness_norm,
         CASE
