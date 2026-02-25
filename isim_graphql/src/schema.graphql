@@ -231,6 +231,7 @@ type IP {
   address: String!
   version: Int
   tag: [String]
+  status: String
   domain_names: [DomainName!]! @relationship(type:  "RESOLVES_TO", properties: "ResolvesTo", direction: OUT)
   uris: [URI!]! @relationship(type: "IDENTIFIES", direction: OUT)
   nodes: [NodeObject!]! @relationship(type:  "HAS_ASSIGNED", properties: "HasAssigned", direction: IN)
@@ -310,7 +311,6 @@ type SoftwareVersion {
     """,
     columnName: "_id"
   )
-  tag: [String]
   version: String!
   hosts: [Host!]! @relationship(type: "ON", properties: "SoftwareOn", direction: OUT)
   network_services: [NetworkService!]! @relationship(type: "PROVIDES", direction: OUT, queryDirection: DEFAULT_UNDIRECTED)
@@ -383,6 +383,7 @@ type Vulnerability {
     columnName: "_id"
   )
   description: String!
+  status: [String]!
   software_versions: [SoftwareVersion!]! @relationship(type:  "IN", direction: OUT)
   cve: CVE @relationship(type:  "REFERS_TO", direction: OUT)
   status: [String!]
@@ -396,12 +397,12 @@ type ResolvesTo @relationshipProperties {
 type SoftwareOn @relationshipProperties {
   end: String
   start: String
-  tag: [String]
 }
 
 type NetworkServiceOn @relationshipProperties {
   end: String
   start: String
+  status: String
   tag: [String]
 }
 
@@ -525,5 +526,31 @@ type Mutation {
       @cypher(
         statement: "MATCH (ip:IP {address: $address}) SET ip.tag = $tag RETURN ip",
         columnName: "ip"
+      )
+
+    updateIPStatus(address: String!, status: String!): IP
+      @cypher(
+        statement: "MATCH (ip:IP {address: $address}) SET ip.status = $status RETURN ip",
+        columnName: "ip"
+      )
+
+    updateNetworkServiceStatus(address: String!, protocol: String!, port: Int!, service: String!, status: String!): NetworkServiceOn
+      @cypher(
+        statement: """
+          MATCH (ns:NetworkService {protocol: $protocol, port: $port, service: $service})-[r:ON]->(:Host)-[:IS_A]-(:Node)-[:HAS_ASSIGNED]-(ip:IP {address: $address})
+          SET r.status = $status
+          RETURN r
+        """,
+        columnName: "r"
+      )
+
+    updateVulnerabilityStatus(cve: String!, status: [String]!): Vulnerability
+      @cypher(
+        statement: """
+          MATCH (v:Vulnerability)-[:REFERS_TO]->(c:CVE {cve_id: $cve})
+          SET v.status = $status
+          RETURN v
+        """,
+        columnName: "v"
       )
 }

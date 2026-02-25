@@ -54,7 +54,7 @@ class GeneralAdapter:
             "CREATE CONSTRAINT FOR (n:Component) REQUIRE n.name IS UNIQUE",
             "CREATE CONSTRAINT FOR (n:DomainName) REQUIRE (n.domain_name, n.tag) IS UNIQUE",
             "CREATE CONSTRAINT FOR (s:NetworkService) REQUIRE (s.service, s.tag) IS UNIQUE",
-            "CREATE CONSTRAINT FOR (s:SoftwareVersion) REQUIRE (s.version, s.tag) IS UNIQUE",
+            "CREATE CONSTRAINT FOR (s:SoftwareVersion) REQUIRE s.version IS UNIQUE",
             "CREATE CONSTRAINT FOR (d:Device) REQUIRE (d.name) IS UNIQUE",
         ]
 

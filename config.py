@@ -40,6 +40,8 @@ class Host:
 class OrganizationConfig:
     name: str
     hosts: list[Host]
+    cleaning_time: int
+    rediscovery_time: int
 
 
 @dataclass

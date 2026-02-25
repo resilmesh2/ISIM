@@ -34,6 +34,7 @@ urlpatterns = [
     re_path(r"^ip/(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/cve", views.ip_cves, name="ip_cves"),
     # endpoints for temporal workflows from CASM
     path("easm", views.easm, name="easm"),
+    path("nmap_assets", views.nmap_assets, name="nmap_assets"),
     path("traceroute", views.traceroute, name="traceroute"),
     path("nodes/betweenness_centrality", views.betweenness_centrality, name="betweenness_centrality"),
     path("nodes/degree_centrality", views.degree_centrality, name="degree_centrality"),

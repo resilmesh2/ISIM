@@ -10,6 +10,7 @@ from typing import Any, LiteralString, cast
 
 from neo4j_adapter.dtos import IPAssetInformationDTO
 from neo4j_adapter.general_adapter import GeneralAdapter
+from config import AppConfig as ISIMConfig
 
 BASE_DIR = Path(__file__).parent
 
@@ -265,12 +266,36 @@ class RESTAdapter(GeneralAdapter):
         :param json_string: string containing the JSON representation of asset information
         :return: None
         """
-        query = Path(BASE_DIR / "assets/asset_update_query.cypher").read_text()
+        query = Path(BASE_DIR / "assets/asset_separate_parts.cypher").read_text()
         params = {"json_string": json_string}
         query = cast("LiteralString", query)
         self._run_query(query, **params)
+        self._store_common_assets(json_string)
         self._default_ip_address_parent_subnets_constraint()
         self._default_subnet_parent_subnets_constraint()
+
+    def store_nmap_assets(self, json_string: str) -> None:
+        """
+        Stores nmap asset information passed from Nmap workflow from CASM.
+        :param json_string: string containing the JSON representation of asset information
+        :return:
+        """
+        config = ISIMConfig.get()
+        rediscovery_time = f"P{config.organization.rediscovery_time}D"
+        query = Path(BASE_DIR / "assets/nmap_separate_parts.cypher").read_text()
+        params = {"json_string": json_string,
+                  "rediscovery_time": rediscovery_time}
+        query = cast("LiteralString", query)
+        self._run_query(query, **params)
+        self._store_common_assets(json_string)
+        self._default_ip_address_parent_subnets_constraint()
+        self._default_subnet_parent_subnets_constraint()
+
+    def _store_common_assets(self, json_string: str) -> None:
+        query = Path(BASE_DIR / "assets/asset_common_parts.cypher").read_text()
+        params = {"json_string": json_string}
+        query = cast("LiteralString", query)
+        self._run_query(query, **params)
 
     def store_easm(self, json_string: str) -> None:
         """
@@ -278,8 +303,11 @@ class RESTAdapter(GeneralAdapter):
         :param json_string: string containing the JSON representation of EasyEASM scan
         :return: None
         """
+        config = ISIMConfig.get()
+        rediscovery_time = f"P{config.organization.rediscovery_time}D"
         query = Path(BASE_DIR / "assets/easm_cypher_query.cypher").read_text()
-        params = {"json_string": json_string}
+        params = {"json_string": json_string,
+                  "rediscovery_time": rediscovery_time}
         query = cast("LiteralString", query)
         self._run_query(query, **params)
 
