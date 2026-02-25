@@ -2,3 +2,12 @@ neo4j:
   password: supertestovaciheslo
   bolt: bolt://resilmesh-sap-neo4j:7687
   user: neo4j
+
+
+openai:
+  query_model: "gpt-oss-120b"
+  response_model: "qwen3-coder"
+  query_builder_temperature: 0.3
+  human_transformer_temperature: 0.5
+  base_url: "https://llm.ai.e-infra.cz/v1/"
+  api_token: CHANGEME

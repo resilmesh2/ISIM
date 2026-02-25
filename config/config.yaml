@@ -9,5 +9,5 @@ openai:
   response_model: "qwen3-coder"
   query_builder_temperature: 0.3
   human_transformer_temperature: 0.5
-  base_url: "https://chat.ai.e-infra.cz/api"
-  api_token: CHANGEME
+  base_url: "https://llm.ai.e-infra.cz/v1/"
+  api_token: sk-CHANGEME
