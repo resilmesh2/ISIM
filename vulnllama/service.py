@@ -19,6 +19,25 @@ logger = logging.getLogger(__name__)
 _service_lock = threading.Lock()
 _service_instance: "VulnLlamaService | None" = None
 
+# Specify which entities can be used in prioritization tasks and what is important about them.
+# LLM chooses them when necessary and makes up its own criteria.
+# Method: Directional stimulus prompting
+PRIORITIZATION_SPECIFICATION = """When you are asked about prioritization of vulnerabilities, their sorting, comparison, and similar tasks, the following sentences contain description of how entities from the Neo4j database must be used.
+Your approach must always adhere to these instructions numbered from 1 to 10: 
+1. CVE can be used with its properties. You can further analyze CVE description.
+2. CVSS (Common Vulnerability Scoring System) vertices can be used with all their properties. 
+3. IP addresses and Host vertices can be used with COUNT function.
+4. Subnets and Organization Units can be used to determine how widespread the vulnerability is.
+5. Missions can be used with their properties and COUNT function.
+6. Mission Dependency vertices can be used to consider cascading impact on missions.
+7. Users and their Roles on Devices can be used together with impacts of vulnerabilities present directly in CVE properties or in CVE descriptions when they are not separately extracted. Impacts may indicate what the attacker can do with the device if impersonating a user. Roles represent levels of privileges.
+8. Network Service nodes may indicate whether the vulnerability is accessible from another machine if the kind of network service matches the description of the vulnerability.
+9. Vertices of type Node, their properties, and connections to other vertices of type Node can be used to estimate impact of vulnerability in the computer network.
+10. Vertices of type Application can be considered if you think that vulnerability could influence their functionality and they have important functionality.
+
+The vertices can be used with paths containing them, in final formulas, or argumentation.
+Always focus your attention on the current state of the database. It is not necessary to use all node types.
+"""
 
 def _get_llm(openai_config: OpenAIConfig, human_response: bool = False) -> ChatOpenAI:
     return ChatOpenAI(
@@ -51,6 +70,48 @@ def get_query_builder_chain(graph_: Neo4jGraph, openai_config: OpenAIConfig) -> 
                 "system",
                 """
                 Task: Given an input question, convert it to a Cypher query.
+                Specification:
+                - Return only the query, no pre-amble or additional text, no formatting such as newlines or linebreaks or backticks.
+                - Severity passed to the query must always be in English.
+                - try to make string comparisons case insensitive
+                - Be aware that entities with valid_from and valid_to are chronicled - this means that they were valid only for a certain time.
+                The current newest information has always valid_to set to null or is empty
+                - Information about datetime and timestamps is in strings, the format is "YYYY-MM-DD HH:MM:SS.sssss". Convert it from that with apoc parse
+
+                """ + PRIORITIZATION_SPECIFICATION,
+            ),
+            ("human", cypher_template),
+        ]
+    )
+    chain = (
+        RunnablePassthrough.assign(
+            schema=lambda _: graph_.get_schema,
+        )
+        | cypher_prompt
+        | cypher_llm.bind(stop=["\nCypherResult:"])
+        | StrOutputParser()
+    )
+
+    class Question(BaseModel):
+        question: str
+
+    return chain.with_types(input_type=Question)
+
+
+def get_visualization_query_builder_chain(graph_: Neo4jGraph, openai_config: OpenAIConfig) -> Runnable[Input, Output]:
+    cypher_llm = _get_llm(openai_config)
+    cypher_template = """Based on the Neo4j graph schema below, write an output Cypher query that would return all vertices 
+    and edges used in input Cypher query to determine its returned results:
+    {schema}
+
+    Input Cypher query: {question}
+    Output Cypher query:"""
+    cypher_prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                """
+                Task: Given an input Cypher query, convert it to a new Cypher query. Limit your results to 100 entities.
                 Specification:
                 - Return only the query, no pre-amble or additional text, no formatting such as newlines or linebreaks or backticks.
                 - Severity passed to the query must always be in English.
@@ -155,6 +216,7 @@ class VulnLlamaService:
             password=config.neo4j.password,
         )
         self._query_builder_chain = get_query_builder_chain(self._graph, self._openai_config)
+        self._visualization_query_chain = get_visualization_query_builder_chain(self._graph, self._openai_config)
         self._human_result_chain = get_result_to_human_markdown_chain(self._graph, self._openai_config)
 
         relationships = self._graph.structured_schema.get("relationships") or []
@@ -176,10 +238,12 @@ class VulnLlamaService:
         human_result = self._human_result_chain.invoke(
             {"question": query, "result": result, "language": language}
         )
+        visualization_query = self._visualization_query_chain.invoke({"question": query})
         return {
             "question": question,
             "language": language,
             "query": query,
+            "visualization_query": visualization_query,
             "result": result,
             "human_result": human_result,
         }
