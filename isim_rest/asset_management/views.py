@@ -4,8 +4,6 @@ They typically contain encoding and decoding of data, error handling and
 response creation.
 """
 
-import json
-
 import msgspec.json
 from django.http import HttpRequest
 from msgspec import ValidationError
@@ -20,6 +18,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view  # type: ignore
 from rest_framework.response import Response
 
+from config import AppConfig
 from isim_rest.asset_management.data_formats.input_dtos import (
     AssetListInputDTO,
     EasmDTO,
@@ -28,8 +27,7 @@ from isim_rest.asset_management.data_formats.input_dtos import (
     NmapTopologyDTO,
     SLPEnrichmentDTO,
 )
-from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip
-from config import AppConfig
+from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip, msgspec_encode_to_json_string
 
 DEFAULT_LIMIT = 50
 DEFAULT_OFFSET = 0
@@ -70,7 +68,7 @@ def mission(request: HttpRequest) -> Response:
     request_body = request.body
     try:
         data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         client.create_missions_and_components_string(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -87,7 +85,7 @@ def assets(request: HttpRequest) -> Response:
     try:
         data = msgspec.json.decode(request_body, type=AssetListInputDTO, dec_hook=dec_hook_ip)
         data.flatten_related_relationships()
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         client.store_assets(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -106,7 +104,7 @@ def easm(request: HttpRequest) -> Response:
     request_body = request.body
     try:
         data = msgspec.json.decode(request_body, type=list[EasmDTO], dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         client.store_easm(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -125,7 +123,7 @@ def nmap_assets(request: HttpRequest) -> Response:
     try:
         data = msgspec.json.decode(request_body, type=AssetListInputDTO, dec_hook=dec_hook_ip)
         data.flatten_related_relationships()
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         client.store_nmap_assets(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -212,7 +210,7 @@ def traceroute(request: HttpRequest) -> Response:
     request_body = request.body
     try:
         data = msgspec.json.decode(request_body, type=NmapTopologyDTO)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data)))
+        json_string = msgspec_encode_to_json_string(data)
         nmap_adapter.create_topology(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -247,7 +245,7 @@ def store_criticality(request: HttpRequest) -> Response:
     request_body = request.body
     try:
         data = msgspec.json.decode(request_body, type=list[MissionCriticalityDTO], dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         csa_adapter.store_criticality(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -284,7 +282,7 @@ def slp_enrichment(request: HttpRequest) -> Response:
     request_body = request.body
     try:
         data = msgspec.json.decode(request_body, type=list[SLPEnrichmentDTO], dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         slp_enrichment_adapter.store_slp_data(json_string)
     except ValidationError as e:
         return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
