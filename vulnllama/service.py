@@ -10,33 +10,24 @@ from langchain_neo4j import Neo4jGraph
 from langchain_neo4j.chains.graph_qa.cypher_utils import CypherQueryCorrector, Schema
 from langchain_openai import ChatOpenAI
 from neo4j import Driver, GraphDatabase
+from openai import BadRequestError
 from pydantic import BaseModel
 
 from config import AppConfig, OpenAIConfig
+import copy
 
 logger = logging.getLogger(__name__)
 
 _service_lock = threading.Lock()
 _service_instance: "VulnLlamaService | None" = None
 
-# Specify which entities can be used in prioritization tasks and what is important about them.
-# LLM chooses them when necessary and makes up its own criteria.
-# Method: Directional stimulus prompting
-PRIORITIZATION_SPECIFICATION = """When you are asked about prioritization of vulnerabilities, their sorting, comparison, and similar tasks, the following sentences contain description of how entities from the Neo4j database must be used.
-Your approach must always adhere to these instructions numbered from 1 to 10: 
-1. CVE can be used with its properties. You can further analyze CVE description.
-2. CVSS (Common Vulnerability Scoring System) vertices can be used with all their properties. 
-3. IP addresses and Host vertices can be used with COUNT function.
-4. Subnets and Organization Units can be used to determine how widespread the vulnerability is.
-5. Missions can be used with their properties and COUNT function.
-6. Mission Dependency vertices can be used to consider cascading impact on missions.
-7. Users and their Roles on Devices can be used together with impacts of vulnerabilities present directly in CVE properties or in CVE descriptions when they are not separately extracted. Impacts may indicate what the attacker can do with the device if impersonating a user. Roles represent levels of privileges.
-8. Network Service nodes may indicate whether the vulnerability is accessible from another machine if the kind of network service matches the description of the vulnerability.
-9. Vertices of type Node, their properties, and connections to other vertices of type Node can be used to estimate impact of vulnerability in the computer network.
-10. Vertices of type Application can be considered if you think that vulnerability could influence their functionality and they have important functionality.
+PRIORITIZATION_SPECIFICATION = """When you are asked about prioritization of CVE vulnerabilities, their sorting, comparison, and similar tasks, identify which entities user asks about first and use only instructions for relevant entities out of the following.
 
-The vertices can be used with paths containing them, in final formulas, or argumentation.
-Always focus your attention on the current state of the database. It is not necessary to use all node types.
+1. CVSS (Common Vulnerability Scoring System) vertices can be used to obtain score. CVSS score can be completely ignored when user does not ask about it.
+2. IP addresses can be used with COUNT function. When IP addresses are used together with CVSS score, CVSS score should be multiplied by the count of IP addresses that are jeopardized by the vulnerability.
+3. Host vertices can be used with COUNT function. When Host vertices are used together with CVSS score, CVSS score should be multiplied by the count of hosts that are jeopardized by the vulnerability.
+4. Missions can be used to obtain their criticality and with SUM function. When Mission vertices are used together with CVSS score, CVSS score should be multiplied by the sum of criticalities of jeopardized missions. 
+5. Criticality of vertices of type Node can be used only when user asks about prioritization according to network topology. It cannot be used together with IP addresses, Host vertices, or Missions. When used together with CVSS score, CVSS score is multiplied by the sum of final criticalities of Node vertices.
 """
 
 def _get_llm(openai_config: OpenAIConfig, human_response: bool = False) -> ChatOpenAI:
@@ -59,11 +50,22 @@ def get_user_language(question: str, openai_config: OpenAIConfig) -> str:
 
 def get_query_builder_chain(graph_: Neo4jGraph, openai_config: OpenAIConfig) -> Runnable[Input, Output]:
     cypher_llm = _get_llm(openai_config)
-    cypher_template = """Based on the Neo4j graph schema below, write a Cypher query that would answer the user's question:
-    {schema}
+    cypher_template = """Based on the Neo4j graph schema below, write a Cypher query that would answer the user's question.
 
-    Question: {question}
-    Cypher query:"""
+                Schema: {schema}
+                The schema has three parts - node properties, relationship properties, and the relationships.
+                The first part starts with line "Node properties:". Each of the lines in the first part starts with a name of node type, followed by a space and left curly bracket. 
+                An enumeration of properties and their types is inside of the curly brackets. Properties are immediately followed by colons, while types are written with capital letters.
+                The second part starts with line "Relationship properties:". Each of the lines starts with a name of relationship type in capital letters, followed by a space and left curly bracket. 
+                An enumeration of properties and their types is inside of the curly brackets. Properties are immediately followed by colons, while types are written with capital letters.
+                This part must be used only to obtain names of properties and their types. The third part must be used to create paths with relationships.
+                The third part starts with line "The relationships:". Each of the lines has the same format - (:<source_node_type>)-[:<relationship_type>]->(:<destination_node_type>).
+                It means that the database contains relationships from the source node type to the destination node type that have the specified relationship type.
+                The arrow "->" represents direction of the relationship. You can chain only relationships listed in this part to create your queries. Use the correct direction.
+
+                Question: {question}
+
+                Cypher query:"""
     cypher_prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -72,11 +74,8 @@ def get_query_builder_chain(graph_: Neo4jGraph, openai_config: OpenAIConfig) -> 
                 Task: Given an input question, convert it to a Cypher query.
                 Specification:
                 - Return only the query, no pre-amble or additional text, no formatting such as newlines or linebreaks or backticks.
-                - Severity passed to the query must always be in English.
-                - try to make string comparisons case insensitive
-                - Be aware that entities with valid_from and valid_to are chronicled - this means that they were valid only for a certain time.
-                The current newest information has always valid_to set to null or is empty
-                - Information about datetime and timestamps is in strings, the format is "YYYY-MM-DD HH:MM:SS.sssss". Convert it from that with apoc parse
+                - Try to make string comparisons case insensitive.
+                - If information about datetime and timestamps is in strings, they start with "YYYY-MM-DDTHH:MM:SS.sss". Convert it from that with apoc parse.
 
                 """ + PRIORITIZATION_SPECIFICATION,
             ),
@@ -101,11 +100,22 @@ def get_query_builder_chain(graph_: Neo4jGraph, openai_config: OpenAIConfig) -> 
 def get_visualization_query_builder_chain(graph_: Neo4jGraph, openai_config: OpenAIConfig) -> Runnable[Input, Output]:
     cypher_llm = _get_llm(openai_config)
     cypher_template = """Based on the Neo4j graph schema below, write an output Cypher query that would return all vertices 
-    and edges used in input Cypher query to determine its returned results:
-    {schema}
+                and edges used in input Cypher query below to determine its returned results.
 
-    Input Cypher query: {question}
-    Output Cypher query:"""
+                Schema: {schema}
+                The schema has three parts - node properties, relationship properties, and the relationships.
+                The first part starts with line "Node properties:". Each of the lines in the first part starts with a name of node type, followed by a space and left curly bracket. 
+                An enumeration of properties and their types is inside of the curly brackets. Properties are immediately followed by colons, while types are written with capital letters.
+                The second part starts with line "Relationship properties:". Each of the lines starts with a name of relationship type in capital letters, followed by a space and left curly bracket. 
+                An enumeration of properties and their types is inside of the curly brackets. Properties are immediately followed by colons, while types are written with capital letters.
+                This part must be used only to obtain names of properties and their types. The third part must be used to create paths with relationships.
+                The third part starts with line "The relationships:". Each of the lines has the same format - (:<source_node_type>)-[:<relationship_type>]->(:<destination_node_type>).
+                It means that the database contains relationships from the source node type to the destination node type that have the specified relationship type.
+                The arrow "->" represents direction of the relationship. You can chain only relationships listed in this part to create your queries. Use the correct direction.
+
+                Input Cypher query: {question}
+
+                Output Cypher query:"""
     cypher_prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -114,11 +124,8 @@ def get_visualization_query_builder_chain(graph_: Neo4jGraph, openai_config: Ope
                 Task: Given an input Cypher query, convert it to a new Cypher query. Limit your results to 100 entities.
                 Specification:
                 - Return only the query, no pre-amble or additional text, no formatting such as newlines or linebreaks or backticks.
-                - Severity passed to the query must always be in English.
-                - try to make string comparisons case insensitive
-                - Be aware that entities with valid_from and valid_to are chronicled - this means that they were valid only for a certain time.
-                The current newest information has always valid_to set to null or is empty
-                - Information about datetime and timestamps is in strings, the format is "YYYY-MM-DD HH:MM:SS.sssss". Convert it from that with apoc parse
+                - Try to make string comparisons case insensitive.
+                - If information about datetime and timestamps is in strings, they start with "YYYY-MM-DDTHH:MM:SS.sss". Convert it from that with apoc parse.
 
                 """,
             ),
@@ -142,22 +149,25 @@ def get_visualization_query_builder_chain(graph_: Neo4jGraph, openai_config: Ope
 
 def get_result_to_human_markdown_chain(graph_: Neo4jGraph, openai_config: OpenAIConfig) -> Runnable[Input, Output]:
     cypher_llm = _get_llm(openai_config, human_response=True)
-    cypher_template = """Based on the Neo4j graph schema below and query: \"{question}\", interpret the result: \"{result}\" and give 2-3 sentences of explanation. Use following format:
-    **Result:** Here will be the result of the query explained as short as possible. Write everything in \"{language}\".
-    **Data**  Always try to include results as a table. We do not mind longer tables, let's say up to 20 rows.
-    **Explanation:** Here will be the explanation of the result.
+    cypher_template = """Based on the Neo4j graph schema and query below, interpret the result below. Use the following markdown format with three sections.
+            **Result:** The explanation of the result of the query as short as possible in \"{language}\".
+            **Data:**  The table containing results of the query, formatted using pipes (|) and hyphens (---). We do not mind longer tables, let's say up to 20 rows.
+            **Explanation:** The explanation of the approach for obtaining the result containing 2-3 sentences.
 
-    Schema: {schema}
+            Schema: {schema}
 
-    Question: {question}
-    Cypher query:"""
+            Query: {question}
+
+            Result: {result}
+
+            Your answer using the prescribed format:"""
     cypher_prompt = ChatPromptTemplate.from_messages(
         [
             (
                 "system",
                 """
-                Task: Given an input transform the Cypher query result to human readable markdown.
-                Specification: Return only the query, no pre-amble or additional text, no formatting such as newlines or linebreaks or backticks.
+                Task: Given an input transform the Cypher query and its result to human readable markdown.
+                Specification: Return only the markdown, no pre-amble or additional text, no formatting such as newlines or linebreaks, or backticks.
                 """,
             ),
             ("human", cypher_template),
@@ -235,16 +245,19 @@ class VulnLlamaService:
         logger.info("Detected language: %s", language)
         query = self._query_builder_chain.invoke({"question": question})
         result = self.run_query(query)
-        human_result = self._human_result_chain.invoke(
-            {"question": query, "result": result, "language": language}
-        )
+        try:
+            human_result = self._human_result_chain.invoke(
+                {"question": query, "result": copy.deepcopy(result), "language": language}
+            )
+        except BadRequestError as exc:
+            human_result = str(exc)
         visualization_query = self._visualization_query_chain.invoke({"question": query})
         return {
             "question": question,
             "language": language,
             "query": query,
             "visualization_query": visualization_query,
-            "result": result,
+            "result": copy.deepcopy(result),
             "human_result": human_result,
         }
 
