@@ -55,28 +55,56 @@ def get_offset(request: HttpRequest) -> int:
 
 
 # RED and BLUE LAYERS
-@api_view(["GET", "POST"])
-def mission(request: HttpRequest) -> Response:
+@api_view(["GET", "POST", "PUT", "DELETE"])
+def missions(request: HttpRequest) -> Response:
     """
-    GET/POST information about missions view.
-    :param request: GET/POST request
+    GET / POST information about missions view or UPDATE / DELETE missions.
+    :param request: GET / POST / PUT / DELETE request
     :return: HTTP response
     """
     if request.method == "GET":  # type: ignore
         limit = get_limit(request)
         return Response(client.get_all_mission(limit))
+    elif request.method == "POST":
+        request_body = request.body
+        try:
+            data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
+            json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+            client.create_missions_and_components_string(json_string)
+        except ValidationError as e:
+            return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        except (ClientError, TransientError, DatabaseError) as e:
+            return Response(
+                "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        return Response("Processed successfully", status=status.HTTP_201_CREATED)
+    elif request.method == "PUT":
+        request_body = request.body
+        try:
+            data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
+            json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+            client.update_missions(json_string)
+        except ValidationError as e:
+            return Response(f"Validation of mission representation did not pass: {e!s}",
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        except (ClientError, TransientError, DatabaseError) as e:
+            return Response(
+                "Exception on neo4j side, update operation failed. Mission is never deleted during the update, "
+                "only its connected vertices. Its update can be tried again in the future." + str(e),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        return Response("Mission was updated successfully", status=status.HTTP_200_OK)
+
+    # DELETE method
     request_body = request.body
     try:
         data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
-        json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
-        client.create_missions_and_components_string(json_string)
-    except ValidationError as e:
-        return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        client.delete_missions(json_string)
     except (ClientError, TransientError, DatabaseError) as e:
-        return Response(
-            "Exception on neo4j side, set operation failed. " + str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-    return Response("Processed successfully", status=status.HTTP_201_CREATED)
+        return Response("Exception on neo4j side, delete operation failed. " + str(e),
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response("Mission was deleted successfully.", status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["POST"])

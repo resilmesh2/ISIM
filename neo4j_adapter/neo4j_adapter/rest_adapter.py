@@ -74,6 +74,38 @@ class RESTAdapter(GeneralAdapter):
                             component2_name=component2["name"],
                         )
 
+    def update_missions(self, json_string: str) -> None:
+        """
+        A method for updating missions. It deletes their connected vertices at first and then
+        creates the whole representation again due to complexity of the representation.
+        :param json_string: string containing the mission representation
+        :return:
+        """
+        query = Path(BASE_DIR / "assets/mission_partial_delete.cypher").read_text()
+        query = cast("LiteralString", query)
+        params = {"json_string": json_string}
+        self._run_query(query, **params)
+        self.create_missions_and_components_string(json_string)
+
+    def delete_missions(self, json_string: str) -> None:
+        """
+        A method for deleting missions. It deletes their connected vertices at first
+        and then the missions.
+        :param json_string: string containing the mission representation
+        :return:
+        """
+        full_delete_query_suffix = """
+        WITH mission
+        DETACH DELETE mission
+        """
+
+        query = (Path(BASE_DIR / "assets/mission_partial_delete.cypher").read_text() + "\n" +
+                 full_delete_query_suffix)
+
+        query = cast("LiteralString", query)
+        params = {"json_string": json_string}
+        self._run_query(query, **params)
+
     # generic GETs
 
     def get_organization_units(self, limit: int = 50, offset: int = 0) -> list[Any]:
