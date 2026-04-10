@@ -132,7 +132,7 @@ UNWIND input_.software_versions AS sw_versions
     '
     ],
     '',
-    {sw_versions: sw_versions, scan_dt: scan_dt}
+    {sw_versions: sw_versions, scan_dt: scan_dt, rediscovery_time: $rediscovery_time}
   )
   yield value as versions
   RETURN versions

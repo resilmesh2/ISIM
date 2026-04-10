@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from ipaddress import (
     IPv4Address,
     IPv4Interface,
@@ -11,6 +12,8 @@ from ipaddress import (
 from ipaddress import _BaseAddress as IPInterface  # type: ignore
 from ipaddress import _BaseNetwork as IPNetwork  # type: ignore
 from typing import Any
+
+import msgspec
 
 
 def dec_hook_ip(type_: type[Any], obj: Any) -> Any:
@@ -44,3 +47,7 @@ def enc_hook_ip(obj: Any) -> Any:
         return obj.with_prefixlen
     # Raise a NotImplementedError for other types
     raise NotImplementedError(f"Objects of type {type(obj)} are not supported")
+
+
+def msgspec_encode_to_json_string(obj: msgspec.Struct | Sequence[msgspec.Struct], *, enc_hook: Any = None) -> str:
+    return msgspec.json.encode(obj, enc_hook=enc_hook).decode("utf-8")
