@@ -69,7 +69,7 @@ def missions(request: HttpRequest) -> Response:
         request_body = request.body
         try:
             data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
-            json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+            json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
             client.create_missions_and_components_string(json_string)
         except ValidationError as e:
             return Response(f"Bad input: {e!s}", status=status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -82,7 +82,7 @@ def missions(request: HttpRequest) -> Response:
         request_body = request.body
         try:
             data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
-            json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+            json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
             client.update_missions(json_string)
         except ValidationError as e:
             return Response(f"Validation of mission representation did not pass: {e!s}",
@@ -99,7 +99,7 @@ def missions(request: HttpRequest) -> Response:
     request_body = request.body
     try:
         data = msgspec.json.decode(request_body, type=MissionListInputDTO, dec_hook=dec_hook_ip)
-        json_string = json.dumps(json.loads(msgspec.json.encode(data, enc_hook=enc_hook_ip)))
+        json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         client.delete_missions(json_string)
     except (ClientError, TransientError, DatabaseError) as e:
         return Response("Exception on neo4j side, delete operation failed. " + str(e),
