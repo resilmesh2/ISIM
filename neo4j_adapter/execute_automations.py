@@ -190,21 +190,6 @@ def execute_automation(automation_id: str, config: dict):
     finally:
         driver.close()
 
-# def build_where_clause(target_type: str, target_values: list) -> str:
-#     """Build WHERE clause for Neo4j query based on target type"""
-#     if target_type == 'all':
-#         return "1=1"  # Always true
-#     elif target_type == 'subnet':
-#         # Fix: Use proper string formatting for IN clause
-#         subnet_list = "', '".join(target_values)
-#         return f"(n)<-[:HAS_ASSIGNED]-(:IP)-[:PART_OF]->(:Subnet {{range: IN ['{subnet_list}']}})"
-#     elif target_type == 'ip':
-#         # Fix: Use proper string formatting for IN clause  
-#         ip_list = "', '".join(target_values)
-#         return f"(n)<-[:HAS_ASSIGNED]-(:IP {{address: IN ['{ip_list}']}})"
-#     else:
-#         return "1=1"
-    
 def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
     """Build calculation using live Neo4j property values per node"""
     
