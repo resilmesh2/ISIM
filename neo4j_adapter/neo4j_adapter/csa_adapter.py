@@ -34,6 +34,7 @@ class CSAAdapter(GeneralAdapter):
         """
         This method combines mission criticality, normalized degree centrality,
         and normalized betweenness centrality into one value stored for nodes.
+        Should be used with results of Nmap topology scan.
         :return: None
         """
         # The lowest values for normalized metrics are 1 not 0
@@ -62,5 +63,39 @@ class CSAAdapter(GeneralAdapter):
         SET n.mission_criticality = mission_criticality
         SET n.final_criticality = ((9*n.topology_degree_norm*n.topology_betweenness_norm / 100) + 1) * n.mission_criticality
                 """
+        query = cast("LiteralString", query)
+        self._run_query(query)
+
+    def combine_criticality_ip_flows(self):
+        """
+        This method combines mission criticality, normalized degree centrality,
+        and normalized pagerank centrality into one value stored for nodes.
+        Should be used with IP flows.
+        :return: None
+        """
+        query = """
+        MATCH (n:Node)
+        WITH max(n.pagerank_centrality) AS max_pagerank, min(n.pagerank_centrality) AS min_pagerank,
+        count(n) AS count_of_nodes
+        MATCH (n:Node)
+        WITH n, max_pagerank, min_pagerank, count_of_nodes,
+        CASE
+          WHEN n.degree_centrality IS NULL THEN 1
+          ELSE 9*(n.degree_centrality / count_of_nodes) + 1
+        END AS degree_centrality_norm,
+        CASE
+          WHEN n.pagerank_centrality IS NULL THEN 1
+          WHEN max_pagerank - min_pagerank = 0 THEN 1
+          ELSE 9*((n.pagerank_centrality - min_pagerank) / (max_pagerank - min_pagerank)) + 1
+        END AS pagerank_centrality_norm,
+        CASE
+          WHEN n.mission_criticality IS NULL THEN 1
+          ELSE n.mission_criticality
+        END AS mission_criticality
+        SET n.degree_centrality_norm = degree_centrality_norm
+        SET n.pagerank_centrality_norm = pagerank_centrality_norm
+        SET n.mission_criticality = mission_criticality
+        SET n.final_criticality_flows = ((9*n.degree_centrality_norm*n.pagerank_centrality_norm / 100) + 1) * n.mission_criticality
+        """
         query = cast("LiteralString", query)
         self._run_query(query)
