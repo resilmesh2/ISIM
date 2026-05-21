@@ -73,10 +73,9 @@ class CriticalityAdapter(GeneralAdapter):
         From the perspective of criticality, the most important is how many hosts communicate to an important host.
         :return: None
         """
-        query = """CALL gds.graph.project('centralityGraph', ['Node'], {
-                 IS_CONNECTED_TO: {properties: {numberOfConnections: {property: '*', aggregation: 'COUNT'}}}})
-                YIELD graphName AS graph, relationshipProjection AS degreeProjection,
-                 nodeCount AS nodes, relationshipCount AS rels"""
+        query = """MATCH (source)-[r:IS_CONNECTED_TO]->(target) WHERE r.hops IS NULL
+                   WITH source, target, count(r) AS numberOfConnections
+                   RETURN gds.graph.project('centralityGraph', source, target, {relationshipProperties: {numberOfConnections: numberOfConnections}})"""
         query = cast("LiteralString", query)
         self._run_query(query)
 
