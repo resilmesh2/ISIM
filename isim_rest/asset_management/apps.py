@@ -44,7 +44,7 @@ class AssetManagementConfig(AppConfig):
             client.init_db()
         except ClientError as e:
             if e.message and "An equivalent constraint already exists" not in e.message:
-                logger.exception(e)
+                logger.exception("database_initialization_failed")
         data = msgspec.convert(initial_data, type=AssetListInputDTO, dec_hook=dec_hook_ip)
         json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         client.store_assets(json_string)

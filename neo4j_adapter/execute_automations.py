@@ -29,21 +29,21 @@ def should_run_automation(automation: Dict[str, Any]) -> bool:
     
     # Never run manual automations
     if frequency == 'manual':
-        logger.info(f"Skipping manual automation")
+        logger.info("automation_skipped", reason="manual")
         return False
     
     last_run = automation.get('last_run')
     if not last_run:
         # Never been run, so run it
-        logger.info(f"Automation never run before, running now")
+        logger.info("automation_due", reason="never_run")
         return True
     
     # Parse last run time
     try:
         last_run_time = datetime.fromisoformat(last_run)
-    except:
+    except (TypeError, ValueError):
         # If we can't parse, run it
-        logger.warning(f"Cannot parse last_run time, running anyway")
+        logger.warning("last_run_parse_failed", last_run=last_run)
         return True
     
     now = datetime.now()
@@ -52,21 +52,21 @@ def should_run_automation(automation: Dict[str, Any]) -> bool:
     # Check based on frequency
     if frequency == 'minute':
         should_run = time_since_last_run >= timedelta(minutes=1)
-        logger.info(f"Minute check: last run {time_since_last_run} ago, should run: {should_run}")
+        logger.info("automation_due_check", frequency=frequency, elapsed=str(time_since_last_run), should_run=should_run)
         return should_run
     elif frequency == 'hourly':
         should_run = time_since_last_run >= timedelta(hours=1)
-        logger.info(f"Hourly check: last run {time_since_last_run} ago, should run: {should_run}")
+        logger.info("automation_due_check", frequency=frequency, elapsed=str(time_since_last_run), should_run=should_run)
         return should_run
     elif frequency == 'daily':
         should_run = time_since_last_run >= timedelta(days=1)
-        logger.info(f"Daily check: last run {time_since_last_run} ago, should run: {should_run}")
+        logger.info("automation_due_check", frequency=frequency, elapsed=str(time_since_last_run), should_run=should_run)
         return should_run
     elif frequency == 'weekly':
         should_run = time_since_last_run >= timedelta(weeks=1)
-        logger.info(f"Weekly check: last run {time_since_last_run} ago, should run: {should_run}")
+        logger.info("automation_due_check", frequency=frequency, elapsed=str(time_since_last_run), should_run=should_run)
         return should_run
-    
+
     return False
 
 def load_automations() -> Dict[str, Any]:
@@ -84,13 +84,13 @@ def load_automations() -> Dict[str, Any]:
                 if automation_config and isinstance(automation_config, dict):
                     valid_automations[automation_id] = automation_config
                 else:
-                    logger.warning(f"Skipping invalid automation {automation_id}")
-            
+                    logger.warning("invalid_automation_skipped", automation_id=automation_id)
+
             return valid_automations
-    except Exception as e:
-        logger.error(f"Failed to load automations: {e}")
+    except Exception:
+        logger.exception("automations_load_failed", path=config_path)
         return {}
-    
+
 def update_last_run(automation_id: str):
     """Update the last run time in the config"""
     config_path = "/config/risk_assessment_config.yaml"
@@ -105,15 +105,15 @@ def update_last_run(automation_id: str):
             with open(config_path, 'w') as file:
                 yaml.dump(config, file, default_flow_style=False)
             
-            logger.info(f"Updated last_run for {automation_id}")
+            logger.info("automation_last_run_updated", automation_id=automation_id)
                 
-    except Exception as e:
-        logger.error(f"Failed to update last run time: {e}")
+    except Exception:
+        logger.exception("last_run_update_failed", automation_id=automation_id, path=config_path)
         
 def execute_automation(automation_id: str, config: dict):
     """Execute a single automation"""
     
-    logger.info(f"Executing automation {automation_id}: {config.get('formula_name')}")
+    logger.info("automation_execution_started", automation_id=automation_id, formula_name=config.get('formula_name'))
     
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
     
@@ -128,8 +128,7 @@ def execute_automation(automation_id: str, config: dict):
             calculation_method = config.get('calculation_method', 'weighted_avg')
             custom_formula = config.get('custom_formula', '')
             
-            logger.info(f"Using calculation method: {calculation_method}")
-            logger.info(f"Target property: '{target_property}'")
+            logger.info("automation_calculation_selected", method=calculation_method, target_property=target_property)
             
             # Build calculation
             calculation = build_calculation(components, formula_config, calculation_method, custom_formula)
@@ -176,20 +175,20 @@ def execute_automation(automation_id: str, config: dict):
             if record:
                 nodes_updated = record['nodes_updated']
                 avg_risk = record['avg_risk']
-                logger.info(f"Updated {nodes_updated} nodes. Average {target_property}: {avg_risk}")
+                logger.info("automation_nodes_updated", automation_id=automation_id, nodes_updated=nodes_updated, target_property=target_property, average=avg_risk)
                 
                 # Update automation metadata
                 update_last_run(automation_id)
                 
-    except Exception as e:
-        logger.error(f"Error executing automation {automation_id}: {e}")
+    except Exception:
+        logger.exception("automation_execution_failed", automation_id=automation_id)
     finally:
         driver.close()
 
 def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
     """Build calculation using live Neo4j property values per node"""
     
-    logger.info(f"Building calculation with method: {method}")
+    logger.info("automation_calculation_building", method=method)
     
     if method == 'weighted_avg':
         weighted_terms = []
@@ -265,37 +264,35 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
         return formula
     
     else:
-        logger.warning(f"Unknown method {method}, defaulting to weighted_avg")
+        logger.warning("unknown_calculation_method", method=method, fallback="weighted_avg")
         return build_calculation(components, formula_config, 'weighted_avg')
 
 def main():
     """Main execution function"""
-    logger.info("="*50)
-    logger.info("Starting scheduled automation check")
+    logger.info("automation_check_started")
     
     automations = load_automations()
-    logger.info(f"Found {len(automations)} automation(s)")
+    logger.info("automations_loaded", count=len(automations))
     
     if not automations:
-        logger.info("No automations configured")
+        logger.info("no_automations_configured")
         return
     
     for automation_id, config in automations.items():
         # Skip if config is None or not a dictionary
         if not config or not isinstance(config, dict):
-            logger.warning(f"Skipping automation {automation_id} - invalid or missing configuration")
+            logger.warning("automation_skipped", automation_id=automation_id, reason="invalid_configuration")
             continue
             
         frequency = config.get('update_frequency', 'manual')
-        logger.info(f"Checking automation {automation_id} (frequency: {frequency})")
+        logger.info("automation_checking", automation_id=automation_id, frequency=frequency)
         
         if should_run_automation(config):
             execute_automation(automation_id, config)
         else:
-            logger.info(f"Skipping {automation_id} - not due to run yet")
+            logger.info("automation_skipped", automation_id=automation_id, reason="not_due")
     
-    logger.info("Automation execution complete")
-    logger.info("="*50)
+    logger.info("automation_check_completed")
 
 if __name__ == "__main__":
     main()

@@ -45,7 +45,7 @@ class WazuhThreatScoreCalculator:
     def __init__(self):
         """Initialize connections to OpenSearch and Neo4j"""
         # OpenSearch client
-        logger.info(f"Connecting to OpenSearch at {OPENSEARCH_HOST}:{OPENSEARCH_PORT}")
+        logger.info("opensearch_connecting", host=OPENSEARCH_HOST, port=OPENSEARCH_PORT)
         
         self.es = OpenSearch(
             hosts=[{'host': OPENSEARCH_HOST, 'port': OPENSEARCH_PORT}],
@@ -59,9 +59,9 @@ class WazuhThreatScoreCalculator:
         # Test connection
         try:
             info = self.es.info()
-            logger.info(f"Connected to OpenSearch version: {info['version']['number']}")
-        except Exception as e:
-            logger.error(f"Failed to connect to OpenSearch: {str(e)}")
+            logger.info("opensearch_connected", version=info['version']['number'])
+        except Exception:
+            logger.exception("opensearch_connection_failed", host=OPENSEARCH_HOST, port=OPENSEARCH_PORT)
             raise
         
         # Neo4j driver
@@ -142,10 +142,10 @@ class WazuhThreatScoreCalculator:
                 index=OS_INDEX,
                 body=query
             )
-            logger.info(f"Successfully queried Wazuh alerts from index {OS_INDEX}")
+            logger.info("wazuh_alerts_queried", index=OS_INDEX)
             return response
-        except Exception as e:
-            logger.error(f"Error querying Wazuh alerts: {str(e)}")
+        except Exception:
+            logger.exception("wazuh_alerts_query_failed", index=OS_INDEX)
             return None
     
     def calculate_threat_scores(self, wazuh_response: Dict) -> Dict[str, Tuple[float, str]]:
@@ -155,7 +155,7 @@ class WazuhThreatScoreCalculator:
         threat_scores = {}
         
         if not wazuh_response or 'aggregations' not in wazuh_response:
-            logger.warning("No aggregations found in Wazuh response")
+            logger.warning("wazuh_response_missing_aggregations")
             return threat_scores
         
         agents = wazuh_response['aggregations']['agents']['buckets']
@@ -168,7 +168,7 @@ class WazuhThreatScoreCalculator:
             agent_ip = None
             if 'agent_ip' in agent and agent['agent_ip']['buckets']:
                 agent_ip = agent['agent_ip']['buckets'][0]['key']
-                logger.info(f"Agent {agent_name} has IP: {agent_ip}")
+                logger.info("wazuh_agent_ip_found", agent_name=agent_name, agent_ip=agent_ip)
             
             alert_levels = []
             weighted_scores = []
@@ -203,11 +203,10 @@ class WazuhThreatScoreCalculator:
                 # Store both score and IP
                 threat_scores[agent_name] = (round(final_score, 2), agent_ip)
                 
-                logger.info(f"Agent {agent_name} ({agent_ip}): {alert_count} alerts, "
-                        f"threat score: {threat_scores[agent_name][0]}")
+                logger.info("threat_score_calculated", agent_name=agent_name, agent_ip=agent_ip, alert_count=alert_count, threat_score=threat_scores[agent_name][0])
             else:
                 threat_scores[agent_name] = (0.0, agent_ip)
-                logger.info(f"Agent {agent_name} ({agent_ip}): No alerts with levels")
+                logger.info("threat_score_defaulted", agent_name=agent_name, agent_ip=agent_ip, reason="no_alert_levels")
         
         return threat_scores
 
@@ -230,14 +229,14 @@ class WazuhThreatScoreCalculator:
                         count = result.single()['updated']
                         if count > 0:
                             nodes_updated += count
-                            logger.info(f"Updated {count} nodes for agent {agent_name} via IP {agent_ip}")
+                            logger.info("threat_score_nodes_updated", agent_name=agent_name, agent_ip=agent_ip, nodes_updated=count)
                         else:
-                            logger.warning(f"No nodes found with IP {agent_ip} for agent {agent_name}")
+                            logger.warning("threat_score_nodes_not_found", agent_name=agent_name, agent_ip=agent_ip)
                     else:
-                        logger.warning(f"No IP address found for agent {agent_name}")
+                        logger.warning("wazuh_agent_ip_missing", agent_name=agent_name)
                         
-                except Exception as e:
-                    logger.error(f"Error updating Neo4j for agent {agent_name}: {str(e)}")
+                except Exception:
+                    logger.exception("threat_score_node_update_failed", agent_name=agent_name, agent_ip=agent_ip)
         
         # Update average threat score
         try:
@@ -250,44 +249,42 @@ class WazuhThreatScoreCalculator:
                     SET m.averageThreatScore = avgThreat,
                         m.lastUpdated = datetime()
                 """)
-                logger.info("Updated average threat score metrics")
-        except Exception as e:
-            logger.error(f"Error updating metrics: {str(e)}")
+                logger.info("threat_score_metrics_updated")
+        except Exception:
+            logger.exception("threat_score_metrics_update_failed")
         
         return nodes_updated
 
 def main():
     """Main execution function"""
-    logger.info("="*80)
-    logger.info("Starting Wazuh Threat Score Calculation")
-    logger.info(f"Timestamp: {datetime.now().isoformat()}")
+    logger.info("threat_score_calculation_started", timestamp=datetime.now().isoformat())
     
     calculator = WazuhThreatScoreCalculator()
     
     try:
         # Query Wazuh alerts
-        logger.info("Querying Wazuh alerts from OpenSearch...")
+        logger.info("wazuh_alerts_query_started")
         wazuh_response = calculator.query_wazuh_alerts(time_range_hours=24)
         
         if not wazuh_response:
-            logger.error("Failed to get Wazuh alerts")
+            logger.error("wazuh_alerts_unavailable")
             return
         
         # Calculate threat scores
-        logger.info("Calculating threat scores...")
+        logger.info("threat_scores_calculation_started")
         threat_scores = calculator.calculate_threat_scores(wazuh_response)
         
         if not threat_scores:
-            logger.warning("No threat scores calculated")
+            logger.warning("no_threat_scores_calculated")
             return
         
-        logger.info(f"Calculated threat scores for {len(threat_scores)} agents")
+        logger.info("threat_scores_calculated", agent_count=len(threat_scores))
         
         # Update Neo4j
-        logger.info("Updating Neo4j with threat scores...")
+        logger.info("threat_scores_update_started")
         nodes_updated = calculator.update_neo4j_threat_scores(threat_scores)
         
-        logger.info(f"Successfully updated {nodes_updated} nodes in Neo4j")
+        logger.info("threat_scores_update_completed", nodes_updated=nodes_updated)
         
         # Log summary statistics
         if threat_scores:
@@ -295,23 +292,19 @@ def main():
             max_score = max([score for score, ip in threat_scores.values()])
             min_score = min([score for score, ip in threat_scores.values()])
             
-            logger.info(f"Threat Score Statistics:")
-            logger.info(f"  Average: {avg_score:.2f}")
-            logger.info(f"  Maximum: {max_score:.2f}")
-            logger.info(f"  Minimum: {min_score:.2f}")
+            logger.info("threat_score_statistics", average=round(avg_score, 2), maximum=round(max_score, 2), minimum=round(min_score, 2))
             
             high_threat = {k: v[0] for k, v in threat_scores.items() if v[0] >= 7.0}
             if high_threat:
-                logger.warning(f"High threat agents (score >= 7.0): {high_threat}")
+                logger.warning("high_threat_agents_found", threshold=7.0, agents=high_threat)
         
-    except Exception as e:
-        logger.error(f"Fatal error in threat score calculation: {str(e)}")
+    except Exception:
+        logger.exception("threat_score_calculation_failed")
         raise
     finally:
         calculator.close()
     
-    logger.info("Threat Score Calculation completed!")
-    logger.info("="*80)
+    logger.info("threat_score_calculation_completed")
 
 if __name__ == "__main__":
     main()
