@@ -1110,7 +1110,7 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
         
         # Handle case where all components are missing
         if not weighted_terms or total_weight == 0:
-            logger.warning("No valid components found for calculation, returning 0.0")
+            logger.warning("risk_calculation_no_valid_components", method=method)
             return "0.0"
         
         calculation = " + ".join(weighted_terms)
@@ -1137,7 +1137,7 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
             logger.warning("risk_calculation_missing_components", method=method, components=missing_components)
         
         if not property_refs:
-            logger.warning("No valid properties for max calculation")
+            logger.warning("risk_calculation_no_valid_properties", method=method)
             return "0.0"
         
         if len(property_refs) == 1:
@@ -2253,7 +2253,7 @@ def list_all_component_schedules():
 def execute_criticality_calculation():
     """Execute full ISIM calculations (betweenness, degree, normalize, criticality, cvss, risk score)"""
     try:
-        logger.info("Executing full ISIM calculation pipeline")
+        logger.info("isim_calculation_pipeline_started")
         
         import subprocess
         import sys
@@ -2266,7 +2266,7 @@ def execute_criticality_calculation():
         )
         
         if result.returncode != 0:
-            logger.error("isim_calculations_subprocess_failed", returncode=result.returncode, stderr=result.stderr)
+            logger.error("isim_calculations_subprocess_failed", returncode=result.returncode, stderr_length=len(result.stderr or ""))
             return jsonify({
                 'success': False,
                 'error': f'ISIM calculations failed: {result.stderr}'
@@ -2392,7 +2392,7 @@ def execute_threat_calculation():
                 'avg_value': float(avg_threat) if avg_threat else 0
             }), 200
         else:
-            logger.error("threat_calculation_subprocess_failed", returncode=result.returncode, stderr=result.stderr)
+            logger.error("threat_calculation_subprocess_failed", returncode=result.returncode, stderr_length=len(result.stderr or ""))
             return jsonify({
                 'success': False,
                 'error': result.stderr
@@ -2626,7 +2626,7 @@ def execute_automation_endpoint(automation_id):
 def execute_base_risk_automation():
     """Execute base risk calculation - hardcoded 3-component formula"""
     try:
-        logger.info("Executing base-risk automation")
+        logger.info("base_risk_automation_started")
         
         target_property = "Risk Score"
         
@@ -3010,5 +3010,5 @@ def import_components_from_neo4j():
     
 if __name__ == '__main__':
     #Start Flask API
-    logger.info("Starting Risk Assessment API on port 5000")
+    logger.info("risk_assessment_api_started", port=5000)
     app.run(host='0.0.0.0', port=5000, debug=False)
