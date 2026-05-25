@@ -53,7 +53,11 @@ def should_run_component_automation(automation: Dict[str, Any]) -> bool:
     
     # Check if expired
     if automation.get('expires_at'):
-        expires = datetime.fromisoformat(automation['expires_at'])
+        try:
+            expires = datetime.fromisoformat(automation['expires_at'])
+        except (TypeError, ValueError):
+            logger.warning("component_automation_expires_at_parse_failed", expires_at=automation.get('expires_at'))
+            return True
         if datetime.now() > expires:
             logger.info("component_automation_expired", expires_at=expires.isoformat())
             return False
@@ -69,7 +73,7 @@ def should_run_component_automation(automation: Dict[str, Any]) -> bool:
     
     try:
         last_run_time = datetime.fromisoformat(last_run)
-    except ValueError:
+    except (TypeError, ValueError):
         logger.warning("component_automation_last_run_parse_failed", last_run=last_run)
         return True
     
