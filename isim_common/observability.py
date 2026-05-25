@@ -55,6 +55,10 @@ def _build_renderer(formatter: LogFormatter, *, pretty_print_exceptions: bool) -
     )
 
 
+def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
+    return structlog.get_logger(name)
+
+
 def configure_logging(service: str, logging_config: LoggingConfig | None = None) -> None:
     global _configured
 

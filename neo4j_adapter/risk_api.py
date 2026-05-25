@@ -5,7 +5,6 @@ Risk Assessment API for Angular integration
 """
 
 import asyncio
-import logging
 import os
 import uuid
 from datetime import datetime, timedelta
@@ -25,7 +24,7 @@ from temporalio.client import (
 )
 
 from isim_common.config import LoggingConfig
-from isim_common.observability import configure_logging
+from isim_common.observability import configure_logging, get_logger
 
 configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
 
@@ -43,7 +42,7 @@ NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
 neo4j_driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Config file path
 CONFIG_PATH = "/config/risk_assessment_config.yaml"

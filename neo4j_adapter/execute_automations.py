@@ -4,7 +4,6 @@
 Execute scheduled risk calculations based on frequency
 Location: /app/execute_automations.py
 """
-import logging
 import os
 from datetime import datetime, timedelta
 from typing import Any, Dict
@@ -14,11 +13,11 @@ from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
 from isim_common.config import LoggingConfig
-from isim_common.observability import configure_logging
+from isim_common.observability import configure_logging, get_logger
 
 load_dotenv()
 configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://resilmesh-sap-neo4j:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")

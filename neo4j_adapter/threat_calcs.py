@@ -6,7 +6,6 @@ Location: /app/threat_calcs.py
 """
 
 import json
-import logging
 import os
 import statistics
 from datetime import datetime, timedelta
@@ -18,12 +17,12 @@ from neo4j import GraphDatabase
 from opensearchpy import OpenSearch
 
 from isim_common.config import LoggingConfig
-from isim_common.observability import configure_logging
+from isim_common.observability import configure_logging, get_logger
 
 # Load .env file
 load_dotenv()
 configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Neo4j connection from .env
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://resilmesh-sap-neo4j:7687")

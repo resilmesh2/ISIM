@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # type: ignore
 
-import logging
 import os
 import subprocess
 import sys
@@ -12,11 +11,11 @@ from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
 from isim_common.config import LoggingConfig
-from isim_common.observability import configure_logging
+from isim_common.observability import configure_logging, get_logger
 
 load_dotenv()
 configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Neo4j connection configuration
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://resilmesh-sap-neo4j:7687")
