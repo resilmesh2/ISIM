@@ -42,9 +42,9 @@ class Neo4jGraphOperations:
                 # Log results summary
                 if records:
                     logger.info("isim_query_completed", description=description, records_returned=len(records))
-                    # Log first few records for debugging
+                    # Keep debug logs schema-only; query results may contain sensitive asset data.
                     for record in records[:3]:
-                        logger.debug("isim_query_record", description=description, record=dict(record))
+                        logger.debug("isim_query_record", description=description, fields=list(record.keys()))
                 else:
                     logger.info("isim_query_completed", description=description, records_returned=0)
                 
