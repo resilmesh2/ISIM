@@ -3,11 +3,18 @@
 
 import os
 import sys
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
+
+from isim_common.observability import configure_logging
 
 
 def main() -> None:
     """Run administrative tasks."""
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "neo4j_rest.settings")
+    configure_logging("isim-rest-manage")
     try:
         from django.core.management import execute_from_command_line  # type: ignore
     except ImportError as exc:

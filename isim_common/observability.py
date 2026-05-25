@@ -5,7 +5,7 @@ from typing import Any
 
 import structlog
 
-from config import AppConfig, LogFormatter, LoggingConfig
+from isim_common.config import AppConfig, LogFormatter, LoggingConfig
 
 _configured = False
 

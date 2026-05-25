@@ -1,13 +1,15 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 from ipaddress import ip_address, ip_network
+from logging import getLevelName
 from pathlib import Path
+from typing import Literal, cast, get_args
 
 import yaml
 from dacite import from_dict
 
-from isim_rest.neo4j_rest.settings import BASE_DIR
-
-CONF_DIR = BASE_DIR.parent / "config"
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONF_DIR = BASE_DIR / "config"
 
 
 @dataclass
@@ -43,6 +45,7 @@ class OrganizationConfig:
     cleaning_time: int
     rediscovery_time: int
 
+
 LogFormatter = Literal["json", "colored", "key_value", "plain"]
 
 
@@ -52,7 +55,6 @@ class LoggingConfig:
     pretty_print_exceptions: bool = False
     verbose_origin: bool = True
     formatter: str = "key_value"
-    endpoints_skip_list: list[str] = field(default_factory=list)
 
     @cached_property
     def level_const(self) -> int:

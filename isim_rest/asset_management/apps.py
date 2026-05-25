@@ -4,7 +4,7 @@ from neo4j.exceptions import ClientError
 from neo4j_adapter.rest_adapter import RESTAdapter
 from structlog import getLogger
 
-from config import AppConfig as ISIMConfig
+from isim_common.config import AppConfig as ISIMConfig
 from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip, msgspec_encode_to_json_string
 

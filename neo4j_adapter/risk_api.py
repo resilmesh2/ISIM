@@ -3,18 +3,31 @@
 """
 Risk Assessment API for Angular integration
 """
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import yaml
-import logging
-from datetime import datetime
-import uuid
-from typing import Dict, Any, Optional, List
-from neo4j import GraphDatabase
-import os
-from temporalio.client import Client, Schedule, ScheduleActionStartWorkflow, ScheduleSpec, ScheduleIntervalSpec, ScheduleState
-from datetime import timedelta
+
 import asyncio
+import logging
+import os
+import uuid
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import yaml
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from neo4j import GraphDatabase
+from temporalio.client import (
+    Client,
+    Schedule,
+    ScheduleActionStartWorkflow,
+    ScheduleIntervalSpec,
+    ScheduleSpec,
+    ScheduleState,
+)
+
+from isim_common.config import LoggingConfig
+from isim_common.observability import configure_logging
+
+configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
 
 app = Flask(__name__)
 CORS(app, 
@@ -30,8 +43,6 @@ NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
 neo4j_driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Config file path

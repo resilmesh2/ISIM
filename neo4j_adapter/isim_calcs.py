@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
 # type: ignore
 
-from neo4j import GraphDatabase
+import logging
+import os
 import subprocess
 import sys
-import os
-from pathlib import Path
-import logging
 from datetime import datetime
+from pathlib import Path
+
 from dotenv import load_dotenv
+from neo4j import GraphDatabase
+
+from isim_common.config import LoggingConfig
+from isim_common.observability import configure_logging
 
 load_dotenv()
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s',
-    handlers=[
-        logging.FileHandler("/app/logs/isim_calcs.log"),
-        logging.StreamHandler()
-    ]
-)
+configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
 logger = logging.getLogger(__name__)
 
 # Neo4j connection configuration

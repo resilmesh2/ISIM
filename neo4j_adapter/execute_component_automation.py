@@ -5,23 +5,20 @@
 Execute scheduled component automations
 Location: /app/execute_component_automation.py
 """
-import yaml
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any
-from neo4j import GraphDatabase
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict
+
+import yaml
 from dotenv import load_dotenv
+from neo4j import GraphDatabase
+
+from isim_common.config import LoggingConfig
+from isim_common.observability import configure_logging
 
 load_dotenv()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s',
-    handlers=[
-        logging.FileHandler("/app/logs/component_automation.log"),
-    ]
-)
+configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
 logger = logging.getLogger(__name__)
 
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://resilmesh-sap-neo4j:7687")

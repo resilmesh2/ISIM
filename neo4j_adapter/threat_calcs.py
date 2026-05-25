@@ -5,29 +5,24 @@ Query Wazuh alerts, calculate threat scores, and update Neo4j ISIM
 Location: /app/threat_calcs.py
 """
 
-from opensearchpy import OpenSearch
-from neo4j import GraphDatabase
-import os
-import logging
-from datetime import datetime, timedelta
 import json
-from typing import Dict, List, Tuple
+import logging
+import os
 import statistics
-from dotenv import load_dotenv
+from datetime import datetime, timedelta
+from typing import Dict, List, Tuple
 from urllib.parse import urlparse
+
+from dotenv import load_dotenv
+from neo4j import GraphDatabase
+from opensearchpy import OpenSearch
+
+from isim_common.config import LoggingConfig
+from isim_common.observability import configure_logging
 
 # Load .env file
 load_dotenv()
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s',
-    handlers=[
-        logging.FileHandler("/app/logs/threat_calcs.log"),
-        logging.StreamHandler()
-    ]
-)
+configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
 logger = logging.getLogger(__name__)
 
 # Neo4j connection from .env

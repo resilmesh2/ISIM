@@ -1,7 +1,7 @@
 from typing import Any
 
+from isim_common.config import AppConfig as ISIMConfig
 from neo4j_adapter.general_adapter import GeneralAdapter
-from config import AppConfig as ISIMConfig
 
 
 class Cleaner(GeneralAdapter):
