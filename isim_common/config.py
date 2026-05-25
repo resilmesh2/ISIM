@@ -86,7 +86,7 @@ class AppConfig:
     _config: Config | None = None
 
     @classmethod
-    def get(cls, config_path: Path | None = None, org_config_path: Path | None = None) -> Config:
+    def get(cls, config_path: Path | None = None) -> Config:
         if cls._config is not None:
             return cls._config
 
@@ -94,13 +94,6 @@ class AppConfig:
             config_path = CONF_DIR / "config.yaml"
         with config_path.open() as f:
             raw_config = yaml.safe_load(f)
-
-        if org_config_path is None:
-            org_config_path = CONF_DIR / "config_organization.yaml"
-        with org_config_path.open() as f:
-            raw_org_config = yaml.safe_load(f)
-
-        raw_config["organization"] = raw_org_config
 
         cls._config = from_dict(Config, raw_config)
 
