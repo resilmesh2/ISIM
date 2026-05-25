@@ -2,3 +2,11 @@ neo4j:
   password: supertestovaciheslo
   bolt: bolt://localhost:7687
   user: neo4j
+
+logging:
+  level: INFO # CRITICAL, ERROR, WARNING, INFO, DEBUG
+  pretty_print_exceptions: False
+  formatter: colored # key_value, json, colored, plain
+  verbose_origin: True
+  endpoints_skip_list:
+    - '/_healthcheck/liveness'
