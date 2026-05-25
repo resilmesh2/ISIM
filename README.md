@@ -36,33 +36,44 @@ docker compose up -d --build
 ```
 
 # Configuration
-Configuration files are located in the [config](config) folder. Currently, the project provides configuration file
-for local (`config.yaml`) and dockerized (`config_docker.yaml`) deployment. 
+Configuration files are located in the [config](config) folder. The project provides application config files
+for local (`config.yaml`) and dockerized (`config_docker.yaml`) deployment.
 
-The configuration is rather simple, the ini files contain a single section
+The application config includes Neo4j connection settings, logging settings, and organization discovery settings:
 
 ```yaml
 neo4j:
   password: supertestovaciheslo
   bolt: bolt://neo4j:7687
   user: neo4j
+
+logging:
+  level: INFO
+
+organization:
+  name: "test"
+  hosts:
+    - ip_address: "127.0.0.1"
+      domain_names: ["test.cz"]
+      subnets: ["127.0.0.0/24"]
+  cleaning_time: 90
+  rediscovery_time: 30
 ```
 
 - bolt: URI of the Neo4j database
 - user: user in the Neo4j database
 - password: password to Neo4j database
 
-Another configuration file (`config_organization.yml`) in the same folder defines constituency of users.
-Its default version contains a name of organization, and hosts described by their IP addresses, domain names, 
-and subnets: 
+Organization config defines the initial discovery scope and retention timing:
 
-```yaml
-name: "test"
-hosts:
-  - ip_address: "127.0.0.1"
-    domain_names: ["test.cz"]
-    subnets: ["127.0.0.0/24"]
-```
+- `organization.name`: human-readable organization label.
+- `organization.hosts`: seed hosts used during application startup to create initial asset input for Neo4j.
+- `hosts[].ip_address`: required seed IP address.
+- `hosts[].domain_names`: optional DNS names for the seed host.
+- `hosts[].subnets`: subnets the host belongs to. Config validation ensures `ip_address` is inside each listed subnet.
+- `hosts[].uris`: optional service or application URIs for the seed host.
+- `cleaning_time`: age in days used by the Neo4j cleaner before removing old relationships.
+- `rediscovery_time`: age in days passed to asset import logic; existing discovered assets older than this can be rediscovered or refreshed.
 
 # How to work with the application
 
