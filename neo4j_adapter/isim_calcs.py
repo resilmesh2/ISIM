@@ -1,27 +1,21 @@
 #!/usr/bin/env python3
 # type: ignore
 
-from neo4j import GraphDatabase
+import os
 import subprocess
 import sys
-import os
-from pathlib import Path
-import logging
 from datetime import datetime
+from pathlib import Path
+
 from dotenv import load_dotenv
+from neo4j import GraphDatabase
+
+from isim_common.config import LoggingConfig
+from isim_common.observability import configure_logging, get_logger
 
 load_dotenv()
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s',
-    handlers=[
-        logging.FileHandler("/app/logs/isim_calcs.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
+logger = get_logger(__name__)
 
 # Neo4j connection configuration
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://resilmesh-sap-neo4j:7687")
@@ -41,29 +35,27 @@ class Neo4jGraphOperations:
         """Execute a single Cypher query and return results"""
         with self.driver.session(database=self.database) as session:
             try:
-                logger.info(f"Executing: {description}")
+                logger.info("isim_query_started", description=description)
                 result = session.run(query)
                 records = list(result)
                 
                 # Log results summary
                 if records:
-                    logger.info(f"✓ Query executed successfully - {len(records)} records returned")
-                    # Log first few records for debugging
+                    logger.info("isim_query_completed", description=description, records_returned=len(records))
+                    # Keep debug logs schema-only; query results may contain sensitive asset data.
                     for record in records[:3]:
-                        logger.debug(dict(record))
+                        logger.debug("isim_query_record", description=description, fields=list(record.keys()))
                 else:
-                    logger.info(f"✓ Query executed successfully - no records returned")
+                    logger.info("isim_query_completed", description=description, records_returned=0)
                 
                 return records
                 
-            except Exception as e:
-                logger.error(f"✗ Error executing query: {str(e)}")
+            except Exception:
+                logger.exception("isim_query_failed", description=description)
                 return None
 
 def main():
-    logger.info("="*80)
-    logger.info("Starting ISIM calculations")
-    logger.info(f"Timestamp: {datetime.now().isoformat()}")
+    logger.info("isim_calculations_started", timestamp=datetime.now().isoformat())
     
     # Initialize connection using environment variables
     neo4j_ops = Neo4jGraphOperations(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, DATABASE_NAME)
@@ -250,14 +242,12 @@ def main():
         neo4j_ops.execute_query(drop_graph, "Graph cleanup")
         
         # ISIM plugin folder permissions
-        logger.info("Running in container - skipping file permission changes")
-        logger.info("Ensure proper permissions are set in Dockerfile or docker-compose")
+        logger.info("file_permission_changes_skipped", reason="container_runtime")
         
-        logger.info("All ISIM calculations completed successfully!")
-        logger.info("="*80)
+        logger.info("isim_calculations_completed")
         
-    except Exception as e:
-        logger.error(f"Fatal error in ISIM calculations: {str(e)}")
+    except Exception:
+        logger.exception("isim_calculations_failed")
         sys.exit(1)
     finally:
         neo4j_ops.close()

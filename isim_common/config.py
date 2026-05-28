@@ -1,13 +1,15 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 from ipaddress import ip_address, ip_network
+from logging import getLevelName
 from pathlib import Path
+from typing import Literal, cast, get_args
 
 import yaml
 from dacite import from_dict
 
-from isim_rest.neo4j_rest.settings import BASE_DIR
-
-CONF_DIR = BASE_DIR.parent / "config"
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONF_DIR = BASE_DIR / "config"
 
 
 @dataclass
@@ -44,17 +46,47 @@ class OrganizationConfig:
     rediscovery_time: int
 
 
+LogFormatter = Literal["json", "colored", "key_value", "plain"]
+
+
+@dataclass(unsafe_hash=True)
+class LoggingConfig:
+    level: str
+    pretty_print_exceptions: bool = False
+    verbose_origin: bool = True
+    formatter: str = "key_value"
+
+    @cached_property
+    def level_const(self) -> int:
+        return cast("int", getLevelName((self.level or "INFO").upper()))  # pyright: ignore[reportDeprecated]
+
+    @cached_property
+    def formatter_const(self) -> LogFormatter:
+        return cast("LogFormatter", self.formatter)
+
+    def __post_init__(self) -> None:
+        resolved_level = getLevelName(self.level.upper())
+        if not isinstance(resolved_level, int):
+            msg = f"Invalid log level: {self.level}"
+            raise ValueError(msg)
+
+        if self.formatter not in get_args(LogFormatter):
+            msg = f"Invalid formatter: {self.formatter}. Expected one of: {', '.join(get_args(LogFormatter))}"
+            raise ValueError(msg)
+
+
 @dataclass
 class Config:
     neo4j: Neo4jConfig
     organization: OrganizationConfig
+    logging: LoggingConfig
 
 
 class AppConfig:
     _config: Config | None = None
 
     @classmethod
-    def get(cls, config_path: Path | None = None, org_config_path: Path | None = None) -> Config:
+    def get(cls, config_path: Path | None = None) -> Config:
         if cls._config is not None:
             return cls._config
 
@@ -62,13 +94,6 @@ class AppConfig:
             config_path = CONF_DIR / "config.yaml"
         with config_path.open() as f:
             raw_config = yaml.safe_load(f)
-
-        if org_config_path is None:
-            org_config_path = CONF_DIR / "config_organization.yaml"
-        with org_config_path.open() as f:
-            raw_org_config = yaml.safe_load(f)
-
-        raw_config["organization"] = raw_org_config
 
         cls._config = from_dict(Config, raw_config)
 

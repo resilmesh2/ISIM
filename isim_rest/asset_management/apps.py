@@ -2,13 +2,13 @@ import msgspec
 from django.apps.config import AppConfig
 from neo4j.exceptions import ClientError
 from neo4j_adapter.rest_adapter import RESTAdapter
-from structlog import getLogger
 
-from config import AppConfig as ISIMConfig
+from isim_common.config import AppConfig as ISIMConfig
+from isim_common.observability import get_logger
 from isim_rest.asset_management.data_formats.input_dtos import AssetListInputDTO
 from isim_rest.asset_management.data_formats.serde_utils import dec_hook_ip, enc_hook_ip, msgspec_encode_to_json_string
 
-logger = getLogger()
+logger = get_logger(__name__)
 
 
 class AssetManagementConfig(AppConfig):
@@ -44,7 +44,7 @@ class AssetManagementConfig(AppConfig):
             client.init_db()
         except ClientError as e:
             if e.message and "An equivalent constraint already exists" not in e.message:
-                logger.exception(e)
+                logger.exception("database_initialization_failed")
         data = msgspec.convert(initial_data, type=AssetListInputDTO, dec_hook=dec_hook_ip)
         json_string = msgspec_encode_to_json_string(data, enc_hook=enc_hook_ip)
         client.store_assets(json_string)

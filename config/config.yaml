@@ -2,3 +2,19 @@ neo4j:
   password: supertestovaciheslo
   bolt: bolt://localhost:7687
   user: neo4j
+
+logging:
+  level: INFO # CRITICAL, ERROR, WARNING, INFO, DEBUG
+  pretty_print_exceptions: False
+  formatter: colored # key_value, json, colored, plain
+  verbose_origin: True
+
+
+organization:
+  name: "test"
+  hosts:
+    - ip_address: "127.0.0.1"
+      domain_names: ["test.cz"]
+      subnets: ["127.0.0.0/24"]
+  cleaning_time: 90
+  rediscovery_time: 30

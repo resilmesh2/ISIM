@@ -5,7 +5,7 @@ import pytest
 from neo4j import Driver, GraphDatabase
 from neo4j.exceptions import ServiceUnavailable
 
-from config import AppConfig
+from isim_common.config import AppConfig
 
 TEST_ID_PREFIX = "it-trigger-"
 

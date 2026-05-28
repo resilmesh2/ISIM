@@ -3,18 +3,30 @@
 """
 Risk Assessment API for Angular integration
 """
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import yaml
-import logging
-from datetime import datetime
-import uuid
-from typing import Dict, Any, Optional, List
-from neo4j import GraphDatabase
-import os
-from temporalio.client import Client, Schedule, ScheduleActionStartWorkflow, ScheduleSpec, ScheduleIntervalSpec, ScheduleState
-from datetime import timedelta
+
 import asyncio
+import os
+import uuid
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import yaml
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from neo4j import GraphDatabase
+from temporalio.client import (
+    Client,
+    Schedule,
+    ScheduleActionStartWorkflow,
+    ScheduleIntervalSpec,
+    ScheduleSpec,
+    ScheduleState,
+)
+
+from isim_common.config import LoggingConfig
+from isim_common.observability import configure_logging, get_logger
+
+configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
 
 app = Flask(__name__)
 CORS(app, 
@@ -30,9 +42,7 @@ NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "password")
 neo4j_driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Config file path
 CONFIG_PATH = "/config/risk_assessment_config.yaml"
@@ -48,10 +58,10 @@ def load_config() -> Optional[Dict[str, Any]]:
         with open(CONFIG_PATH, 'r') as file:
             return yaml.safe_load(file)
     except FileNotFoundError:
-        logger.error(f"Config file not found: {CONFIG_PATH}")
+        logger.error("config_file_not_found", path=CONFIG_PATH)
         return None
-    except yaml.YAMLError as e:
-        logger.error(f"Error parsing config file: {e}")
+    except yaml.YAMLError:
+        logger.exception("config_file_parse_failed", path=CONFIG_PATH)
         return None
 
 def save_config(config: Dict[str, Any]) -> bool:
@@ -60,8 +70,8 @@ def save_config(config: Dict[str, Any]) -> bool:
         with open(CONFIG_PATH, 'w') as file:
             yaml.dump(config, file, default_flow_style=False, indent=2)
         return True
-    except Exception as e:
-        logger.error(f"Error saving config file: {e}")
+    except Exception:
+        logger.exception("config_file_save_failed", path=CONFIG_PATH)
         return False
 
 @app.route('/api/health', methods=['GET'])
@@ -93,7 +103,7 @@ def get_predefined_formulas():
         
         return jsonify({"formulas": formulas})
     except Exception as e:
-        logger.error(f"Error getting predefined formulas: {e}")
+        logger.exception("predefined_formulas_get_failed")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/formulas/custom', methods=['GET'])
@@ -120,7 +130,7 @@ def get_custom_formulas():
         
         return jsonify({"formulas": formulas})
     except Exception as e:
-        logger.error(f"Error getting custom formulas: {e}")
+        logger.exception("custom_formulas_get_failed")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/formulas/custom', methods=['POST'])
@@ -180,7 +190,7 @@ def create_custom_formula():
             return jsonify({"error": "Failed to save formula"}), 500
             
     except Exception as e:
-        logger.error(f"Error creating custom formula: {e}")
+        logger.exception("custom_formula_create_failed")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/formulas/active', methods=['GET'])
@@ -211,7 +221,7 @@ def get_active_formula():
             }
         })
     except Exception as e:
-        logger.error(f"Error getting active formula: {e}")
+        logger.exception("active_formula_get_failed")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/formulas/active', methods=['PUT'])
@@ -257,7 +267,7 @@ def set_active_formula():
             return jsonify({"error": "Failed to save config"}), 500
             
     except Exception as e:
-        logger.error(f"Error setting active formula: {e}")
+        logger.exception("active_formula_set_failed")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/formulas/custom/<formula_id>', methods=['DELETE'])
@@ -291,7 +301,7 @@ def delete_custom_formula(formula_id: str):
             return jsonify({"error": "Failed to save config"}), 500
             
     except Exception as e:
-        logger.error(f"Error deleting formula: {e}")
+        logger.exception("custom_formula_delete_failed", formula_id=formula_id)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/components/custom', methods=['GET'])
@@ -321,7 +331,7 @@ def get_custom_components():
         return jsonify(custom_components)
         
     except Exception as e:
-        logger.error(f"Error getting custom components: {e}")
+        logger.exception("custom_components_get_failed")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/components/custom/<component_id>', methods=['DELETE'])
@@ -367,10 +377,10 @@ def delete_custom_component(component_id: str):
                 client = await get_temporal_client()
                 handle = client.get_schedule_handle(schedule_id)
                 await handle.delete()
-                logger.info(f"Deleted Temporal schedule: {schedule_id}")
+                logger.info("temporal_schedule_deleted", schedule_id=schedule_id)
                 return True
-            except Exception as e:
-                logger.warning(f"Could not delete Temporal schedule {schedule_id}: {e}")
+            except Exception:
+                logger.warning("temporal_schedule_delete_failed", schedule_id=schedule_id, exc_info=True)
                 return False
         
         temporal_deleted = asyncio.run(delete_temporal_schedule())
@@ -395,13 +405,13 @@ def delete_custom_component(component_id: str):
                 
                 for auto_id in automations_to_delete:
                     del component_config['active_component_automations'][auto_id]
-                    logger.info(f"Deleted automation {auto_id}")
+                    logger.info("component_automation_deleted", automation_id=auto_id, component_key=component_key_to_delete)
                 
                 if automations_to_delete:
                     save_component_config(component_config)
                     
-        except Exception as e:
-            logger.error(f"Error removing automations: {e}")
+        except Exception:
+            logger.exception("component_automations_remove_failed", component_key=component_key_to_delete)
             
         return jsonify({
             "success": True,
@@ -409,8 +419,8 @@ def delete_custom_component(component_id: str):
             "temporal_schedule_deleted": temporal_deleted
         })
         
-    except Exception as e:
-        logger.error(f"Error deleting custom component: {e}")
+    except Exception:
+        logger.exception("custom_component_delete_failed")
         return jsonify({"error": str(e)}), 500
        
 @app.route('/api/components/neo4j-property/<neo4j_property>', methods=['DELETE'])
@@ -418,10 +428,10 @@ def delete_neo4j_property(neo4j_property: str):
     """Delete a component property from all nodes in Neo4j"""
     driver = None
     try:
-        logger.info(f"Starting Neo4j property deletion for: {neo4j_property}")
+        logger.info("neo4j_property_deletion_started", neo4j_property=neo4j_property)
         
         driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
-        logger.info(f"Neo4j driver created successfully")
+        logger.info("neo4j_driver_created")
         
         # Use a write transaction to ensure the changes are committed
         def delete_property_transaction(tx, formatted_prop):
@@ -432,12 +442,12 @@ def delete_neo4j_property(neo4j_property: str):
             RETURN count(n) as nodeCount
             """
             
-            logger.info(f"Checking existing nodes with query: {check_query}")
+            logger.info("neo4j_property_deletion_check_started", neo4j_property=neo4j_property)
             check_result = tx.run(check_query)
             check_record = check_result.single()
             nodes_with_property = check_record["nodeCount"] if check_record else 0
             
-            logger.info(f"Found {nodes_with_property} nodes with property {neo4j_property}")
+            logger.info("neo4j_property_nodes_found", neo4j_property=neo4j_property, nodes_found=nodes_with_property)
             
             if nodes_with_property == 0:
                 return 0, nodes_with_property, 0
@@ -450,26 +460,26 @@ def delete_neo4j_property(neo4j_property: str):
             RETURN count(n) as nodesUpdated
             """
             
-            logger.info(f"Executing Neo4j deletion query: {delete_query}")
+            logger.info("neo4j_property_delete_query_started", neo4j_property=neo4j_property)
             delete_result = tx.run(delete_query)
             
             delete_record = delete_result.single()
             nodes_updated = delete_record["nodesUpdated"] if delete_record else 0
             
-            logger.info(f"Transaction reports {nodes_updated} nodes updated")
+            logger.info("neo4j_property_delete_transaction_updated", neo4j_property=neo4j_property, nodes_updated=nodes_updated)
             
             # Verify deletion within the same transaction
             verify_result = tx.run(check_query)
             verify_record = verify_result.single()
             remaining_nodes = verify_record["nodeCount"] if verify_record else 0
             
-            logger.info(f"Verification within transaction: {remaining_nodes} nodes still have the property")
+            logger.info("neo4j_property_delete_verified", neo4j_property=neo4j_property, remaining_nodes=remaining_nodes)
             
             return nodes_updated, nodes_with_property, remaining_nodes
 
         # Format property name for Neo4j query
         formatted_prop = f"`{neo4j_property}`" if ' ' in neo4j_property or '-' in neo4j_property else neo4j_property
-        logger.info(f"Formatted property name: {formatted_prop}")
+        logger.info("neo4j_property_formatted", neo4j_property=neo4j_property, formatted_property=formatted_prop)
         
         # Execute the deletion in a write transaction
         with driver.session() as session:
@@ -477,7 +487,7 @@ def delete_neo4j_property(neo4j_property: str):
                 delete_property_transaction, formatted_prop
             )
             
-            logger.info(f"Transaction completed: {nodes_updated} nodes updated, {remaining_nodes} remaining")
+            logger.info("neo4j_property_deletion_completed", neo4j_property=neo4j_property, nodes_updated=nodes_updated, remaining_nodes=remaining_nodes)
             
             return jsonify({
                 "success": True,
@@ -489,9 +499,7 @@ def delete_neo4j_property(neo4j_property: str):
             })
             
     except Exception as e:
-        logger.error(f"Error deleting Neo4j property {neo4j_property}: {e}")
-        logger.error(f"Error type: {type(e).__name__}")
-        logger.error(f"Error args: {e.args}")
+        logger.exception("neo4j_property_deletion_failed", neo4j_property=neo4j_property, error_type=type(e).__name__, error_args=e.args)
         return jsonify({
             "success": False,
             "error": f"Failed to delete Neo4j property: {str(e)}",
@@ -520,14 +528,14 @@ def test_neo4j_property_deletion(neo4j_property: str):
             RETURN count(n) as nodeCount, collect(n.{formatted_prop})[0..5] as sampleValues
             """
             
-            logger.info(f"Testing Neo4j query: {check_query}")
+            logger.info("neo4j_property_test_query_started", neo4j_property=neo4j_property)
             result = session.run(check_query)
             
             record = result.single()
             node_count = record["nodeCount"]
             sample_values = record["sampleValues"]
             
-            logger.info(f"Found {node_count} nodes with property {neo4j_property}")
+            logger.info("neo4j_property_test_completed", neo4j_property=neo4j_property, node_count=node_count)
             
             return jsonify({
                 "success": True,
@@ -541,7 +549,7 @@ def test_neo4j_property_deletion(neo4j_property: str):
             })
             
     except Exception as e:
-        logger.error(f"Error testing Neo4j property: {e}")
+        logger.exception("neo4j_property_test_failed", neo4j_property=neo4j_property)
         return jsonify({
             "success": False,
             "error": f"Failed to test Neo4j property: {str(e)}"
@@ -585,7 +593,7 @@ def get_risk_available_components():
         return jsonify({"available_components": component_list})
         
     except Exception as e:
-        logger.error(f"Error getting available components: {e}")
+        logger.exception("available_components_get_failed")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/risk/components/custom', methods=['POST'])
@@ -642,8 +650,8 @@ def save_custom_component():
         
         # Check for None (parse error)
         if component_config is None:
-            logger.error("Component automation config has syntax errors")
-            logger.warning("Could not create automation skeleton due to config errors")
+            logger.error("component_automation_config_invalid")
+            logger.warning("component_automation_skeleton_create_skipped", reason="config_errors")
             return jsonify({
                 "success": True,
                 "component_key": component_key,
@@ -678,9 +686,9 @@ def save_custom_component():
         
         # Save component automation config
         if not save_component_config(component_config):
-            logger.warning("Failed to save automation skeleton, but component was created")
+            logger.warning("component_automation_skeleton_save_failed", component_key=component_key)
         
-        logger.info(f"Created component '{data['name']}' with key '{component_key}' and automation skeleton")
+        logger.info("custom_component_created", component_name=data['name'], component_key=component_key, automation_id=auto_id)
         
         return jsonify({
             "success": True,
@@ -690,7 +698,7 @@ def save_custom_component():
         }), 200
         
     except Exception as e:
-        logger.error(f"Error saving custom component: {e}")
+        logger.exception("custom_component_save_failed")
         return jsonify({"error": str(e)}), 500
     
 @app.route('/api/components/custom/<component_identifier>/config', methods=['GET', 'OPTIONS'])
@@ -739,7 +747,7 @@ def get_custom_component_config(component_identifier):
         })
         
     except Exception as e:
-        logger.error(f"Error getting component config: {e}")
+        logger.exception("component_config_get_failed", component_identifier=component_identifier)
         return jsonify({"error": str(e)}), 500
     
 @app.route('/api/components/custom/<component_identifier>/execute', methods=['POST', 'OPTIONS'])
@@ -754,12 +762,11 @@ def execute_component_query(component_identifier):
         update_neo4j = data.get('update_neo4j', True)
         target_property = data.get('target_property', component_identifier)
         
-        logger.info(f"Execute called for {component_identifier}")
-        logger.info(f"Query from request: {query}")
+        logger.info("component_query_execution_requested", component_identifier=component_identifier, update_neo4j=update_neo4j, target_property=target_property, has_query=bool(query))
         
         if not query:
             config = load_component_config()
-            logger.info(f"No query in request, loading from config")
+            logger.info("component_query_loading_from_config", component_identifier=component_identifier)
             automations = config.get('active_component_automations', {})
             
             for auto_id, automation in automations.items():
@@ -768,13 +775,13 @@ def execute_component_query(component_identifier):
                     automation.get('target_property') == component_identifier):
                     query = automation.get('data_source', {}).get('query')
                     target_property = automation.get('target_property', component_identifier)
-                    logger.info(f"Found query in automation {auto_id}: {query}")
+                    logger.info("component_query_found_in_automation", component_identifier=component_identifier, automation_id=auto_id, target_property=target_property)
                     break
         
         if not query:
             return jsonify({"error": "No query provided"}), 400
         
-        logger.info(f"Final query to execute: {query}")
+        logger.info("component_query_selected", component_identifier=component_identifier, target_property=target_property)
         
         # Check if query contains TODO/placeholder text
         if '# TODO' in query or 'TODO:' in query or 'MATCH (n:Node) RETURN 0 as value' in query:
@@ -794,7 +801,7 @@ def execute_component_query(component_identifier):
         
         for keyword in destructive_keywords:
             if keyword in query_upper:
-                logger.warning(f"Blocked potentially destructive query containing '{keyword}' from component {component_identifier}")
+                logger.warning("destructive_query_blocked", component_identifier=component_identifier, blocked_keyword=keyword)
                 return jsonify({
                     "error": "Query contains potentially destructive operations",
                     "message": f"Query cannot contain '{keyword}'. Only read operations (MATCH, RETURN) and safe SET operations for the component property are allowed.",
@@ -818,7 +825,7 @@ def execute_component_query(component_identifier):
                 result = session.run(query)
                 record = result.single()
                 
-                logger.info(f"Query result record: {record}")
+                logger.info("component_query_record_returned", component_identifier=component_identifier, has_record=record is not None)
                 
                 # FIXED VALUE EXTRACTION
                 if record is not None:
@@ -830,18 +837,18 @@ def execute_component_query(component_identifier):
                                 value = float(value)
                             else:
                                 value = 0
-                                logger.warning("Query returned null value")
+                                logger.warning("component_query_returned_null", component_identifier=component_identifier)
                         else:
                             value = 0
-                            logger.warning("No 'value' field in query result")
-                    except (KeyError, TypeError) as e:
-                        logger.warning(f"Could not extract value from record: {e}")
+                            logger.warning("component_query_value_field_missing", component_identifier=component_identifier)
+                    except (KeyError, TypeError):
+                        logger.warning("component_query_value_extract_failed", component_identifier=component_identifier, exc_info=True)
                         value = 0
                 else:
                     value = 0
-                    logger.warning("Query returned no records")
+                    logger.warning("component_query_returned_no_records", component_identifier=component_identifier)
                 
-                logger.info(f"Extracted value: {value}")
+                logger.info("component_query_value_extracted", component_identifier=component_identifier, value=value)
                 
                 # Update all nodes with this property value
                 if update_neo4j:
@@ -855,7 +862,7 @@ def execute_component_query(component_identifier):
                     update_record = update_result.single()
                     nodes_updated = update_record['updated_count'] if update_record else 0
                     
-                    logger.info(f"Updated {nodes_updated} nodes with {target_property} = {value}")
+                    logger.info("component_query_nodes_updated", component_identifier=component_identifier, target_property=target_property, nodes_updated=nodes_updated, value=value)
                     
                     # Update risk scores
                     update_risk_scores(session, target_property, value)
@@ -889,11 +896,11 @@ def execute_component_query(component_identifier):
                         "details": error_message
                     }), 400
             
-            logger.error(f"Query execution failed: {e}")
+            logger.exception("component_query_execution_failed", component_identifier=component_identifier)
             return jsonify({"error": f"Query failed: {str(e)}"}, 500)
             
     except Exception as e:
-        logger.error(f"Error executing component query: {e}")
+        logger.exception("component_query_request_failed", component_identifier=component_identifier)
         return jsonify({"error": str(e)}), 500
            
 @app.route('/api/components/neo4j/update', methods=['POST', 'OPTIONS'])
@@ -935,7 +942,7 @@ def update_neo4j_property():
         }), 200
         
     except Exception as e:
-        logger.error(f"Error updating Neo4j property: {e}")
+        logger.exception("neo4j_property_update_failed", property_name=property_name if 'property_name' in locals() else None)
         return jsonify({"error": str(e)}), 500
     
 def update_risk_scores(session, component_property, component_value):
@@ -943,12 +950,12 @@ def update_risk_scores(session, component_property, component_value):
     try:
         config = load_config()
         if not config:
-            logger.warning("No risk configuration found, skipping risk score update")
+            logger.warning("risk_score_update_skipped", reason="missing_config")
             return
             
         automations = config.get('active_automations', {})
         if not automations:
-            logger.info("No active risk automations to update")
+            logger.info("risk_score_update_skipped", reason="no_active_automations")
             return
         
         for auto_id, automation in automations.items():
@@ -987,15 +994,15 @@ def update_risk_scores(session, component_property, component_value):
                         record = result.single()
                         avg_risk = record['avg_risk'] if record else 0
                         
-                        logger.info(f"Updated Risk Score values. Average risk: {avg_risk}")
+                        logger.info("risk_score_values_updated", automation_id=auto_id, component_property=component_property, average=avg_risk)
                         
                         automation['last_run'] = datetime.now().isoformat()
                         automation['avg_risk_score'] = float(avg_risk)
                         config['active_automations'][auto_id] = automation
                         save_config(config)
                         
-    except Exception as e:
-        logger.error(f"Error updating risk scores: {e}")
+    except Exception:
+        logger.exception("risk_scores_update_failed", component_property=component_property)
 
 @app.route('/api/components/custom/<component_id>/config', methods=['PUT'])
 def update_custom_component_config(component_id):
@@ -1006,7 +1013,7 @@ def update_custom_component_config(component_id):
         config = load_component_config()
         
         if config is None:
-            logger.error("Cannot update config - file has syntax errors")
+            logger.error("component_config_update_failed", reason="config_syntax_errors")
             return jsonify({"error": "Configuration file has syntax errors, cannot update"}), 500
         
         if not config:
@@ -1063,13 +1070,13 @@ def update_custom_component_config(component_id):
             return jsonify({"error": "Failed to save configuration"}), 500
             
     except Exception as e:
-        logger.error(f"Error updating component config: {e}")
+        logger.exception("component_config_update_failed", component_id=component_id)
         return jsonify({"error": str(e)}), 500
     
 def build_calculation(components, formula_config, method='weighted_avg', custom_formula=''):
     """Build calculation based on selected method using Neo4j properties with proper formatting"""
     
-    logger.info(f"Building calculation with method: {method}")
+    logger.info("risk_calculation_building", method=method)
     
     if method == 'weighted_avg':
         weighted_terms = []
@@ -1084,7 +1091,7 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
             # Check if component has valid property
             if not neo4j_property:
                 missing_components.append(comp_name)
-                logger.warning(f"Component '{comp_name}' has no neo4jProperty, skipping")
+                logger.warning("risk_calculation_component_missing_property", component_name=comp_name)
                 continue
                 
             if weight > 0:
@@ -1099,11 +1106,11 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
         
         # Log missing components for admin awareness
         if missing_components:
-            logger.warning(f"Missing components in calculation: {missing_components}")
+            logger.warning("risk_calculation_missing_components", method=method, components=missing_components)
         
         # Handle case where all components are missing
         if not weighted_terms or total_weight == 0:
-            logger.warning("No valid components found for calculation, returning 0.0")
+            logger.warning("risk_calculation_no_valid_components", method=method)
             return "0.0"
         
         calculation = " + ".join(weighted_terms)
@@ -1127,10 +1134,10 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
                 property_refs.append(f"COALESCE(n.{neo4j_property}, 0.0)")
         
         if missing_components:
-            logger.warning(f"Missing components in max calculation: {missing_components}")
+            logger.warning("risk_calculation_missing_components", method=method, components=missing_components)
         
         if not property_refs:
-            logger.warning("No valid properties for max calculation")
+            logger.warning("risk_calculation_no_valid_properties", method=method)
             return "0.0"
         
         if len(property_refs) == 1:
@@ -1159,7 +1166,7 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
                 property_refs.append(f"COALESCE(n.{neo4j_property}, 0.0)")
         
         if missing_components:
-            logger.warning(f"Missing components in sum calculation: {missing_components}")
+            logger.warning("risk_calculation_missing_components", method=method, components=missing_components)
         
         return " + ".join(property_refs) if property_refs else "0.0"
     
@@ -1182,7 +1189,7 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
             property_refs.append(f"CASE WHEN {prop_ref} > 0 THEN {prop_ref} ELSE 0.1 END")
         
         if missing_components:
-            logger.warning(f"Missing components in geometric mean calculation: {missing_components}")
+            logger.warning("risk_calculation_missing_components", method=method, components=missing_components)
         
         if not property_refs:
             return "0.0"
@@ -1213,12 +1220,12 @@ def build_calculation(components, formula_config, method='weighted_avg', custom_
             formula = formula.replace(comp_name, property_ref)
         
         if missing_replacements:
-            logger.warning(f"Replaced missing components with 0.0 in custom formula: {missing_replacements}")
+            logger.warning("risk_calculation_missing_components_replaced", method=method, components=missing_replacements, replacement=0.0)
         
         return formula
     
     else:
-        logger.warning(f"Unknown method {method}, defaulting to weighted_avg")
+        logger.warning("unknown_risk_calculation_method", method=method, fallback="weighted_avg")
         return build_calculation(components, formula_config, 'weighted_avg')
            
 @app.route('/api/risk/apply-configuration', methods=['POST'])
@@ -1237,7 +1244,7 @@ def apply_risk_configuration():
         calculation_method = data.get('calculationMethod', 'weighted_avg')
         custom_formula = data.get('customFormula', '')
         
-        logger.info(f"Received calculation method: {calculation_method}")
+        logger.info("risk_configuration_apply_started", calculation_method=calculation_method, target_type=target_type, update_frequency=update_frequency, target_property=target_property)
         
         formula_config = {}
         for comp in components:
@@ -1274,7 +1281,7 @@ def apply_risk_configuration():
             
             calculation = build_calculation(components, formula_config, calculation_method, custom_formula)
             
-            logger.info(f"Calculation: {calculation}")
+            logger.debug("risk_configuration_calculation_built", calculation=calculation)
             
             prop_name = f"`{target_property}`" if ' ' in target_property else target_property
             
@@ -1334,7 +1341,7 @@ def apply_risk_configuration():
             
             automation_id = str(uuid.uuid4())[:8]
             config['active_automations'][automation_id] = automation_data
-            logger.info(f"Saving automation {automation_id}")
+            logger.info("risk_automation_saving", automation_id=automation_id, formula_name=formula_name, update_frequency=update_frequency)
         
         config['last_risk_calculation'] = {
             'formula_name': formula_name,
@@ -1351,9 +1358,9 @@ def apply_risk_configuration():
         }
         
         if save_config(config):
-            logger.info(f"Successfully saved automation to config")
+            logger.info("risk_automation_config_saved", automation_id=automation_id if update_frequency != 'manual' else None)
         else:
-            logger.error("Failed to save automation to config")
+            logger.error("risk_automation_config_save_failed", automation_id=automation_id if update_frequency != 'manual' else None)
         
         if update_frequency != 'manual':
             schedule_data = {
@@ -1396,13 +1403,13 @@ def apply_risk_configuration():
                             )
                         )
                     )
-                    logger.info(f"Created Temporal schedule {schedule_id} with note: {formula_name}")
+                    logger.info("temporal_schedule_created", schedule_id=schedule_id, automation_id=automation_id, formula_name=formula_name, update_frequency=update_frequency)
                 
                 asyncio.run(create_automation_schedule())
-                logger.info(f"Temporal schedule created for automation {automation_id}")
+                logger.info("risk_automation_schedule_created", automation_id=automation_id, schedule_id=schedule_id)
                 
-            except Exception as e:
-                logger.error(f"Failed to create Temporal schedule: {e}")
+            except Exception:
+                logger.exception("temporal_schedule_create_failed", automation_id=automation_id, schedule_id=schedule_id, update_frequency=update_frequency)
         
         return jsonify({
             'success': True,
@@ -1413,7 +1420,7 @@ def apply_risk_configuration():
         })
         
     except Exception as e:
-        logger.error(f"Error applying configuration: {e}")
+        logger.exception("risk_configuration_apply_failed")
         return jsonify({'error': str(e)}), 500
                          
 def load_component_config() -> Optional[Dict[str, Any]]:
@@ -1426,12 +1433,12 @@ def load_component_config() -> Optional[Dict[str, Any]]:
                 return get_default_component_config()
             return config
     except FileNotFoundError:
-        logger.info(f"Component config not found, creating new: {COMPONENT_CONFIG_PATH}")
+        logger.info("component_config_missing_creating_default", path=COMPONENT_CONFIG_PATH)
         default_config = get_default_component_config()
         save_component_config(default_config)
         return default_config
-    except yaml.YAMLError as e:
-        logger.error(f"Error parsing component config: {e}")
+    except yaml.YAMLError:
+        logger.exception("component_config_parse_failed", path=COMPONENT_CONFIG_PATH)
         # IMPORTANT: Don't return empty dict on parse error!
         # Return None to indicate error without overwriting
         return None
@@ -1458,25 +1465,25 @@ def save_component_config(config: Dict[str, Any]) -> bool:
             with open(COMPONENT_CONFIG_PATH, 'r') as src:
                 with open(backup_path, 'w') as dst:
                     dst.write(src.read())
-            logger.info(f"Created backup at {backup_path}")
+            logger.info("component_config_backup_created", path=COMPONENT_CONFIG_PATH, backup_path=backup_path)
         
         # Save the new config
         with open(COMPONENT_CONFIG_PATH, 'w') as file:
             yaml.dump(config, file, default_flow_style=False, indent=2, sort_keys=False, allow_unicode=True)
         return True
-    except Exception as e:
-        logger.error(f"Error saving component config: {e}")
+    except Exception:
+        logger.exception("component_config_save_failed", path=COMPONENT_CONFIG_PATH)
         # Try to restore from backup if save failed
         backup_path = f"{COMPONENT_CONFIG_PATH}.backup"
         if os.path.exists(backup_path):
-            logger.info("Attempting to restore from backup...")
+            logger.info("component_config_backup_restore_started", path=COMPONENT_CONFIG_PATH, backup_path=backup_path)
             try:
                 with open(backup_path, 'r') as src:
                     with open(COMPONENT_CONFIG_PATH, 'w') as dst:
                         dst.write(src.read())
-                logger.info("Restored from backup")
-            except:
-                logger.error("Failed to restore from backup")
+                logger.info("component_config_backup_restored", path=COMPONENT_CONFIG_PATH, backup_path=backup_path)
+            except Exception:
+                logger.exception("component_config_backup_restore_failed", path=COMPONENT_CONFIG_PATH, backup_path=backup_path)
         return False   
 @app.route('/api/components/automation/save', methods=['POST'])
 def save_component_automation():
@@ -1527,7 +1534,7 @@ def save_component_automation():
         config['active_component_automations'][automation_id] = automation_data
         
         if save_component_config(config):
-            logger.info(f"Saved component automation {automation_id} for {component_name}")
+            logger.info("component_automation_saved", automation_id=automation_id, component_name=component_name, update_frequency=update_frequency)
             return jsonify({
                 'success': True,
                 'automationId': automation_id,
@@ -1537,7 +1544,7 @@ def save_component_automation():
             return jsonify({'error': 'Failed to save automation'}), 500
             
     except Exception as e:
-        logger.error(f"Error saving component automation: {e}")
+        logger.exception("component_automation_save_failed", component_name=component_name if 'component_name' in locals() else None)
         return jsonify({'error': str(e)}), 500
    
 @app.route('/api/components/automation/test', methods=['POST'])
@@ -1587,7 +1594,7 @@ def test_component_query():
             return jsonify({'error': 'Invalid source type or missing query'}), 400
             
     except Exception as e:
-        logger.error(f"Error testing component query: {e}")
+        logger.exception("component_query_test_failed")
         return jsonify({'error': str(e)}), 500
     
 @app.route('/api/components/automation/<component_id>', methods=['GET'])
@@ -1631,7 +1638,7 @@ def get_component_automation(component_id):
         return jsonify({"message": "No automation configured"}), 404
         
     except Exception as e:
-        logger.error(f"Error fetching automation config: {e}")
+        logger.exception("component_automation_get_failed", component_id=component_id)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/components/<int:component_id>/apply-automation', methods=['POST'])
@@ -1670,7 +1677,7 @@ def apply_component_automation(component_id):
         })
         
     except Exception as e:
-        logger.error(f"Error applying automation: {e}")
+        logger.exception("component_automation_apply_failed", component_id=component_id, automation_id=automation_id if 'automation_id' in locals() else None)
         return jsonify({"error": str(e)}), 500
 
 def execute_automation_logic(automation):
@@ -1690,7 +1697,7 @@ def execute_automation_logic(automation):
                 driver.close()
                 return {"value": value, "source": "neo4j"}
             except Exception as e:
-                logger.error(f"Neo4j query failed: {e}")
+                logger.exception("component_automation_neo4j_query_failed", source_type=source_type)
                 return {"error": str(e)}
     
     elif source_type == 'static_value':
@@ -1727,7 +1734,7 @@ def list_component_automations():
         return jsonify({"automations": automation_list})
         
     except Exception as e:
-        logger.error(f"Error listing automations: {e}")
+        logger.exception("component_automations_list_failed")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/components/automation/active', methods=['GET'])
@@ -1743,7 +1750,12 @@ def get_active_component_automations():
         
         for auto_id, auto_data in automations.items():
             if auto_data.get('expires_at'):
-                expires = datetime.fromisoformat(auto_data['expires_at'])
+                try:
+                    expires = datetime.fromisoformat(auto_data['expires_at'])
+                except (TypeError, ValueError):
+                    logger.warning("component_automation_expires_at_parse_failed", automation_id=auto_id, expires_at=auto_data.get('expires_at'))
+                    active[auto_id] = auto_data
+                    continue
                 if expires < now:
                     continue  # Skip expired
             active[auto_id] = auto_data
@@ -1753,7 +1765,7 @@ def get_active_component_automations():
             'automations': active
         })
     except Exception as e:
-        logger.error(f"Error getting component automations: {e}")
+        logger.exception("active_component_automations_get_failed")
         return jsonify({'error': str(e)}), 500
  
 @app.route('/api/components/automation/<automation_id>/pause', methods=['PUT'])
@@ -1769,13 +1781,13 @@ def pause_risk_automation(automation_id):
         automations[automation_id]['enabled'] = False
         
         if save_config(config):  # Save main config
-            logger.info(f"Paused risk automation {automation_id}")
+            logger.info("risk_automation_paused", automation_id=automation_id)
             return jsonify({'success': True, 'message': 'Automation paused'})
         else:
             return jsonify({'error': 'Failed to save configuration'}), 500
             
     except Exception as e:
-        logger.error(f"Error pausing risk automation: {e}")
+        logger.exception("risk_automation_pause_failed", automation_id=automation_id)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/components/automation/<automation_id>/resume', methods=['PUT'])
@@ -1791,13 +1803,13 @@ def resume_risk_automation(automation_id):
         automations[automation_id]['enabled'] = True
         
         if save_config(config):  # Save main config
-            logger.info(f"Resumed risk automation {automation_id}")
+            logger.info("risk_automation_resumed", automation_id=automation_id)
             return jsonify({'success': True, 'message': 'Automation resumed'})
         else:
             return jsonify({'error': 'Failed to save configuration'}), 500
             
     except Exception as e:
-        logger.error(f"Error resuming risk automation: {e}")
+        logger.exception("risk_automation_resume_failed", automation_id=automation_id)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/risk/automations/active', methods=['GET'])
@@ -1825,7 +1837,7 @@ def get_active_risk_formula_automations():
             'automations': transformed_automations
         })
     except Exception as e:
-        logger.error(f"Error getting risk formula automations: {e}")
+        logger.exception("risk_formula_automations_get_failed")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/components/automation/<automation_id>', methods=['DELETE'])
@@ -1842,13 +1854,13 @@ def delete_risk_automation(automation_id):
         del automations[automation_id]
         
         if save_config(config):  # Save main config
-            logger.info(f"Deleted risk automation {automation_id}")
+            logger.info("risk_automation_deleted", automation_id=automation_id, automation_name=automation_name)
             return jsonify({'success': True, 'message': f'Risk automation {automation_name} deleted'})
         else:
             return jsonify({'error': 'Failed to save configuration'}), 500
             
     except Exception as e:
-        logger.error(f"Error deleting risk automation: {e}")
+        logger.exception("risk_automation_delete_failed", automation_id=automation_id)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/components/automation/<automation_id>/workflow', methods=['GET'])
@@ -1876,7 +1888,7 @@ def get_automation_workflow(automation_id):
         })
         
     except Exception as e:
-        logger.error(f"Error getting automation workflow: {e}")
+        logger.exception("automation_workflow_get_failed", automation_id=automation_id)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/components/automation/<automation_id>/workflow', methods=['PUT'])
@@ -1900,7 +1912,7 @@ def update_automation_workflow(automation_id):
             return jsonify({'error': 'Failed to save configuration'}), 500
             
     except Exception as e:
-        logger.error(f"Error updating automation workflow: {e}")
+        logger.exception("automation_workflow_update_failed", automation_id=automation_id)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/components/automation/<automation_id>', methods=['PUT'])
@@ -1925,7 +1937,7 @@ def update_automation_configuration(automation_id):
             return jsonify({'error': 'Failed to save configuration'}), 500
             
     except Exception as e:
-        logger.error(f"Error updating automation: {e}")
+        logger.exception("automation_update_failed", automation_id=automation_id)
         return jsonify({'error': str(e)}), 500
     
     # Temporal scheduling endpoints
@@ -1986,7 +1998,7 @@ def start_component_schedule():
                     )
                 )
             )
-            logger.info(f"Created Temporal schedule {schedule_id} with execution endpoint")
+            logger.info("temporal_schedule_created", schedule_id=schedule_id, component_id=component_id, update_frequency=update_frequency)
         
         asyncio.run(create_schedule())
         
@@ -1998,7 +2010,7 @@ def start_component_schedule():
         }), 200
         
     except Exception as e:
-        logger.error(f"Failed to start component schedule: {str(e)}")
+        logger.exception("temporal_schedule_start_failed", component_id=component_id if 'component_id' in locals() else None)
         return jsonify({'success': False, 'error': str(e)}), 500
     
 @app.route('/api/risk/components/schedule/pause', methods=['POST'])
@@ -2015,12 +2027,12 @@ def pause_component_schedule():
             await handle.pause(note="Paused by user")
         
         asyncio.run(pause_schedule())
-        logger.info(f"Paused Temporal schedule {schedule_id}")
+        logger.info("temporal_schedule_paused", schedule_id=schedule_id, component_id=component_id)
         
         return jsonify({'success': True, 'message': f'Paused schedule for {component_id}'}), 200
         
     except Exception as e:
-        logger.error(f"Failed to pause schedule: {str(e)}")
+        logger.exception("temporal_schedule_pause_failed", component_id=component_id if 'component_id' in locals() else None)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/risk/components/schedule/resume', methods=['POST'])
@@ -2037,12 +2049,12 @@ def resume_component_schedule():
             await handle.unpause(note="Resumed by user")
         
         asyncio.run(resume_schedule())
-        logger.info(f"Resumed Temporal schedule {schedule_id}")
+        logger.info("temporal_schedule_resumed", schedule_id=schedule_id, component_id=component_id)
         
         return jsonify({'success': True, 'message': f'Resumed schedule for {component_id}'}), 200
         
     except Exception as e:
-        logger.error(f"Failed to resume schedule: {str(e)}")
+        logger.exception("temporal_schedule_resume_failed", component_id=component_id if 'component_id' in locals() else None)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/components/schedule/delete/<component_id>', methods=['DELETE'])
@@ -2055,7 +2067,7 @@ def delete_component_schedule(component_id):
             client = await get_temporal_client()
             handle = client.get_schedule_handle(schedule_id)
             await handle.delete()
-            logger.info(f"Deleted schedule {schedule_id}")
+            logger.info("temporal_schedule_deleted", schedule_id=schedule_id, component_id=component_id)
         
         asyncio.run(delete_schedule())
         
@@ -2065,7 +2077,7 @@ def delete_component_schedule(component_id):
         }), 200
         
     except Exception as e:
-        logger.error(f"Failed to delete schedule: {str(e)}")
+        logger.exception("temporal_schedule_delete_failed", component_id=component_id)
         return jsonify({'success': False, 'error': str(e)}), 500
     
 @app.route('/api/components/schedule/update/<component_id>', methods=['PUT'])
@@ -2082,9 +2094,9 @@ def update_component_schedule(component_id):
             try:
                 handle = client.get_schedule_handle(schedule_id)
                 await handle.delete()
-                logger.info(f"Deleted old schedule {schedule_id}")
-            except:
-                logger.info(f"No existing schedule to delete: {schedule_id}")
+                logger.info("temporal_schedule_deleted_before_update", schedule_id=schedule_id, component_id=component_id)
+            except Exception:
+                logger.info("temporal_schedule_missing_before_update", schedule_id=schedule_id, component_id=component_id)
             
             interval_map = {
                 'minute': timedelta(minutes=1),
@@ -2122,7 +2134,7 @@ def update_component_schedule(component_id):
                     )
                 )
             )
-            logger.info(f"Created new schedule {schedule_id} with {new_frequency}")
+            logger.info("temporal_schedule_updated", schedule_id=schedule_id, component_id=component_id, update_frequency=new_frequency)
         
         asyncio.run(update_schedule())
         
@@ -2133,7 +2145,7 @@ def update_component_schedule(component_id):
         }), 200
         
     except Exception as e:
-        logger.error(f"Failed to update schedule: {str(e)}")
+        logger.exception("temporal_schedule_update_failed", component_id=component_id)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/components/schedule/status/<component_id>', methods=['GET'])
@@ -2177,11 +2189,11 @@ def get_component_schedule_status(component_id):
             }
         
         result = asyncio.run(get_status())
-        logger.info(f"Schedule status for {component_id}: {result}")
+        logger.info("temporal_schedule_status_loaded", component_id=component_id, schedule_id=schedule_id, exists=result.get('exists'), paused=result.get('paused'))
         return jsonify(result), 200
         
-    except Exception as e:
-        logger.warning(f"Schedule not found: {schedule_id} - {str(e)}")
+    except Exception:
+        logger.warning("temporal_schedule_status_missing", component_id=component_id, schedule_id=schedule_id, exc_info=True)
         return jsonify({
             'success': True,
             'exists': False,
@@ -2203,12 +2215,12 @@ def trigger_component_now():
             await handle.trigger()
         
         asyncio.run(trigger_schedule())
-        logger.info(f"Triggered immediate execution for {schedule_id}")
+        logger.info("temporal_schedule_triggered", component_id=component_id, schedule_id=schedule_id)
         
         return jsonify({'success': True, 'message': f'Triggered execution for {component_id}'}), 200
         
     except Exception as e:
-        logger.error(f"Failed to trigger schedule: {str(e)}")
+        logger.exception("temporal_schedule_trigger_failed", component_id=component_id if 'component_id' in locals() else None)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/risk/components/schedules/list', methods=['GET'])
@@ -2234,14 +2246,14 @@ def list_all_component_schedules():
         return jsonify({'success': True, 'schedules': schedules}), 200
         
     except Exception as e:
-        logger.error(f"Failed to list schedules: {str(e)}")
+        logger.exception("temporal_schedules_list_failed")
         return jsonify({'success': False, 'error': str(e)}), 500
     
 @app.route('/api/components/execute/criticality', methods=['POST'])
 def execute_criticality_calculation():
     """Execute full ISIM calculations (betweenness, degree, normalize, criticality, cvss, risk score)"""
     try:
-        logger.info("Executing full ISIM calculation pipeline")
+        logger.info("isim_calculation_pipeline_started")
         
         import subprocess
         import sys
@@ -2254,13 +2266,13 @@ def execute_criticality_calculation():
         )
         
         if result.returncode != 0:
-            logger.error(f"ISIM calculations failed: {result.stderr}")
+            logger.error("isim_calculations_subprocess_failed", returncode=result.returncode, stderr_length=len(result.stderr or ""))
             return jsonify({
                 'success': False,
                 'error': f'ISIM calculations failed: {result.stderr}'
             }), 500
         
-        logger.info("ISIM calculations completed successfully")
+        logger.info("isim_calculations_subprocess_completed")
         
         with neo4j_driver.session() as session:
             stats_query = """
@@ -2279,7 +2291,7 @@ def execute_criticality_calculation():
             nodes_updated = record['nodesUpdated'] if record else 0
             avg_criticality = record['avgCriticality'] if record else 0
         
-        logger.info(f"Criticality calculation complete: {nodes_updated} nodes updated, avg: {avg_criticality}")
+        logger.info("criticality_calculation_completed", nodes_updated=nodes_updated, average=avg_criticality)
         
         return jsonify({
             'success': True,
@@ -2289,10 +2301,10 @@ def execute_criticality_calculation():
         }), 200
         
     except subprocess.TimeoutExpired:
-        logger.error("ISIM calculations timed out after 5 minutes")
+        logger.error("isim_calculations_subprocess_timed_out", timeout_seconds=300)
         return jsonify({'success': False, 'error': 'Calculation timeout'}), 500
     except Exception as e:
-        logger.error(f"Criticality calculation failed: {str(e)}")
+        logger.exception("criticality_calculation_failed")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2300,7 +2312,7 @@ def execute_criticality_calculation():
 def execute_cvss_calculation():
     """Execute CVSS score calculation - queries existing CVE data"""
     try:
-        logger.info("Executing CVSS score calculation")
+        logger.info("cvss_calculation_started")
 
         set_cvss_query = """
         MATCH (n:Node)-[:IS_A]->(h:Host)
@@ -2328,7 +2340,7 @@ def execute_cvss_calculation():
             nodes_updated = record['nodesUpdated'] if record else 0
             avg_cvss = record['globalAverageCvss'] if record else 0
         
-        logger.info(f"CVSS calculation complete: {nodes_updated} nodes updated")
+        logger.info("cvss_calculation_completed", nodes_updated=nodes_updated, average=avg_cvss)
         
         return jsonify({
             'success': True,
@@ -2338,7 +2350,7 @@ def execute_cvss_calculation():
         }), 200
         
     except Exception as e:
-        logger.error(f"CVSS calculation failed: {str(e)}")
+        logger.exception("cvss_calculation_failed")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2346,7 +2358,7 @@ def execute_cvss_calculation():
 def execute_threat_calculation():
     """Execute threat score calculation by running threat_calcs.py"""
     try:
-        logger.info("Executing threat score calculation")
+        logger.info("threat_calculation_started")
         
         import subprocess
         import sys
@@ -2359,7 +2371,7 @@ def execute_threat_calculation():
         )
         
         if result.returncode == 0:
-            logger.info("Threat calculation completed successfully")
+            logger.info("threat_calculation_subprocess_completed")
             
             count_query = """
             MATCH (n:Node)
@@ -2380,24 +2392,24 @@ def execute_threat_calculation():
                 'avg_value': float(avg_threat) if avg_threat else 0
             }), 200
         else:
-            logger.error(f"Threat calculation failed: {result.stderr}")
+            logger.error("threat_calculation_subprocess_failed", returncode=result.returncode, stderr_length=len(result.stderr or ""))
             return jsonify({
                 'success': False,
                 'error': result.stderr
             }), 500
             
     except subprocess.TimeoutExpired:
-        logger.error("Threat calculation timed out")
+        logger.error("threat_calculation_timed_out", timeout_seconds=300)
         return jsonify({'success': False, 'error': 'Calculation timed out'}), 500
     except Exception as e:
-        logger.error(f"Threat calculation failed: {str(e)}")
+        logger.exception("threat_calculation_failed")
         return jsonify({'success': False, 'error': str(e)}), 500
     
 @app.route('/api/components/execute/<component_id>', methods=['POST'])
 def execute_component_calculation(component_id):
     """Execute calculation for a specific component"""
     try:
-        logger.info(f"Executing calculation for component: {component_id}")
+        logger.info("component_calculation_started", component_id=component_id)
         
         # Map component IDs to their execution functions
         execution_map = {
@@ -2411,7 +2423,7 @@ def execute_component_calculation(component_id):
             return execution_map[component_id]()
         else:
             # For custom components, just return success
-            logger.info(f"No specific calculation for {component_id}")
+            logger.info("component_calculation_skipped", component_id=component_id, reason="no_specific_calculation")
             return jsonify({
                 'success': True,
                 'component': component_id,
@@ -2419,7 +2431,7 @@ def execute_component_calculation(component_id):
             }), 200
             
     except Exception as e:
-        logger.error(f"Component execution failed: {str(e)}")
+        logger.exception("component_calculation_failed", component_id=component_id)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 #Temporal Risk Formula scheduling
@@ -2467,7 +2479,7 @@ def start_automation_schedule():
                     )
                 )
             )
-            logger.info(f"Created Temporal schedule {schedule_id}")
+            logger.info("temporal_schedule_created", schedule_id=schedule_id, automation_id=automation_id, update_frequency=update_frequency)
         
         asyncio.run(create_schedule())
         
@@ -2479,7 +2491,7 @@ def start_automation_schedule():
         }), 200
         
     except Exception as e:
-        logger.error(f"Failed to start automation schedule: {str(e)}")
+        logger.exception("automation_schedule_start_failed", automation_id=automation_id if 'automation_id' in locals() else None)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/automations/execute/<automation_id>', methods=['POST'])
@@ -2500,7 +2512,7 @@ def execute_automation_endpoint(automation_id):
         if not automation.get('enabled', True):
             return jsonify({'success': False, 'error': 'Automation is paused'}), 400
         
-        logger.info(f"Executing automation {automation_id}: {automation.get('formula_name')}")
+        logger.info("risk_automation_execution_started", automation_id=automation_id, formula_name=automation.get('formula_name'))
         
         driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
         
@@ -2515,8 +2527,7 @@ def execute_automation_endpoint(automation_id):
                 calculation_method = automation.get('calculation_method', 'weighted_avg')
                 custom_formula = automation.get('custom_formula', '')
                 
-                logger.info(f"Using calculation method: {calculation_method}")
-                logger.info(f"Target property: '{target_property}'")
+                logger.info("risk_automation_calculation_selected", automation_id=automation_id, method=calculation_method, target_property=target_property)
                 
                 calculation = build_calculation(components, formula_config, calculation_method, custom_formula)
                 
@@ -2566,7 +2577,7 @@ def execute_automation_endpoint(automation_id):
                     RETURN count(n) as nodes_updated, avg(n.{formatted_property}) as avg_risk
                     """
                 
-                logger.info(f"Executing query: {query}")
+                logger.info("risk_automation_query_started", automation_id=automation_id, target_type=target_type, target_property=target_property)
                 result = session.run(query)
                 record = result.single()
                 
@@ -2579,7 +2590,7 @@ def execute_automation_endpoint(automation_id):
                     automation['avg_risk_score'] = round(avg_risk, 2)
                     
                     if save_config(config):
-                        logger.info(f"Updated {nodes_updated} nodes. Average {target_property}: {avg_risk}")
+                        logger.info("risk_automation_nodes_updated", automation_id=automation_id, target_property=target_property, nodes_updated=nodes_updated, average=avg_risk)
                     
                     return jsonify({
                         'success': True,
@@ -2596,7 +2607,7 @@ def execute_automation_endpoint(automation_id):
                     }), 500
                     
         except Exception as e:
-            logger.error(f"Error executing automation query: {e}")
+            logger.exception("risk_automation_query_failed", automation_id=automation_id)
             return jsonify({
                 'success': False,
                 'error': f'Query execution failed: {str(e)}'
@@ -2605,7 +2616,7 @@ def execute_automation_endpoint(automation_id):
             driver.close()
             
     except Exception as e:
-        logger.error(f"Error executing automation {automation_id}: {e}")
+        logger.exception("risk_automation_execution_failed", automation_id=automation_id)
         return jsonify({
             'success': False,
             'error': str(e)
@@ -2615,7 +2626,7 @@ def execute_automation_endpoint(automation_id):
 def execute_base_risk_automation():
     """Execute base risk calculation - hardcoded 3-component formula"""
     try:
-        logger.info("Executing base-risk automation")
+        logger.info("base_risk_automation_started")
         
         target_property = "Risk Score"
         
@@ -2641,7 +2652,7 @@ def execute_base_risk_automation():
             nodes_updated = record['nodes_updated'] if record else 0
             avg_risk = record['avg_risk'] if record and record['avg_risk'] is not None else 0
         
-        logger.info(f"Base-risk calculation complete: {nodes_updated} nodes updated, avg: {avg_risk}")
+        logger.info("base_risk_calculation_completed", nodes_updated=nodes_updated, average=avg_risk)
         
         return jsonify({
             'success': True,
@@ -2653,7 +2664,7 @@ def execute_base_risk_automation():
         }), 200
         
     except Exception as e:
-        logger.error(f"Base-risk calculation failed: {str(e)}")
+        logger.exception("base_risk_calculation_failed")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/automations/schedule/pause/<automation_id>', methods=['POST'])
@@ -2666,7 +2677,7 @@ def pause_automation_schedule(automation_id):
             client = await get_temporal_client()
             handle = client.get_schedule_handle(schedule_id)
             await handle.pause()
-            logger.info(f"Paused schedule {schedule_id}")
+            logger.info("automation_schedule_paused", schedule_id=schedule_id, automation_id=automation_id)
         
         asyncio.run(pause_schedule())
         
@@ -2676,7 +2687,7 @@ def pause_automation_schedule(automation_id):
         }), 200
         
     except Exception as e:
-        logger.error(f"Failed to pause schedule: {str(e)}")
+        logger.exception("automation_schedule_pause_failed", automation_id=automation_id)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/automations/schedule/resume/<automation_id>', methods=['POST'])
@@ -2689,7 +2700,7 @@ def resume_automation_schedule(automation_id):
             client = await get_temporal_client()
             handle = client.get_schedule_handle(schedule_id)
             await handle.unpause()
-            logger.info(f"Resumed schedule {schedule_id}")
+            logger.info("automation_schedule_resumed", schedule_id=schedule_id, automation_id=automation_id)
         
         asyncio.run(resume_schedule())
         
@@ -2699,7 +2710,7 @@ def resume_automation_schedule(automation_id):
         }), 200
         
     except Exception as e:
-        logger.error(f"Failed to resume schedule: {str(e)}")
+        logger.exception("automation_schedule_resume_failed", automation_id=automation_id)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/automations/schedule/status/<automation_id>', methods=['GET'])
@@ -2743,8 +2754,8 @@ def get_automation_schedule_status(automation_id):
         result = asyncio.run(get_status())
         return jsonify(result), 200
         
-    except Exception as e:
-        logger.warning(f"Schedule not found: {schedule_id}")
+    except Exception:
+        logger.warning("automation_schedule_status_missing", schedule_id=schedule_id, automation_id=automation_id, exc_info=True)
         return jsonify({
             'success': True,
             'exists': False,
@@ -2765,9 +2776,9 @@ def update_automation_schedule(automation_id):
             try:
                 handle = client.get_schedule_handle(schedule_id)
                 await handle.delete()
-                logger.info(f"Deleted old schedule {schedule_id}")
-            except:
-                logger.info(f"No existing schedule to delete: {schedule_id}")
+                logger.info("automation_schedule_deleted_before_update", schedule_id=schedule_id, automation_id=automation_id)
+            except Exception:
+                logger.info("automation_schedule_missing_before_update", schedule_id=schedule_id, automation_id=automation_id)
             
             interval_map = {
                 'minute': timedelta(minutes=1),
@@ -2797,7 +2808,7 @@ def update_automation_schedule(automation_id):
                     )
                 )
             )
-            logger.info(f"Created new schedule {schedule_id} with {new_frequency}")
+            logger.info("automation_schedule_updated", schedule_id=schedule_id, automation_id=automation_id, update_frequency=new_frequency)
         
         asyncio.run(update_schedule())
         
@@ -2808,30 +2819,30 @@ def update_automation_schedule(automation_id):
         }), 200
         
     except Exception as e:
-        logger.error(f"Failed to update schedule: {str(e)}")
+        logger.exception("automation_schedule_update_failed", automation_id=automation_id)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/automations/schedule/delete/<automation_id>', methods=['DELETE'])
 def delete_automation_schedule(automation_id):
     try:
         schedule_id = f"automation-schedule-{automation_id}"
-        logger.info(f"Attempting to delete Temporal automation schedule: {schedule_id}")
+        logger.info("automation_schedule_delete_started", schedule_id=schedule_id, automation_id=automation_id)
         
         async def delete_schedule():
             try:
                 client = await get_temporal_client()
-                logger.info(f"Connected to Temporal at {TEMPORAL_URL}")
+                logger.info("temporal_connected", target=TEMPORAL_URL)
                 
                 handle = client.get_schedule_handle(schedule_id)
-                logger.info(f"Got handle for schedule {schedule_id}")
+                logger.info("automation_schedule_handle_loaded", schedule_id=schedule_id, automation_id=automation_id)
                 
                 await handle.delete()
-                logger.info(f"Successfully deleted schedule {schedule_id}")
+                logger.info("automation_schedule_deleted", schedule_id=schedule_id, automation_id=automation_id)
                 return {'deleted': True, 'message': 'Schedule deleted successfully'}
                 
             except Exception as e:
                 error_msg = str(e)
-                logger.error(f"Error deleting schedule {schedule_id}: {error_msg}")
+                logger.warning("automation_schedule_delete_inner_failed", schedule_id=schedule_id, automation_id=automation_id, error=error_msg)
                 
                 if 'not found' in error_msg.lower() or 'no rows' in error_msg.lower():
                     return {'deleted': False, 'message': 'Schedule not found', 'warning': error_msg}
@@ -2847,7 +2858,7 @@ def delete_automation_schedule(automation_id):
         }), 200
         
     except Exception as e:
-        logger.error(f"Failed to delete automation schedule {automation_id}: {str(e)}")
+        logger.exception("automation_schedule_delete_failed", automation_id=automation_id)
         return jsonify({
             'success': False,
             'error': str(e),
@@ -2930,7 +2941,7 @@ def scan_neo4j_for_components():
             })
             
     except Exception as e:
-        logger.error(f"Error scanning Neo4j: {e}")
+        logger.exception("neo4j_component_scan_failed")
         return jsonify({"error": str(e)}), 500
     finally:
         if driver:
@@ -2982,7 +2993,7 @@ def import_components_from_neo4j():
             }
             
             imported_count += 1
-            logger.info(f"Imported component: {component_key} with Neo4j property: {neo4j_property}")
+            logger.info("neo4j_component_imported", component_key=component_key, neo4j_property=neo4j_property)
         
         if save_config(config):
             return jsonify({
@@ -2994,10 +3005,10 @@ def import_components_from_neo4j():
             return jsonify({"error": "Failed to save configuration"}), 500
             
     except Exception as e:
-        logger.error(f"Error importing components: {e}")
+        logger.exception("neo4j_components_import_failed")
         return jsonify({"error": str(e)}), 500
     
 if __name__ == '__main__':
     #Start Flask API
-    logger.info("Starting Risk Assessment API on port 5000")
+    logger.info("risk_assessment_api_started", port=5000)
     app.run(host='0.0.0.0', port=5000, debug=False)

@@ -18,7 +18,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view  # type: ignore
 from rest_framework.response import Response
 
-from config import AppConfig
+from isim_common.config import AppConfig
 from isim_rest.asset_management.data_formats.input_dtos import (
     AssetListInputDTO,
     EasmDTO,

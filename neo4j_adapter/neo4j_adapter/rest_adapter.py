@@ -10,7 +10,7 @@ from typing import Any, LiteralString, cast
 
 from neo4j_adapter.dtos import IPAssetInformationDTO
 from neo4j_adapter.general_adapter import GeneralAdapter
-from config import AppConfig as ISIMConfig
+from isim_common.config import AppConfig as ISIMConfig
 
 BASE_DIR = Path(__file__).parent
 

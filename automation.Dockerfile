@@ -12,11 +12,14 @@ RUN python -m venv /venv && \
         flask \
         flask-cors \
         pyyaml \
+        dacite \
+        structlog \
         python-dotenv \
         opensearch-py \
         temporalio
 
 COPY neo4j_adapter/ /app/
+COPY isim_common/ /app/isim_common/
 
 RUN sed -i 's/\r$//' /app/crontab /app/start.sh /app/*.py && \
     chmod +x /app/start.sh

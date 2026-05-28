@@ -1,11 +1,11 @@
 # /app/crontab
 
 # Run automation checks every minute
-* * * * * /usr/local/bin/python /app/execute_automations.py >> /app/logs/automation.log 2>&1
-* * * * * /usr/local/bin/python /app/execute_component_automation.py >> /app/logs/component_automation.log 2>&1
+* * * * * /venv/bin/python /app/execute_automations.py >> /app/logs/automation.log 2>&1
+* * * * * /venv/bin/python /app/execute_component_automation.py >> /app/logs/component_automation.log 2>&1
 
 # Run threat_calcs every 2 hours at 10 minutes past the hour (xx:10)
-10 */2 * * * /usr/local/bin/python /app/threat_calcs.py >> /app/logs/threat_calcs.log 2>&1
+10 */2 * * * /venv/bin/python /app/threat_calcs.py >> /app/logs/threat_calcs.log 2>&1
 
 # Run isim_calcs every 2 hours at 20 minutes past the hour (xx:20) - 10 mins after threat
-20 */2 * * * /usr/local/bin/python /app/isim_calcs.py >> /app/logs/isim_calcs.log 2>&1
+20 */2 * * * /venv/bin/python /app/isim_calcs.py >> /app/logs/isim_calcs.log 2>&1

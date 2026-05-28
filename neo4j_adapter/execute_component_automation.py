@@ -5,24 +5,20 @@
 Execute scheduled component automations
 Location: /app/execute_component_automation.py
 """
-import yaml
-import logging
-from datetime import datetime, timedelta
-from typing import Dict, Any
-from neo4j import GraphDatabase
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict
+
+import yaml
 from dotenv import load_dotenv
+from neo4j import GraphDatabase
+
+from isim_common.config import LoggingConfig
+from isim_common.observability import configure_logging, get_logger
 
 load_dotenv()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(message)s',
-    handlers=[
-        logging.FileHandler("/app/logs/component_automation.log"),
-    ]
-)
-logger = logging.getLogger(__name__)
+configure_logging("isim-automation", LoggingConfig(level=os.getenv("LOG_LEVEL", "INFO")))
+logger = get_logger(__name__)
 
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://resilmesh-sap-neo4j:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
@@ -37,14 +33,14 @@ def load_component_automations() -> Dict[str, Any]:
         with open(COMPONENT_CONFIG_PATH, 'r') as file:
             config = yaml.safe_load(file)
             if config is None:
-                logger.warning("Component config file is empty")
+                logger.warning("component_automation_config_empty", path=COMPONENT_CONFIG_PATH)
                 return {}
             return config.get('active_component_automations', {})
-    except yaml.YAMLError as e:
-        logger.error(f"YAML syntax error in component automations: {e}")
+    except yaml.YAMLError:
+        logger.exception("component_automation_config_parse_failed", path=COMPONENT_CONFIG_PATH)
         return None  # Return None to indicate parse error
-    except Exception as e:
-        logger.error(f"Failed to load component automations: {e}")
+    except Exception:
+        logger.exception("component_automations_load_failed", path=COMPONENT_CONFIG_PATH)
         return {}
     
 def should_run_component_automation(automation: Dict[str, Any]) -> bool:
@@ -57,9 +53,13 @@ def should_run_component_automation(automation: Dict[str, Any]) -> bool:
     
     # Check if expired
     if automation.get('expires_at'):
-        expires = datetime.fromisoformat(automation['expires_at'])
+        try:
+            expires = datetime.fromisoformat(automation['expires_at'])
+        except (TypeError, ValueError):
+            logger.warning("component_automation_expires_at_parse_failed", expires_at=automation.get('expires_at'))
+            return True
         if datetime.now() > expires:
-            logger.info(f"Automation expired at {expires}")
+            logger.info("component_automation_expired", expires_at=expires.isoformat())
             return False
     
     # Never run manual automations
@@ -68,13 +68,13 @@ def should_run_component_automation(automation: Dict[str, Any]) -> bool:
     
     last_run = automation.get('last_run')
     if not last_run:
-        logger.info("Never run before, running now")
+        logger.info("component_automation_due", reason="never_run")
         return True
     
     try:
         last_run_time = datetime.fromisoformat(last_run)
-    except:
-        logger.warning("Cannot parse last_run time, running anyway")
+    except (TypeError, ValueError):
+        logger.warning("component_automation_last_run_parse_failed", last_run=last_run)
         return True
     
     now = datetime.now()
@@ -91,7 +91,7 @@ def should_run_component_automation(automation: Dict[str, Any]) -> bool:
     required_delta = frequency_checks.get(frequency)
     if required_delta:
         should_run = time_since_last_run >= required_delta
-        logger.info(f"{frequency} check: last run {time_since_last_run} ago, should run: {should_run}")
+        logger.info("component_automation_due_check", frequency=frequency, elapsed=str(time_since_last_run), should_run=should_run)
         return should_run
     
     return False
@@ -100,7 +100,7 @@ def execute_component_automation(automation_id: str, config: dict):
     """Execute component automation and update both Neo4j properties AND config"""
     
     component_name = config.get('component_name')
-    logger.info(f"Executing component automation {automation_id}: {component_name}")
+    logger.info("component_automation_execution_started", automation_id=automation_id, component_name=component_name)
     
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
     
@@ -119,11 +119,11 @@ def execute_component_automation(automation_id: str, config: dict):
                 records = list(result)
                 if records and 'value' in records[0]:
                     value = records[0]['value']
-                    logger.info(f"Query returned value: {value}")
+                    logger.info("component_automation_query_value_returned", automation_id=automation_id, value=value)
                     
             elif source_type == 'static_value':
                 value = data_source.get('value', 0)
-                logger.info(f"Using static value: {value}")
+                logger.info("component_automation_static_value_used", automation_id=automation_id, value=value)
             
             # CRITICAL: Update Neo4j properties with the component value
             if value is not None and neo4j_property:
@@ -144,18 +144,18 @@ def execute_component_automation(automation_id: str, config: dict):
                 update_record = update_result.single()
                 nodes_updated = update_record['updated_count'] if update_record else 0
                 
-                logger.info(f"Updated {nodes_updated} nodes with {neo4j_property} = {value}")
+                logger.info("component_automation_nodes_updated", automation_id=automation_id, nodes_updated=nodes_updated, neo4j_property=neo4j_property, value=value)
                 
                 # ALSO update config file for UI display
                 update_component_value(component_name, value)
                 update_last_run(automation_id)
                 
-                logger.info(f"Component automation {automation_id} completed: Neo4j + config updated")
+                logger.info("component_automation_execution_completed", automation_id=automation_id)
             else:
-                logger.warning(f"No value or neo4j_property for {component_name}")
+                logger.warning("component_automation_missing_value_or_property", automation_id=automation_id, component_name=component_name, neo4j_property=neo4j_property)
                 
-    except Exception as e:
-        logger.error(f"Error executing component automation {automation_id}: {e}")
+    except Exception:
+        logger.exception("component_automation_execution_failed", automation_id=automation_id)
     finally:
         driver.close()
         
@@ -176,8 +176,8 @@ def update_component_value(component_name: str, value: float):
         with open(MAIN_CONFIG_PATH, 'w') as file:
             yaml.dump(config, file, default_flow_style=False)
             
-    except Exception as e:
-        logger.error(f"Failed to update component value: {e}")
+    except Exception:
+        logger.exception("component_value_update_failed", component_name=component_name, path=MAIN_CONFIG_PATH)
 
 def update_last_run(automation_id: str):
     """Update the last run time for component automation"""
@@ -191,39 +191,37 @@ def update_last_run(automation_id: str):
             with open(COMPONENT_CONFIG_PATH, 'w') as file:
                 yaml.dump(config, file, default_flow_style=False)
                 
-    except Exception as e:
-        logger.error(f"Failed to update last run time: {e}")
+    except Exception:
+        logger.exception("component_automation_last_run_update_failed", automation_id=automation_id, path=COMPONENT_CONFIG_PATH)
 
 def main():
     """Main execution function"""
-    logger.info("="*50)
-    logger.info("Starting component automation check")
+    logger.info("component_automation_check_started")
     
     automations = load_component_automations()
     
     # Handle None return (config parse error) or empty dict
     if automations is None:
-        logger.error("Component automation config has syntax errors, cannot proceed")
+        logger.error("component_automation_config_invalid")
         return
     
     if not automations:
-        logger.info("No component automations configured")
+        logger.info("no_component_automations_configured")
         return
     
-    logger.info(f"Found {len(automations)} component automation(s)")
+    logger.info("component_automations_loaded", count=len(automations))
     
     for automation_id, config in automations.items():
         if not config or not isinstance(config, dict):
-            logger.warning(f"Skipping {automation_id} - invalid configuration")
+            logger.warning("component_automation_skipped", automation_id=automation_id, reason="invalid_configuration")
             continue
         
         if should_run_component_automation(config):
             execute_component_automation(automation_id, config)
         else:
-            logger.info(f"Skipping {automation_id} - not due to run")
+            logger.info("component_automation_skipped", automation_id=automation_id, reason="not_due")
     
-    logger.info("Component automation execution complete")
-    logger.info("="*50)
+    logger.info("component_automation_check_completed")
 
 if __name__ == "__main__":
     main()
