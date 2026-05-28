@@ -38,7 +38,10 @@ urlpatterns = [
     path("traceroute", views.traceroute, name="traceroute"),
     path("nodes/betweenness_centrality", views.betweenness_centrality, name="betweenness_centrality"),
     path("nodes/degree_centrality", views.degree_centrality, name="degree_centrality"),
+    path("nodes/ip_flows_degree", views.ip_flows_degree, name="ip_flows_degree"),
+    path("nodes/ip_flows_pagerank", views.ip_flows_pagerank, name="ip_flows_pagerank"),
     path("nodes/store_criticality", views.store_criticality, name="store_criticality"),
     path("nodes/combine_criticality", views.combine_criticality, name="combine_criticality"),
+    path("nodes/combine_criticality_flows", views.combine_criticality_flows, name="combine_criticality_flows"),
     path("slp_enrichment", views.slp_enrichment, name="slp_enrichment"),
 ]

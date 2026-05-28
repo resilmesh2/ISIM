@@ -268,6 +268,24 @@ def degree_centrality(request: HttpRequest) -> Response:
 
 
 @api_view(["POST"])
+def ip_flows_degree(request: HttpRequest) -> Response:
+    criticality_adapter = CriticalityAdapter(
+        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
+    )
+    criticality_adapter.compute_ip_flow_degree()
+    return Response("Processed successfully.", status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+def ip_flows_pagerank(request: HttpRequest) -> Response:
+    criticality_adapter = CriticalityAdapter(
+        password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user
+    )
+    criticality_adapter.compute_ip_flow_pagerank()
+    return Response("Processed successfully.", status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
 def store_criticality(request: HttpRequest) -> Response:
     csa_adapter = CSAAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
     request_body = request.body
@@ -288,6 +306,13 @@ def store_criticality(request: HttpRequest) -> Response:
 def combine_criticality(request: HttpRequest) -> Response:
     csa_adapter = CSAAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
     csa_adapter.combine_criticality()
+    return Response("Processed successfully.", status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+def combine_criticality_flows(request: HttpRequest) -> Response:
+    csa_adapter = CSAAdapter(password=config.neo4j.password, bolt=config.neo4j.bolt, user=config.neo4j.user)
+    csa_adapter.combine_criticality_ip_flows()
     return Response("Processed successfully.", status=status.HTTP_200_OK)
 
 
