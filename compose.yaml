@@ -32,7 +32,19 @@ services:
     restart: unless-stopped
     networks:
       - resilmesh_network
-
+  resilmesh-sap-isim-nginx:
+    image: nginx:alpine
+    container_name: resilmesh-sap-isim-nginx
+    restart: unless-stopped
+    ports:
+      - "4443:443"
+    volumes:
+      - ./nginx/certs:/etc/nginx/certs
+      - ./nginx/conf/isim.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - resilmesh-sap-isim-graphql
+    networks:
+      - resilmesh_network
   resilmesh-sap-isim-automation:
     container_name: resilmesh-sap-isim-automation
     build:
