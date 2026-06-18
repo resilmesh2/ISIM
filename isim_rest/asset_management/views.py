@@ -5,6 +5,7 @@ response creation.
 """
 
 import msgspec.json
+from cyclonedx.exception import CycloneDxException
 from django.http import HttpRequest
 from msgspec import ValidationError
 from neo4j.exceptions import ClientError, DatabaseError, TransientError
@@ -105,6 +106,18 @@ def missions(request: HttpRequest) -> Response:
         return Response("Exception on neo4j side, delete operation failed. " + str(e),
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return Response("Mission was deleted successfully.", status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+def mission_cyclonedx(request: HttpRequest, mission_name: str) -> Response:
+    try:
+        cyclonedx_representation = client.get_mission_cyclonedx(mission_name)
+    except (CycloneDxException, TypeError) as e:
+        return Response(f"Exception raised during creating CycloneDX representation: {e!s}",
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except IndexError as e:
+        return Response(f"Mission was not found.", status=status.HTTP_404_NOT_FOUND)
+    return Response(cyclonedx_representation, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

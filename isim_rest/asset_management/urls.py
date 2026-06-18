@@ -32,6 +32,8 @@ urlpatterns = [
     path("ip-hierarchy-sync", views.ip_hierarchy_sync, name="ip-hierarchy-sync"),
     re_path(r"^cve/(?P<cve_id>CVE-\d{4}-\d{4,7})$", views.cve, name="cve"),
     re_path(r"^ip/(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/cve", views.ip_cves, name="ip_cves"),
+    re_path(r"^mission/(?P<mission_name>[\w -]+)/cyclonedx", views.mission_cyclonedx,
+            name="mission_cyclonedx"),
     # endpoints for temporal workflows from CASM
     path("easm", views.easm, name="easm"),
     path("nmap_assets", views.nmap_assets, name="nmap_assets"),

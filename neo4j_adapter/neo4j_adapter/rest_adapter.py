@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from typing import Any, LiteralString, cast
 
+from neo4j_adapter.cyclonedx_conversion import create_cyclonedx_json
 from neo4j_adapter.dtos import IPAssetInformationDTO
 from neo4j_adapter.general_adapter import GeneralAdapter
 from config import AppConfig as ISIMConfig
@@ -34,6 +35,17 @@ class RESTAdapter(GeneralAdapter):
                                 structure: m.structure} AS mission LIMIT $limit",
             limit=limit,
         )
+
+    def get_mission_cyclonedx(self, mission_name: str) -> dict[str, Any]:
+        """
+        A method for creating CycloneDX representation for mission representation.
+        It can contain multiple missions, if the mission representation contains them.
+        :param mission_name: name of mission
+        :return: dictionary representing json structure of CycloneDX format
+        """
+        structure = self._run_query("MATCH (m:Mission {name: $mission_name}) RETURN m.structure AS structure",
+                        mission_name=mission_name)
+        return create_cyclonedx_json(json.loads(structure[0]["structure"]))
 
     def create_missions_and_components_string(self, json_string: str) -> None:
         """
