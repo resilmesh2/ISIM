@@ -121,7 +121,9 @@ def process_mission_and_nodes(json_data: dict[str, Any], and_ids: list[int], or_
     for and_id in and_ids:
         for inner_relationship in json_data["relationships"]["one_way"]:
             if inner_relationship["from"] == and_id:
-                if inner_relationship["to"] in json_data["nodes"]["aggregations"]["or"]:
+                if inner_relationship["to"] in json_data["nodes"]["aggregations"]["and"]:
+                    and_ids.append(inner_relationship["to"])
+                elif inner_relationship["to"] in json_data["nodes"]["aggregations"]["or"]:
                     or_ids.append(inner_relationship["to"])
                 elif inner_relationship["to"] in [service["id"] for service in json_data["nodes"]["services"]]:
                     service_ids.append(inner_relationship["to"])
@@ -156,7 +158,9 @@ def process_mission_or_nodes(json_data: dict[str, Any], mission_dict: dict[str, 
                                                                  value=ComponentScope.OPTIONAL)]))
                 else:
                     inner_service_dict["bom-ref"] = service_object.bom_ref.value
-                service_dict["services"].append(inner_service_dict)
+                service_dict["services"].append({"name": inner_service_dict["name"],
+                                                 "bom-ref": inner_service_dict["bom-ref"],
+                                                 "properties": [{"name": "scope", "value": ComponentScope.OPTIONAL}]})
         if service_dict not in mission_dict["services"]:
             mission_dict["services"].append(service_dict)
 
@@ -177,6 +181,9 @@ def process_services_layer(json_data: dict[str, Any], services_objects: list[Ser
         service_object = find_object_with_properties(service_dict, services_objects)
         if not service_object:
             service_dict["bom-ref"] = "service-" + str(uuid4())
+            service_object = Service(name=service_dict["name"], bom_ref=service_dict["bom-ref"],
+                                     properties=[Property(name="scope", value=ComponentScope.REQUIRED)])
+            services_objects.append(service_object)
         else:
             service_dict["bom-ref"] = service_object.bom_ref.value
 
@@ -201,10 +208,13 @@ def process_services_layer(json_data: dict[str, Any], services_objects: list[Ser
                     "nodes"]["hosts"] if component["id"] == component_id][0]
                 component_object = find_object_with_properties(inner_component_dict, components_objects)
                 if not component_object:
-                    components_objects.append(
-                        Component(name=inner_component_dict["hostname"], bom_ref="component-" + str(uuid4()),
-                                  type=ComponentType.DEVICE, scope=ComponentScope.REQUIRED,
-                                  properties=[Property(name="ip", value=inner_component_dict["ip"])]))
+                    component_object = Component(
+                        name=inner_component_dict["hostname"], bom_ref="component-" + str(uuid4()),
+                        type=ComponentType.DEVICE, scope=ComponentScope.REQUIRED,
+                        properties=[Property(name="ip", value=inner_component_dict["ip"])])
+                    components_objects.append(component_object)
+                if (service_object, [component_object]) not in dependencies:
+                    dependencies.append((service_object, [component_object]))
 
 
 def process_service_and_nodes(json_data: dict[str, Any], and_ids: list[int], or_ids: list[int],
