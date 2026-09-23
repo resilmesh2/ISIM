@@ -44,4 +44,7 @@ urlpatterns = [
     path("nodes/combine_criticality", views.combine_criticality, name="combine_criticality"),
     path("nodes/combine_criticality_flows", views.combine_criticality_flows, name="combine_criticality_flows"),
     path("slp_enrichment", views.slp_enrichment, name="slp_enrichment"),
+    path("vulnllama", views.vulnllama, name="vulnllama"),
+    re_path(r"^vulnllama/static/(?P<path>.+)$", views.vulnllama_static, name="vulnllama-static"),
+    re_path(r"^vulnllama/(?P<path>.+)$", views.vulnllama_asset, name="vulnllama-asset"),
 ]
