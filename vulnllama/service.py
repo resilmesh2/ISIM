@@ -13,7 +13,7 @@ from neo4j import Driver, GraphDatabase
 from openai import BadRequestError
 from pydantic import BaseModel
 
-from config import AppConfig, OpenAIConfig
+from isim_common.config import AppConfig, OpenAIConfig
 import copy
 
 logger = logging.getLogger(__name__)
