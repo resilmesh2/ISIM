@@ -29,6 +29,7 @@ temporalio = "^1.19.0"
 langchain-openai = "^0.3.30"
 langchain-neo4j = "^0.5.0"
 langchain-core = "^0.3.34"
+cyclonedx-python-lib = {extras = ["json-validation"], version = "^11.11.0"}
 
 [tool.poetry.group.dev.dependencies]
 ruff = ">=0.0.261"
